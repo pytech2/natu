@@ -246,8 +246,7 @@ async def create_user(data: UserCreate, current_user: dict = Depends(get_current
     }
 
 @api_router.get("/admin/users", response_model=List[UserResponse])
-async def list_users(authorization: str = None):
-    current_user = await get_current_user(authorization)
+async def list_users(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
