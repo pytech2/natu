@@ -623,6 +623,7 @@ async def export_data(
             photos = submission.get("photos", [])
             photo_urls = ", ".join([p.get("file_url", "") for p in photos])
             ws.cell(row=row_idx, column=19, value=photo_urls)
+            ws.cell(row=row_idx, column=20, value=submission.get("signature_url", ""))
     
     # Adjust column widths
     for col in ws.columns:
