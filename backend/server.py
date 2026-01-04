@@ -408,8 +408,7 @@ async def list_properties(
     }
 
 @api_router.post("/admin/assign")
-async def assign_properties(data: AssignmentRequest, authorization: str = None):
-    current_user = await get_current_user(authorization)
+async def assign_properties(data: AssignmentRequest, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
