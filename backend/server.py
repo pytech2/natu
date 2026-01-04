@@ -330,8 +330,7 @@ async def upload_batch(
     }
 
 @api_router.get("/admin/batches", response_model=List[DatasetBatchResponse])
-async def list_batches(authorization: str = None):
-    current_user = await get_current_user(authorization)
+async def list_batches(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
