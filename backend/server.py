@@ -583,7 +583,7 @@ async def export_data(
         "Total Area", "Category", "Area/Zone", "Assigned Employee", "Status",
         "Survey - Respondent Name", "Survey - Phone", "Survey - House No",
         "Survey - Tax No", "Survey - Remarks", "GPS Latitude", "GPS Longitude",
-        "Submission Date", "Photo URLs"
+        "Submission Date", "Photo URLs", "Signature URL"
     ]
     
     for col, header in enumerate(headers, 1):
