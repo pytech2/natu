@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -27,6 +27,20 @@ import { UserPlus, Trash2, Users } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
+const ROLE_LABELS = {
+  'SURVEYOR': 'Surveyor',
+  'SUPERVISOR': 'Supervisor',
+  'MC_OFFICER': 'MC Officer',
+  'ADMIN': 'Administrator'
+};
+
+const ROLE_COLORS = {
+  'SURVEYOR': 'bg-blue-100 text-blue-700',
+  'SUPERVISOR': 'bg-purple-100 text-purple-700',
+  'MC_OFFICER': 'bg-amber-100 text-amber-700',
+  'ADMIN': 'bg-red-100 text-red-700'
+};
+
 export default function Employees() {
   const { token } = useAuth();
   const [employees, setEmployees] = useState([]);
@@ -36,7 +50,7 @@ export default function Employees() {
     username: '',
     password: '',
     name: '',
-    role: 'EMPLOYEE',
+    role: 'SURVEYOR',
     assigned_area: ''
   });
 
@@ -69,7 +83,7 @@ export default function Employees() {
         username: '',
         password: '',
         name: '',
-        role: 'EMPLOYEE',
+        role: 'SURVEYOR',
         assigned_area: ''
       });
       fetchEmployees();
@@ -95,10 +109,9 @@ export default function Employees() {
   return (
     <AdminLayout title="Employee Management">
       <div data-testid="admin-employees" className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <p className="text-slate-600">
-            Manage field employees and their area assignments
+            Manage surveyors, supervisors and MC officers
           </p>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -111,7 +124,7 @@ export default function Employees() {
               <DialogHeader>
                 <DialogTitle className="font-heading">Add New Employee</DialogTitle>
                 <DialogDescription>
-                  Create a new field employee account
+                  Create a new employee account
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -159,19 +172,20 @@ export default function Employees() {
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="EMPLOYEE">Field Employee</SelectItem>
-                      <SelectItem value="ADMIN">Administrator</SelectItem>
+                      <SelectItem value="SURVEYOR">Surveyor</SelectItem>
+                      <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
+                      <SelectItem value="MC_OFFICER">MC Officer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="area">Assigned Area (Optional)</Label>
+                  <Label htmlFor="area">Assigned Ward (Optional)</Label>
                   <Input
                     id="area"
                     data-testid="employee-area-input"
                     value={formData.assigned_area}
                     onChange={(e) => setFormData({ ...formData, assigned_area: e.target.value })}
-                    placeholder="e.g., Zone A, Sector 5"
+                    placeholder="e.g., Ward 1, Ward 5"
                   />
                 </div>
                 <DialogFooter>
@@ -187,7 +201,6 @@ export default function Employees() {
           </Dialog>
         </div>
 
-        {/* Employee List */}
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-pulse-slow text-slate-500">Loading...</div>
@@ -197,7 +210,7 @@ export default function Employees() {
             <CardContent className="py-12 text-center">
               <Users className="w-12 h-12 mx-auto text-slate-300 mb-4" />
               <h3 className="font-heading font-semibold text-slate-900 mb-2">No employees yet</h3>
-              <p className="text-slate-500">Add your first field employee to get started</p>
+              <p className="text-slate-500">Add your first employee to get started</p>
             </CardContent>
           </Card>
         ) : (
@@ -209,7 +222,7 @@ export default function Employees() {
                     <th>Name</th>
                     <th>Username</th>
                     <th>Role</th>
-                    <th>Assigned Area</th>
+                    <th>Assigned Ward</th>
                     <th>Created</th>
                     <th className="text-right">Actions</th>
                   </tr>
@@ -229,12 +242,8 @@ export default function Employees() {
                       </td>
                       <td className="font-mono text-sm text-slate-600">{emp.username}</td>
                       <td>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          emp.role === 'ADMIN' 
-                            ? 'bg-purple-100 text-purple-700' 
-                            : 'bg-blue-100 text-blue-700'
-                        }`}>
-                          {emp.role}
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ROLE_COLORS[emp.role] || 'bg-slate-100 text-slate-700'}`}>
+                          {ROLE_LABELS[emp.role] || emp.role}
                         </span>
                       </td>
                       <td className="text-slate-600">{emp.assigned_area || '-'}</td>
