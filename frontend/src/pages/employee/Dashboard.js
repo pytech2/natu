@@ -55,7 +55,7 @@ export default function EmployeeDashboard() {
           <h2 className="text-xl font-heading font-bold text-slate-900">
             Welcome, {user?.name}!
           </h2>
-          <p className="text-slate-500 mt-1">Ready for today's surveys?</p>
+          <p className="text-slate-500 mt-1">Ready for today&apos;s surveys?</p>
         </div>
 
         {/* Today's Progress Card */}
@@ -63,7 +63,7 @@ export default function EmployeeDashboard() {
           <CardContent className="py-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm text-slate-300">Today's Progress</p>
+                <p className="text-sm text-slate-300">Today&apos;s Progress</p>
                 <p className="text-3xl font-heading font-bold mt-1">
                   {progress?.today_completed || 0} surveys
                 </p>

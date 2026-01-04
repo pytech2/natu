@@ -652,7 +652,7 @@ export default function Survey() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <User className="w-4 h-4 text-slate-400" />
-                    New Owner's Name *
+                    New Owner&apos;s Name *
                   </Label>
                   <Input
                     data-testid="new-owner-name-input"
