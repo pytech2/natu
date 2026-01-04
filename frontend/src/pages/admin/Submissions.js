@@ -166,7 +166,7 @@ export default function Submissions() {
   const handleEdit = async () => {
     setSavingEdit(true);
     try {
-      // Update submission
+      // Update submission only (property data is read-only)
       await axios.put(`${API_URL}/admin/submissions/${selectedSubmission.id}`, editData, {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -174,17 +174,7 @@ export default function Submissions() {
         }
       });
       
-      // Update property if needed
-      if (selectedSubmission.property_record_id) {
-        await axios.put(`${API_URL}/admin/properties/${selectedSubmission.property_record_id}`, editPropertyData, {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-      
-      toast.success('Changes saved successfully');
+      toast.success('Survey submission updated successfully');
       fetchSubmissions();
       setEditDialog(false);
     } catch (error) {
