@@ -618,30 +618,32 @@ async def approve_reject_submission(data: SubmissionApproval, current_user: dict
 @api_router.put("/admin/submissions/{submission_id}")
 async def edit_submission(
     submission_id: str,
-    new_owner_name: str = Form(None),
-    new_mobile: str = Form(None),
-    receiver_name: str = Form(None),
-    relation: str = Form(None),
-    old_property_id: str = Form(None),
-    family_id: str = Form(None),
-    aadhar_number: str = Form(None),
-    ward_number: str = Form(None),
-    remarks: str = Form(None),
+    request: Request,
     current_user: dict = Depends(get_current_user)
 ):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
+    data = await request.json()
+    
     update_data = {}
-    if new_owner_name: update_data["new_owner_name"] = new_owner_name
-    if new_mobile: update_data["new_mobile"] = new_mobile
-    if receiver_name: update_data["receiver_name"] = receiver_name
-    if relation: update_data["relation"] = relation
-    if old_property_id: update_data["old_property_id"] = old_property_id
-    if family_id: update_data["family_id"] = family_id
-    if aadhar_number: update_data["aadhar_number"] = aadhar_number
-    if ward_number: update_data["ward_number"] = ward_number
-    if remarks: update_data["remarks"] = remarks
+    allowed_fields = [
+        "new_owner_name", "new_mobile", "receiver_name", "relation",
+        "old_property_id", "family_id", "aadhar_number", "ward_number",
+        "remarks", "latitude", "longitude"
+    ]
+    
+    for field in allowed_fields:
+        if field in data:
+            value = data[field]
+            # Convert latitude/longitude to float if provided
+            if field in ["latitude", "longitude"] and value:
+                try:
+                    update_data[field] = float(value)
+                except ValueError:
+                    pass
+            else:
+                update_data[field] = value
     
     update_data["edited_by"] = current_user["id"]
     update_data["edited_at"] = datetime.now(timezone.utc).isoformat()
@@ -652,6 +654,36 @@ async def edit_submission(
     )
     
     return {"message": "Submission updated"}
+
+@api_router.put("/admin/properties/{property_id}")
+async def edit_property(
+    property_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    data = await request.json()
+    
+    update_data = {}
+    allowed_fields = [
+        "property_id", "owner_name", "mobile", "address", "amount", "ward"
+    ]
+    
+    for field in allowed_fields:
+        if field in data and data[field]:
+            update_data[field] = data[field]
+    
+    update_data["edited_by"] = current_user["id"]
+    update_data["edited_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.properties.update_one(
+        {"id": property_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Property updated"}
 
 # ============== EXPORT ROUTES ==============
 
