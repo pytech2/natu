@@ -65,12 +65,12 @@ export default function EmployeeDashboard() {
               <div>
                 <p className="text-sm text-slate-300">Today's Progress</p>
                 <p className="text-3xl font-heading font-bold mt-1">
-                  {progress?.completed || 0} / {progress?.total_assigned || 0}
+                  {progress?.today_completed || 0} surveys
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-4xl font-heading font-bold text-blue-400">{percentage}%</p>
-                <p className="text-sm text-slate-300">Complete</p>
+                <p className="text-sm text-slate-300">Overall</p>
               </div>
             </div>
             <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
@@ -79,11 +79,19 @@ export default function EmployeeDashboard() {
                 style={{ width: `${percentage}%` }}
               />
             </div>
+            {/* Total Completed - Below Today Progress */}
+            <div className="mt-4 pt-4 border-t border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                <span className="text-sm text-slate-300">Total Complete Data</span>
+              </div>
+              <span className="text-xl font-bold text-emerald-400">{progress?.total_completed || 0}</span>
+            </div>
           </CardContent>
         </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Card className="text-center py-4">
             <CardContent className="p-0">
               <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -100,17 +108,27 @@ export default function EmployeeDashboard() {
                 <CheckCircle className="w-5 h-5 text-emerald-600" />
               </div>
               <p className="text-2xl font-heading font-bold text-slate-900">{progress?.completed || 0}</p>
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Done</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Approved</p>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center py-4">
+            <CardContent className="p-0">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+              </div>
+              <p className="text-2xl font-heading font-bold text-slate-900">{progress?.in_progress || 0}</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">In Review</p>
             </CardContent>
           </Card>
 
           <Card className="text-center py-4">
             <CardContent className="p-0">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
+                <XCircle className="w-5 h-5 text-red-600" />
               </div>
-              <p className="text-2xl font-heading font-bold text-slate-900">{progress?.flagged || 0}</p>
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Flagged</p>
+              <p className="text-2xl font-heading font-bold text-slate-900">{progress?.rejected || 0}</p>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Rejected</p>
             </CardContent>
           </Card>
         </div>
