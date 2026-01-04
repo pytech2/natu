@@ -610,9 +610,6 @@ export default function Submissions() {
                       <span className="text-xs font-normal bg-emerald-200 text-emerald-700 px-2 py-1 rounded">Editable</span>
                     </CardTitle>
                   </CardHeader>
-                      SURVEY SUBMISSION DETAILS
-                    </CardTitle>
-                  </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
