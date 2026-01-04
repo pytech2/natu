@@ -1,53 +1,118 @@
-import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "./components/ui/sonner";
+import Login from "./pages/Login";
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminEmployees from "./pages/admin/Employees";
+import AdminProperties from "./pages/admin/Properties";
+import AdminUpload from "./pages/admin/Upload";
+import AdminSubmissions from "./pages/admin/Submissions";
+import AdminExport from "./pages/admin/Export";
+import EmployeeDashboard from "./pages/employee/Dashboard";
+import EmployeeProperties from "./pages/employee/Properties";
+import EmployeeSurvey from "./pages/employee/Survey";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+function ProtectedRoute({ children, allowedRoles }) {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-pulse-slow text-slate-600">Loading...</div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/employee'} replace />;
+  }
+  
+  return children;
+}
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
+function AppRoutes() {
+  const { user } = useAuth();
+  
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin" element={
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/employees" element={
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <AdminEmployees />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/properties" element={
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <AdminProperties />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/upload" element={
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <AdminUpload />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/submissions" element={
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <AdminSubmissions />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/export" element={
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <AdminExport />
+        </ProtectedRoute>
+      } />
+      
+      {/* Employee Routes */}
+      <Route path="/employee" element={
+        <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+          <EmployeeDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/employee/properties" element={
+        <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+          <EmployeeProperties />
+        </ProtectedRoute>
+      } />
+      <Route path="/employee/survey/:propertyId" element={
+        <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+          <EmployeeSurvey />
+        </ProtectedRoute>
+      } />
+      
+      {/* Default redirect */}
+      <Route path="/" element={
+        user ? (
+          <Navigate to={user.role === 'ADMIN' ? '/admin' : '/employee'} replace />
+        ) : (
+          <Navigate to="/login" replace />
+        )
+      } />
+      
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
-};
+}
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+        <Toaster position="top-right" richColors />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
