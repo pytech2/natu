@@ -35,6 +35,9 @@ function ProtectedRoute({ children, allowedRoles }) {
   return children;
 }
 
+// All non-admin roles that can access employee/surveyor routes
+const SURVEYOR_ROLES = ['EMPLOYEE', 'SURVEYOR', 'SUPERVISOR', 'MC_OFFICER'];
+
 function AppRoutes() {
   const { user } = useAuth();
   
