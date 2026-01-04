@@ -23,7 +23,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Download, FileSpreadsheet, Archive, Trash2, FolderOpen } from 'lucide-react';
+import { Download, FileSpreadsheet, Archive, Trash2, FolderOpen, FileText, MapPin, Clock } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -33,6 +33,7 @@ export default function Export() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   
   const [filters, setFilters] = useState({
     batch_id: '',
@@ -85,11 +86,44 @@ export default function Export() {
       link.click();
       link.remove();
 
-      toast.success('Export downloaded successfully');
+      toast.success('Excel export downloaded successfully');
     } catch (error) {
       toast.error('Export failed');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    toast.info('Generating PDF with photos... This may take a moment.');
+    
+    try {
+      const params = new URLSearchParams();
+      if (filters.batch_id) params.append('batch_id', filters.batch_id);
+      if (filters.employee_id) params.append('employee_id', filters.employee_id);
+      if (filters.status) params.append('status', filters.status);
+
+      const response = await axios.get(`${API_URL}/admin/export-pdf?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob',
+        timeout: 120000 // 2 minute timeout for large PDFs
+      });
+
+      // Download file
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `property_survey_report_${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      toast.success('PDF report downloaded successfully');
+    } catch (error) {
+      toast.error('PDF export failed');
+    } finally {
+      setExportingPdf(false);
     }
   };
 
@@ -125,10 +159,10 @@ export default function Export() {
           <CardHeader>
             <CardTitle className="font-heading flex items-center gap-2">
               <Download className="w-5 h-5" />
-              Export to Excel
+              Export Survey Data
             </CardTitle>
             <CardDescription>
-              Download property and survey data as an Excel file
+              Download property and survey data as Excel or PDF with photos
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -188,15 +222,77 @@ export default function Export() {
               </div>
             </div>
 
-            <Button
-              onClick={handleExport}
-              disabled={exporting}
-              data-testid="export-btn"
-              className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700"
-            >
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
-              {exporting ? 'Generating Export...' : 'Download Excel Export'}
-            </Button>
+            {/* Export Buttons */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+              {/* Excel Export */}
+              <Card className="border-emerald-200 bg-emerald-50">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-emerald-900">Excel Export</h4>
+                      <p className="text-sm text-emerald-700">
+                        Download all data as spreadsheet
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleExport}
+                    disabled={exporting}
+                    data-testid="export-excel-btn"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    {exporting ? 'Generating...' : 'Download Excel'}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* PDF Export */}
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-blue-900">PDF Report</h4>
+                      <p className="text-sm text-blue-700">
+                        With photos, GPS & timestamps printed
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleExportPdf}
+                    disabled={exportingPdf}
+                    data-testid="export-pdf-btn"
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    {exportingPdf ? 'Generating PDF...' : 'Download PDF'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* PDF Info */}
+            <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg">
+              <div className="flex gap-2 text-slate-500">
+                <MapPin className="w-4 h-4" />
+                <Clock className="w-4 h-4" />
+              </div>
+              <div className="text-sm text-slate-600">
+                <p className="font-medium text-slate-700">PDF includes:</p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>Property details and survey information</li>
+                  <li>Photos with GPS coordinates & timestamp watermark</li>
+                  <li>Property holder digital signature</li>
+                  <li>Google Maps location reference</li>
+                </ul>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
