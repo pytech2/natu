@@ -656,6 +656,301 @@ async def export_data(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+# Helper function to add watermark to photo
+def add_watermark_to_photo(photo_path, latitude, longitude, submitted_at):
+    """Add GPS coordinates, date and time watermark to photo"""
+    try:
+        img = PILImage.open(photo_path)
+        draw = ImageDraw.Draw(img)
+        
+        # Parse submission date
+        if isinstance(submitted_at, str):
+            try:
+                dt = datetime.fromisoformat(submitted_at.replace('Z', '+00:00'))
+            except:
+                dt = datetime.now()
+        else:
+            dt = submitted_at or datetime.now()
+        
+        date_str = dt.strftime("%d/%m/%Y")
+        time_str = dt.strftime("%I:%M:%S %p")
+        
+        # Watermark text
+        watermark_lines = [
+            f"Date: {date_str}",
+            f"Time: {time_str}",
+            f"Lat: {latitude:.6f}" if latitude else "Lat: N/A",
+            f"Long: {longitude:.6f}" if longitude else "Long: N/A"
+        ]
+        
+        # Calculate font size based on image
+        font_size = max(16, min(img.width, img.height) // 25)
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
+        
+        padding = font_size // 2
+        line_height = font_size + 5
+        
+        # Calculate box dimensions
+        max_text_width = max([draw.textlength(line, font=font) for line in watermark_lines])
+        box_width = int(max_text_width + padding * 2)
+        box_height = line_height * len(watermark_lines) + padding * 2
+        
+        # Position at bottom-left
+        box_x = padding
+        box_y = img.height - box_height - padding
+        
+        # Draw semi-transparent background
+        overlay = PILImage.new('RGBA', img.size, (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.rectangle(
+            [box_x, box_y, box_x + box_width, box_y + box_height],
+            fill=(0, 0, 0, 180)
+        )
+        
+        # Convert to RGBA if needed
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        
+        img = PILImage.alpha_composite(img, overlay)
+        draw = ImageDraw.Draw(img)
+        
+        # Draw text
+        for i, line in enumerate(watermark_lines):
+            draw.text(
+                (box_x + padding, box_y + padding + i * line_height),
+                line,
+                font=font,
+                fill=(255, 255, 255, 255)
+            )
+        
+        # Convert back to RGB for saving
+        img = img.convert('RGB')
+        
+        # Save to temp file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
+        img.save(temp_file.name, 'JPEG', quality=90)
+        return temp_file.name
+    except Exception as e:
+        logger.error(f"Error adding watermark: {e}")
+        return photo_path
+
+@api_router.get("/admin/export-pdf")
+async def export_pdf(
+    batch_id: Optional[str] = None,
+    employee_id: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {"status": "Completed"}  # Only export completed surveys
+    if batch_id:
+        query["batch_id"] = batch_id
+    if employee_id:
+        query["assigned_employee_id"] = employee_id
+    if status:
+        query["status"] = status
+    
+    properties = await db.properties.find(query, {"_id": 0}).to_list(10000)
+    
+    # Create PDF
+    pdf_path = UPLOAD_DIR / f"survey_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    doc = SimpleDocTemplate(
+        str(pdf_path),
+        pagesize=A4,
+        rightMargin=20*mm,
+        leftMargin=20*mm,
+        topMargin=20*mm,
+        bottomMargin=20*mm
+    )
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=20,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#0f172a')
+    )
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        spaceAfter=10,
+        textColor=colors.HexColor('#1e40af')
+    )
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontSize=10,
+        spaceAfter=5
+    )
+    
+    story = []
+    
+    # Title
+    story.append(Paragraph("NSTU Property Tax Survey Report", title_style))
+    story.append(Paragraph(f"Generated on: {datetime.now().strftime('%d/%m/%Y %I:%M %p')}", normal_style))
+    story.append(Spacer(1, 20))
+    
+    # Process each property with submission
+    for prop in properties:
+        submission = await db.submissions.find_one(
+            {"property_record_id": prop["id"]},
+            {"_id": 0}
+        )
+        
+        if not submission:
+            continue
+        
+        # Property header
+        story.append(Paragraph(f"Property ID: {prop.get('property_id', 'N/A')}", heading_style))
+        
+        # Property details table
+        prop_data = [
+            ["Owner Name", prop.get("owner_name", "N/A")],
+            ["Mobile", prop.get("mobile", "N/A")],
+            ["Address", prop.get("plot_address", "N/A")],
+            ["Colony", prop.get("colony_name", "N/A")],
+            ["Area/Zone", prop.get("area", "N/A")],
+        ]
+        
+        prop_table = Table(prop_data, colWidths=[80*mm, 90*mm])
+        prop_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f1f5f9')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#0f172a')),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('PADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(prop_table)
+        story.append(Spacer(1, 10))
+        
+        # Survey details
+        story.append(Paragraph("Survey Information", heading_style))
+        survey_data = [
+            ["Respondent Name", submission.get("respondent_name", "N/A")],
+            ["Phone", submission.get("respondent_phone", "N/A")],
+            ["House Number", submission.get("house_number", "N/A")],
+            ["Tax Number", submission.get("tax_number", "N/A")],
+            ["Submitted By", submission.get("employee_name", "N/A")],
+            ["Submitted At", submission.get("submitted_at", "N/A")],
+            ["GPS Latitude", str(submission.get("latitude", "N/A"))],
+            ["GPS Longitude", str(submission.get("longitude", "N/A"))],
+        ]
+        
+        if submission.get("remarks"):
+            survey_data.append(["Remarks", submission.get("remarks")])
+        
+        survey_table = Table(survey_data, colWidths=[80*mm, 90*mm])
+        survey_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f1f5f9')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#0f172a')),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('PADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(survey_table)
+        story.append(Spacer(1, 15))
+        
+        # Photos with watermark
+        photos = submission.get("photos", [])
+        if photos:
+            story.append(Paragraph("Photo Evidence (with GPS & Timestamp)", heading_style))
+            
+            photo_elements = []
+            for photo in photos:
+                photo_url = photo.get("file_url", "")
+                photo_type = photo.get("photo_type", "PHOTO")
+                
+                # Get actual file path
+                if photo_url.startswith("/api/uploads/"):
+                    filename = photo_url.replace("/api/uploads/", "")
+                    photo_path = UPLOAD_DIR / filename
+                    
+                    if photo_path.exists():
+                        # Add watermark to photo
+                        watermarked_path = add_watermark_to_photo(
+                            str(photo_path),
+                            submission.get("latitude"),
+                            submission.get("longitude"),
+                            submission.get("submitted_at")
+                        )
+                        
+                        try:
+                            img = RLImage(watermarked_path, width=80*mm, height=60*mm)
+                            photo_elements.append([
+                                img,
+                                Paragraph(f"<b>{photo_type}</b>", normal_style)
+                            ])
+                        except Exception as e:
+                            logger.error(f"Error adding photo to PDF: {e}")
+            
+            if photo_elements:
+                # Create photo grid (2 per row)
+                photo_rows = []
+                for i in range(0, len(photo_elements), 2):
+                    row = photo_elements[i:i+2]
+                    if len(row) == 1:
+                        row.append(["", ""])
+                    photo_rows.append([row[0][0], row[1][0] if row[1][0] else ""])
+                    photo_rows.append([row[0][1], row[1][1] if row[1][1] else ""])
+                
+                if photo_rows:
+                    photo_table = Table(photo_rows, colWidths=[85*mm, 85*mm])
+                    photo_table.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('PADDING', (0, 0), (-1, -1), 5),
+                    ]))
+                    story.append(photo_table)
+        
+        story.append(Spacer(1, 10))
+        
+        # Signature
+        signature_url = submission.get("signature_url")
+        if signature_url:
+            story.append(Paragraph("Property Holder Signature", heading_style))
+            
+            if signature_url.startswith("/api/uploads/"):
+                sig_filename = signature_url.replace("/api/uploads/", "")
+                sig_path = UPLOAD_DIR / sig_filename
+                
+                if sig_path.exists():
+                    try:
+                        sig_img = RLImage(str(sig_path), width=60*mm, height=30*mm)
+                        sig_table = Table([[sig_img]], colWidths=[170*mm])
+                        sig_table.setStyle(TableStyle([
+                            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
+                            ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('PADDING', (0, 0), (-1, -1), 10),
+                        ]))
+                        story.append(sig_table)
+                    except Exception as e:
+                        logger.error(f"Error adding signature to PDF: {e}")
+        
+        # Page break between properties
+        story.append(PageBreak())
+    
+    # Build PDF
+    doc.build(story)
+    
+    return FileResponse(
+        path=str(pdf_path),
+        filename=f"property_survey_report_{datetime.now().strftime('%Y%m%d')}.pdf",
+        media_type="application/pdf"
+    )
+
 # ============== EMPLOYEE ROUTES ==============
 
 @api_router.get("/employee/properties")
