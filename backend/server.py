@@ -571,6 +571,17 @@ async def list_submissions(
     total = await db.submissions.count_documents(query)
     submissions = await db.submissions.find(query, {"_id": 0}).sort("submitted_at", -1).skip(skip).limit(limit).to_list(limit)
     
+    # Enrich with property details
+    for sub in submissions:
+        if sub.get("property_record_id"):
+            prop = await db.properties.find_one({"id": sub["property_record_id"]}, {"_id": 0})
+            if prop:
+                sub["property_owner_name"] = prop.get("owner_name", "")
+                sub["property_mobile"] = prop.get("mobile", "")
+                sub["property_address"] = prop.get("address", "")
+                sub["property_amount"] = prop.get("amount", "")
+                sub["property_ward"] = prop.get("ward", "")
+    
     return {
         "submissions": submissions,
         "total": total,
