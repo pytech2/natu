@@ -486,8 +486,7 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
     }
 
 @api_router.get("/admin/employee-progress", response_model=List[EmployeeProgress])
-async def get_employee_progress(authorization: str = None):
-    current_user = await get_current_user(authorization)
+async def get_employee_progress(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
