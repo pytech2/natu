@@ -5,6 +5,13 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -26,7 +33,11 @@ import {
   Pen,
   RotateCcw,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Users,
+  Hash,
+  CreditCard,
+  Building
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -177,6 +188,21 @@ const addWatermarkToImage = (file, latitude, longitude) => {
   });
 };
 
+// Relation options
+const RELATION_OPTIONS = [
+  'Self',
+  'Spouse',
+  'Son',
+  'Daughter',
+  'Father',
+  'Mother',
+  'Brother',
+  'Sister',
+  'Tenant',
+  'Caretaker',
+  'Other'
+];
+
 export default function Survey() {
   const { propertyId } = useParams();
   const navigate = useNavigate();
@@ -192,12 +218,16 @@ export default function Survey() {
   const [gpsStatus, setGpsStatus] = useState('idle');
   const [location, setLocation] = useState({ latitude: null, longitude: null });
 
-  // Form State
+  // Form State - NEW FIELDS as per user requirements
   const [formData, setFormData] = useState({
-    respondent_name: '',
-    respondent_phone: '',
-    house_number: '',
-    tax_number: '',
+    new_owner_name: '',
+    new_mobile: '',
+    receiver_name: '',
+    relation: '',
+    old_property_id: '',
+    family_id: '',
+    aadhar_number: '',
+    ward_number: '',
     remarks: ''
   });
 
@@ -230,12 +260,30 @@ export default function Survey() {
       setProperty(response.data.property);
       setSubmission(response.data.submission);
 
-      setFormData(prev => ({
-        ...prev,
-        respondent_name: response.data.property.owner_name || '',
-        respondent_phone: response.data.property.mobile || '',
-        tax_number: response.data.property.property_id || ''
-      }));
+      // Pre-fill form with existing data if available (for re-submission after rejection)
+      if (response.data.submission) {
+        const sub = response.data.submission;
+        setFormData({
+          new_owner_name: sub.new_owner_name || response.data.property.owner_name || '',
+          new_mobile: sub.new_mobile || response.data.property.mobile || '',
+          receiver_name: sub.receiver_name || '',
+          relation: sub.relation || '',
+          old_property_id: sub.old_property_id || response.data.property.property_id || '',
+          family_id: sub.family_id || '',
+          aadhar_number: sub.aadhar_number || '',
+          ward_number: sub.ward_number || response.data.property.ward || '',
+          remarks: sub.remarks || ''
+        });
+      } else {
+        // Pre-fill with property data for new submissions
+        setFormData(prev => ({
+          ...prev,
+          new_owner_name: response.data.property.owner_name || '',
+          new_mobile: response.data.property.mobile || '',
+          old_property_id: response.data.property.property_id || '',
+          ward_number: response.data.property.ward || ''
+        }));
+      }
     } catch (error) {
       toast.error('Failed to load property');
       navigate('/employee/properties');
@@ -378,8 +426,14 @@ export default function Survey() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.respondent_name || !formData.respondent_phone) {
-      toast.error('Please fill in respondent name and phone');
+    // Validate required fields
+    if (!formData.new_owner_name || !formData.new_mobile) {
+      toast.error('Please fill in new owner name and mobile number');
+      return;
+    }
+
+    if (!formData.receiver_name || !formData.relation) {
+      toast.error('Please fill in receiver name and relation');
       return;
     }
 
@@ -402,10 +456,15 @@ export default function Survey() {
 
     try {
       const formDataObj = new FormData();
-      formDataObj.append('respondent_name', formData.respondent_name);
-      formDataObj.append('respondent_phone', formData.respondent_phone);
-      formDataObj.append('house_number', formData.house_number || '');
-      formDataObj.append('tax_number', formData.tax_number || '');
+      // New survey fields
+      formDataObj.append('new_owner_name', formData.new_owner_name);
+      formDataObj.append('new_mobile', formData.new_mobile);
+      formDataObj.append('receiver_name', formData.receiver_name);
+      formDataObj.append('relation', formData.relation);
+      formDataObj.append('old_property_id', formData.old_property_id || '');
+      formDataObj.append('family_id', formData.family_id || '');
+      formDataObj.append('aadhar_number', formData.aadhar_number || '');
+      formDataObj.append('ward_number', formData.ward_number || '');
       formDataObj.append('remarks', formData.remarks || '');
       formDataObj.append('latitude', location.latitude);
       formDataObj.append('longitude', location.longitude);
