@@ -204,16 +204,14 @@ async def login(data: UserLogin):
     }
 
 @api_router.get("/auth/me")
-async def get_me(authorization: str = None):
-    from fastapi import Header
-    user = await get_current_user(authorization)
+async def get_me(current_user: dict = Depends(get_current_user)):
     return {
-        "id": user["id"],
-        "username": user["username"],
-        "name": user["name"],
-        "role": user["role"],
-        "assigned_area": user.get("assigned_area"),
-        "created_at": user["created_at"]
+        "id": current_user["id"],
+        "username": current_user["username"],
+        "name": current_user["name"],
+        "role": current_user["role"],
+        "assigned_area": current_user.get("assigned_area"),
+        "created_at": current_user["created_at"]
     }
 
 # ============== ADMIN USER ROUTES ==============
