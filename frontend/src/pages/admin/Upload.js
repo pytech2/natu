@@ -73,17 +73,13 @@ export default function UploadPage() {
       'property_id',
       'owner_name',
       'mobile',
-      'plot_address',
-      'colony_name',
-      'total_area',
-      'category',
-      'latitude',
-      'longitude',
-      'area'
+      'address',
+      'amount',
+      'ward'
     ];
     const csvContent = headers.join(',') + '\n' +
-      'PROP001,राम कुमार,9876543210,Plot 101 Sector 5,Green Colony,100 SqYard,Residential,28.6139,77.2090,Zone A\n' +
-      'PROP002,Shyam Singh,9876543211,Plot 102 Sector 5,Green Colony,150 SqYard,Commercial,28.6140,77.2091,Zone A';
+      'PROP001,राम कुमार,9876543210,Plot 101 Sector 5 Green Colony,5000,Ward 1\n' +
+      'PROP002,Shyam Singh,9876543211,Plot 102 Sector 5 Green Colony,7500,Ward 1';
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
