@@ -708,6 +708,7 @@ async def submit_survey(
     longitude: float = Form(...),
     house_photo: UploadFile = File(...),
     gate_photo: UploadFile = File(...),
+    signature: UploadFile = File(...),
     extra_photos: List[UploadFile] = File(default=[]),
     authorization: str = Form(...)
 ):
@@ -741,6 +742,14 @@ async def submit_survey(
         await f.write(content)
     photos.append({"photo_type": "GATE", "file_url": f"/api/uploads/{gate_filename}"})
     
+    # Signature
+    signature_filename = f"{property_id}_signature_{timestamp}.png"
+    signature_path = UPLOAD_DIR / signature_filename
+    async with aiofiles.open(signature_path, 'wb') as f:
+        content = await signature.read()
+        await f.write(content)
+    signature_url = f"/api/uploads/{signature_filename}"
+    
     # Extra photos
     for idx, photo in enumerate(extra_photos):
         if photo.filename:
@@ -767,7 +776,8 @@ async def submit_survey(
         "latitude": latitude,
         "longitude": longitude,
         "submitted_at": datetime.now(timezone.utc).isoformat(),
-        "photos": photos
+        "photos": photos,
+        "signature_url": signature_url
     }
     
     # Check if submission already exists
