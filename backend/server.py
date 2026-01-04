@@ -217,9 +217,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 # ============== ADMIN USER ROUTES ==============
 
 @api_router.post("/admin/users", response_model=UserResponse)
-async def create_user(data: UserCreate, authorization: str = None):
-    from fastapi import Header
-    current_user = await get_current_user(authorization)
+async def create_user(data: UserCreate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
