@@ -253,14 +253,15 @@ class TestSurveyorLogin:
         data = response.json()
         
         # Verify structure for surveyor dashboard
+        # Note: completed = Approved, in_progress = In Review
         assert "total_assigned" in data
-        assert "completed" in data
+        assert "completed" in data  # This is "Approved" in UI
         assert "pending" in data
-        assert "approved" in data
-        assert "in_review" in data
+        assert "in_progress" in data  # This is "In Review" in UI
         assert "rejected" in data
-        # NEW: Today's progress
+        # NEW: Today's progress and Total Complete Data
         assert "today_completed" in data, "Missing today_completed for surveyor"
+        assert "total_completed" in data, "Missing total_completed for surveyor"
 
 
 class TestSubmissionsApproveReject:
