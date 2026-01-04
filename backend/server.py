@@ -10,7 +10,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import bcrypt
 import jwt
 from bson import ObjectId
@@ -53,11 +53,12 @@ api_router = APIRouter(prefix="/api")
 
 # ============== MODELS ==============
 
+# Role options: ADMIN, SURVEYOR, SUPERVISOR, MC_OFFICER
 class UserCreate(BaseModel):
     username: str
     password: str
     name: str
-    role: str = "EMPLOYEE"  # ADMIN or EMPLOYEE
+    role: str = "SURVEYOR"  # ADMIN, SURVEYOR, SUPERVISOR, MC_OFFICER
     assigned_area: Optional[str] = None
 
 class UserLogin(BaseModel):
@@ -91,16 +92,12 @@ class PropertyResponse(BaseModel):
     id: str
     batch_id: str
     property_id: str
-    old_property_id: Optional[str] = None
     owner_name: str
     mobile: str
-    plot_address: str
-    colony_name: Optional[str] = None
+    address: str
     total_area: Optional[str] = None
-    category: Optional[str] = None
-    latitude: Optional[str] = None
-    longitude: Optional[str] = None
-    area: Optional[str] = None
+    amount: Optional[str] = None
+    ward: Optional[str] = None
     assigned_employee_id: Optional[str] = None
     assigned_employee_name: Optional[str] = None
     status: str
@@ -114,46 +111,31 @@ class BulkAssignmentRequest(BaseModel):
     area: str
     employee_id: str
 
-class SurveySubmission(BaseModel):
-    respondent_name: str
-    respondent_phone: str
-    house_number: Optional[str] = None
-    tax_number: Optional[str] = None
+class SubmissionApproval(BaseModel):
+    submission_id: str
+    action: str  # APPROVE or REJECT
     remarks: Optional[str] = None
-    latitude: float
-    longitude: float
-
-class SubmissionResponse(BaseModel):
-    id: str
-    property_record_id: str
-    property_id: str
-    employee_id: str
-    employee_name: str
-    respondent_name: str
-    respondent_phone: str
-    house_number: Optional[str] = None
-    tax_number: Optional[str] = None
-    remarks: Optional[str] = None
-    latitude: float
-    longitude: float
-    submitted_at: str
-    photos: List[dict]
 
 class DashboardStats(BaseModel):
     total_properties: int
     completed: int
     pending: int
     in_progress: int
-    flagged: int
+    rejected: int
     employees: int
     batches: int
+    today_completed: int
+    today_wards: int
 
 class EmployeeProgress(BaseModel):
     employee_id: str
     employee_name: str
+    role: str
     total_assigned: int
     completed: int
     pending: int
+    today_completed: int
+    overall_completed: int
 
 # ============== HELPER FUNCTIONS ==============
 
@@ -187,6 +169,11 @@ async def get_current_user(authorization: str = Header(None)):
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+def get_today_start():
+    """Get the start of today in UTC"""
+    now = datetime.now(timezone.utc)
+    return now.replace(hour=0, minute=0, second=0, microsecond=0)
 
 # ============== AUTH ROUTES ==============
 
@@ -285,7 +272,7 @@ async def upload_batch(
     content = await file.read()
     content_str = content.decode('utf-8')
     
-    # Parse CSV
+    # Parse CSV - New fields: property_id, owner_name, mobile, address, total_area, amount, ward
     reader = csv.DictReader(io.StringIO(content_str))
     properties = []
     
@@ -293,16 +280,12 @@ async def upload_batch(
         prop = {
             "id": str(uuid.uuid4()),
             "property_id": row.get("property_id") or row.get("Property ID") or row.get("PropertyID") or str(uuid.uuid4())[:8].upper(),
-            "old_property_id": row.get("old_property_id") or row.get("Old Property ID") or None,
             "owner_name": row.get("owner_name") or row.get("Owner Name") or row.get("OwnerName") or "Unknown",
             "mobile": row.get("mobile") or row.get("Mobile") or row.get("Mobile No") or "",
-            "plot_address": row.get("plot_address") or row.get("Plot Address") or row.get("Address") or "",
-            "colony_name": row.get("colony_name") or row.get("Colony Name") or row.get("Colony") or "",
+            "address": row.get("address") or row.get("Address") or row.get("plot_address") or "",
             "total_area": row.get("total_area") or row.get("Total Area") or "",
-            "category": row.get("category") or row.get("Category") or "Residential",
-            "latitude": row.get("latitude") or row.get("Latitude") or "",
-            "longitude": row.get("longitude") or row.get("Longitude") or "",
-            "area": row.get("area") or row.get("Area") or row.get("Zone") or "",
+            "amount": row.get("amount") or row.get("Amount") or row.get("category") or "",
+            "ward": row.get("ward") or row.get("Ward") or row.get("area") or "",
             "assigned_employee_id": None,
             "assigned_employee_name": None,
             "status": "Pending",
@@ -361,11 +344,8 @@ async def delete_batch(batch_id: str, current_user: dict = Depends(get_current_u
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Delete all properties in batch
     await db.properties.delete_many({"batch_id": batch_id})
-    # Delete submissions
     await db.submissions.delete_many({"batch_id": batch_id})
-    # Delete batch
     await db.batches.delete_one({"id": batch_id})
     
     return {"message": "Batch and all related data deleted"}
@@ -375,7 +355,7 @@ async def delete_batch(batch_id: str, current_user: dict = Depends(get_current_u
 @api_router.get("/admin/properties")
 async def list_properties(
     batch_id: Optional[str] = None,
-    area: Optional[str] = None,
+    ward: Optional[str] = None,
     status: Optional[str] = None,
     employee_id: Optional[str] = None,
     search: Optional[str] = None,
@@ -387,13 +367,13 @@ async def list_properties(
         raise HTTPException(status_code=403, detail="Admin access required")
     
     query = {}
-    if batch_id:
+    if batch_id and batch_id.strip():
         query["batch_id"] = batch_id
-    if area:
-        query["area"] = area
-    if status:
+    if ward and ward.strip():
+        query["ward"] = ward
+    if status and status.strip():
         query["status"] = status
-    if employee_id:
+    if employee_id and employee_id.strip():
         query["assigned_employee_id"] = employee_id
     if search:
         query["$or"] = [
@@ -433,7 +413,7 @@ async def assign_properties(data: AssignmentRequest, current_user: dict = Depend
     return {"message": f"Assigned {result.modified_count} properties to {employee['name']}"}
 
 @api_router.post("/admin/assign-bulk")
-async def bulk_assign_by_area(data: BulkAssignmentRequest, current_user: dict = Depends(get_current_user)):
+async def bulk_assign_by_ward(data: BulkAssignmentRequest, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
@@ -442,29 +422,28 @@ async def bulk_assign_by_area(data: BulkAssignmentRequest, current_user: dict = 
         raise HTTPException(status_code=404, detail="Employee not found")
     
     result = await db.properties.update_many(
-        {"area": data.area, "assigned_employee_id": None},
+        {"ward": data.area, "assigned_employee_id": None},
         {"$set": {
             "assigned_employee_id": data.employee_id,
             "assigned_employee_name": employee["name"]
         }}
     )
     
-    # Update employee's assigned area
     await db.users.update_one(
         {"id": data.employee_id},
         {"$set": {"assigned_area": data.area}}
     )
     
-    return {"message": f"Assigned {result.modified_count} properties in area {data.area} to {employee['name']}"}
+    return {"message": f"Assigned {result.modified_count} properties in ward {data.area} to {employee['name']}"}
 
-@api_router.get("/admin/areas")
-async def list_areas(current_user: dict = Depends(get_current_user)):
+@api_router.get("/admin/wards")
+async def list_wards(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    areas = await db.properties.distinct("area")
-    areas = [a for a in areas if a]  # Filter out empty values
-    return {"areas": areas}
+    wards = await db.properties.distinct("ward")
+    wards = [w for w in wards if w]
+    return {"wards": wards}
 
 # ============== DASHBOARD ROUTES ==============
 
@@ -473,30 +452,55 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
+    today_start = get_today_start().isoformat()
+    
     total = await db.properties.count_documents({})
     completed = await db.properties.count_documents({"status": "Completed"})
     pending = await db.properties.count_documents({"status": "Pending"})
     in_progress = await db.properties.count_documents({"status": "In Progress"})
-    flagged = await db.properties.count_documents({"status": "Flagged"})
-    employees = await db.users.count_documents({"role": "EMPLOYEE"})
+    rejected = await db.properties.count_documents({"status": "Rejected"})
+    employees = await db.users.count_documents({"role": {"$ne": "ADMIN"}})
     batches = await db.batches.count_documents({"status": "ACTIVE"})
+    
+    # Today's completed
+    today_completed = await db.submissions.count_documents({
+        "submitted_at": {"$gte": today_start},
+        "status": {"$ne": "Rejected"}
+    })
+    
+    # Today's unique wards
+    today_submissions = await db.submissions.find(
+        {"submitted_at": {"$gte": today_start}},
+        {"property_record_id": 1, "_id": 0}
+    ).to_list(10000)
+    
+    today_prop_ids = [s["property_record_id"] for s in today_submissions]
+    if today_prop_ids:
+        today_wards = await db.properties.distinct("ward", {"id": {"$in": today_prop_ids}})
+        today_wards_count = len([w for w in today_wards if w])
+    else:
+        today_wards_count = 0
     
     return {
         "total_properties": total,
         "completed": completed,
         "pending": pending,
         "in_progress": in_progress,
-        "flagged": flagged,
+        "rejected": rejected,
         "employees": employees,
-        "batches": batches
+        "batches": batches,
+        "today_completed": today_completed,
+        "today_wards": today_wards_count
     }
 
-@api_router.get("/admin/employee-progress", response_model=List[EmployeeProgress])
+@api_router.get("/admin/employee-progress")
 async def get_employee_progress(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    employees = await db.users.find({"role": "EMPLOYEE"}, {"_id": 0}).to_list(100)
+    today_start = get_today_start().isoformat()
+    
+    employees = await db.users.find({"role": {"$ne": "ADMIN"}}, {"_id": 0}).to_list(100)
     progress = []
     
     for emp in employees:
@@ -505,12 +509,29 @@ async def get_employee_progress(current_user: dict = Depends(get_current_user)):
             "assigned_employee_id": emp["id"],
             "status": "Completed"
         })
+        
+        # Today's completed for this employee
+        today_completed = await db.submissions.count_documents({
+            "employee_id": emp["id"],
+            "submitted_at": {"$gte": today_start},
+            "status": {"$ne": "Rejected"}
+        })
+        
+        # Overall completed (all time)
+        overall_completed = await db.submissions.count_documents({
+            "employee_id": emp["id"],
+            "status": {"$ne": "Rejected"}
+        })
+        
         progress.append({
             "employee_id": emp["id"],
             "employee_name": emp["name"],
+            "role": emp["role"],
             "total_assigned": total,
             "completed": completed,
-            "pending": total - completed
+            "pending": total - completed,
+            "today_completed": today_completed,
+            "overall_completed": overall_completed
         })
     
     return progress
@@ -521,6 +542,7 @@ async def get_employee_progress(current_user: dict = Depends(get_current_user)):
 async def list_submissions(
     batch_id: Optional[str] = None,
     employee_id: Optional[str] = None,
+    status: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     page: int = 1,
@@ -531,10 +553,12 @@ async def list_submissions(
         raise HTTPException(status_code=403, detail="Admin access required")
     
     query = {}
-    if batch_id:
+    if batch_id and batch_id.strip():
         query["batch_id"] = batch_id
-    if employee_id:
+    if employee_id and employee_id.strip():
         query["employee_id"] = employee_id
+    if status and status.strip():
+        query["status"] = status
     if date_from:
         query["submitted_at"] = {"$gte": date_from}
     if date_to:
@@ -545,7 +569,7 @@ async def list_submissions(
     
     skip = (page - 1) * limit
     total = await db.submissions.count_documents(query)
-    submissions = await db.submissions.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    submissions = await db.submissions.find(query, {"_id": 0}).sort("submitted_at", -1).skip(skip).limit(limit).to_list(limit)
     
     return {
         "submissions": submissions,
@@ -553,6 +577,81 @@ async def list_submissions(
         "page": page,
         "pages": (total + limit - 1) // limit
     }
+
+@api_router.post("/admin/submissions/approve")
+async def approve_reject_submission(data: SubmissionApproval, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    submission = await db.submissions.find_one({"id": data.submission_id}, {"_id": 0})
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    if data.action == "REJECT" and not data.remarks:
+        raise HTTPException(status_code=400, detail="Remarks are required for rejection")
+    
+    new_status = "Approved" if data.action == "APPROVE" else "Rejected"
+    
+    update_data = {
+        "status": new_status,
+        "reviewed_by": current_user["id"],
+        "reviewed_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if data.remarks:
+        update_data["review_remarks"] = data.remarks
+    
+    await db.submissions.update_one(
+        {"id": data.submission_id},
+        {"$set": update_data}
+    )
+    
+    # Update property status
+    prop_status = "Completed" if data.action == "APPROVE" else "Rejected"
+    await db.properties.update_one(
+        {"id": submission["property_record_id"]},
+        {"$set": {"status": prop_status}}
+    )
+    
+    return {"message": f"Submission {new_status.lower()}"}
+
+@api_router.put("/admin/submissions/{submission_id}")
+async def edit_submission(
+    submission_id: str,
+    new_owner_name: str = Form(None),
+    new_mobile: str = Form(None),
+    receiver_name: str = Form(None),
+    relation: str = Form(None),
+    old_property_id: str = Form(None),
+    family_id: str = Form(None),
+    aadhar_number: str = Form(None),
+    ward_number: str = Form(None),
+    remarks: str = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    update_data = {}
+    if new_owner_name: update_data["new_owner_name"] = new_owner_name
+    if new_mobile: update_data["new_mobile"] = new_mobile
+    if receiver_name: update_data["receiver_name"] = receiver_name
+    if relation: update_data["relation"] = relation
+    if old_property_id: update_data["old_property_id"] = old_property_id
+    if family_id: update_data["family_id"] = family_id
+    if aadhar_number: update_data["aadhar_number"] = aadhar_number
+    if ward_number: update_data["ward_number"] = ward_number
+    if remarks: update_data["remarks"] = remarks
+    
+    update_data["edited_by"] = current_user["id"]
+    update_data["edited_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.submissions.update_one(
+        {"id": submission_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Submission updated"}
 
 # ============== EXPORT ROUTES ==============
 
@@ -567,31 +666,28 @@ async def export_data(
         raise HTTPException(status_code=403, detail="Admin access required")
     
     query = {}
-    if batch_id:
+    if batch_id and batch_id.strip():
         query["batch_id"] = batch_id
-    if employee_id:
+    if employee_id and employee_id.strip():
         query["assigned_employee_id"] = employee_id
-    if status:
+    if status and status.strip():
         query["status"] = status
     
     properties = await db.properties.find(query, {"_id": 0}).to_list(100000)
     
-    # Create workbook
     wb = Workbook()
     ws = wb.active
     ws.title = "Property Survey Data"
     
-    # Header style
     header_fill = PatternFill(start_color="0F172A", end_color="0F172A", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True)
     
-    # Headers
     headers = [
-        "Property ID", "Owner Name", "Mobile", "Plot Address", "Colony", 
-        "Total Area", "Category", "Area/Zone", "Assigned Employee", "Status",
-        "Survey - Respondent Name", "Survey - Phone", "Survey - House No",
-        "Survey - Tax No", "Survey - Remarks", "GPS Latitude", "GPS Longitude",
-        "Submission Date", "Photo URLs", "Signature URL"
+        "Property ID", "Owner Name", "Mobile", "Address", "Total Area", "Amount", "Ward",
+        "Assigned Employee", "Status", "New Owner Name", "New Mobile", "Receiver Name",
+        "Relation", "Old Property ID", "Family ID", "Aadhar Number", "Ward Number",
+        "GPS Latitude", "GPS Longitude", "Submission Date", "Signature URL", "Photo URLs",
+        "Approval Status", "Review Remarks"
     ]
     
     for col, header in enumerate(headers, 1):
@@ -600,9 +696,7 @@ async def export_data(
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center")
     
-    # Data rows
     for row_idx, prop in enumerate(properties, 2):
-        # Get submission if exists
         submission = await db.submissions.find_one(
             {"property_record_id": prop["id"]}, 
             {"_id": 0}
@@ -611,29 +705,32 @@ async def export_data(
         ws.cell(row=row_idx, column=1, value=prop.get("property_id", ""))
         ws.cell(row=row_idx, column=2, value=prop.get("owner_name", ""))
         ws.cell(row=row_idx, column=3, value=prop.get("mobile", ""))
-        ws.cell(row=row_idx, column=4, value=prop.get("plot_address", ""))
-        ws.cell(row=row_idx, column=5, value=prop.get("colony_name", ""))
-        ws.cell(row=row_idx, column=6, value=prop.get("total_area", ""))
-        ws.cell(row=row_idx, column=7, value=prop.get("category", ""))
-        ws.cell(row=row_idx, column=8, value=prop.get("area", ""))
-        ws.cell(row=row_idx, column=9, value=prop.get("assigned_employee_name", ""))
-        ws.cell(row=row_idx, column=10, value=prop.get("status", ""))
+        ws.cell(row=row_idx, column=4, value=prop.get("address", ""))
+        ws.cell(row=row_idx, column=5, value=prop.get("total_area", ""))
+        ws.cell(row=row_idx, column=6, value=prop.get("amount", ""))
+        ws.cell(row=row_idx, column=7, value=prop.get("ward", ""))
+        ws.cell(row=row_idx, column=8, value=prop.get("assigned_employee_name", ""))
+        ws.cell(row=row_idx, column=9, value=prop.get("status", ""))
         
         if submission:
-            ws.cell(row=row_idx, column=11, value=submission.get("respondent_name", ""))
-            ws.cell(row=row_idx, column=12, value=submission.get("respondent_phone", ""))
-            ws.cell(row=row_idx, column=13, value=submission.get("house_number", ""))
-            ws.cell(row=row_idx, column=14, value=submission.get("tax_number", ""))
-            ws.cell(row=row_idx, column=15, value=submission.get("remarks", ""))
-            ws.cell(row=row_idx, column=16, value=submission.get("latitude", ""))
-            ws.cell(row=row_idx, column=17, value=submission.get("longitude", ""))
-            ws.cell(row=row_idx, column=18, value=submission.get("submitted_at", ""))
+            ws.cell(row=row_idx, column=10, value=submission.get("new_owner_name", ""))
+            ws.cell(row=row_idx, column=11, value=submission.get("new_mobile", ""))
+            ws.cell(row=row_idx, column=12, value=submission.get("receiver_name", ""))
+            ws.cell(row=row_idx, column=13, value=submission.get("relation", ""))
+            ws.cell(row=row_idx, column=14, value=submission.get("old_property_id", ""))
+            ws.cell(row=row_idx, column=15, value=submission.get("family_id", ""))
+            ws.cell(row=row_idx, column=16, value=submission.get("aadhar_number", ""))
+            ws.cell(row=row_idx, column=17, value=submission.get("ward_number", ""))
+            ws.cell(row=row_idx, column=18, value=submission.get("latitude", ""))
+            ws.cell(row=row_idx, column=19, value=submission.get("longitude", ""))
+            ws.cell(row=row_idx, column=20, value=submission.get("submitted_at", ""))
+            ws.cell(row=row_idx, column=21, value=submission.get("signature_url", ""))
             photos = submission.get("photos", [])
             photo_urls = ", ".join([p.get("file_url", "") for p in photos])
-            ws.cell(row=row_idx, column=19, value=photo_urls)
-            ws.cell(row=row_idx, column=20, value=submission.get("signature_url", ""))
+            ws.cell(row=row_idx, column=22, value=photo_urls)
+            ws.cell(row=row_idx, column=23, value=submission.get("status", "Pending"))
+            ws.cell(row=row_idx, column=24, value=submission.get("review_remarks", ""))
     
-    # Adjust column widths
     for col in ws.columns:
         max_length = 0
         column = col[0].column_letter
@@ -646,7 +743,6 @@ async def export_data(
         adjusted_width = min(max_length + 2, 50)
         ws.column_dimensions[column].width = adjusted_width
     
-    # Save to file
     export_path = UPLOAD_DIR / f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     wb.save(export_path)
     
@@ -658,12 +754,10 @@ async def export_data(
 
 # Helper function to add watermark to photo
 def add_watermark_to_photo(photo_path, latitude, longitude, submitted_at):
-    """Add GPS coordinates, date and time watermark to photo"""
     try:
         img = PILImage.open(photo_path)
         draw = ImageDraw.Draw(img)
         
-        # Parse submission date
         if isinstance(submitted_at, str):
             try:
                 dt = datetime.fromisoformat(submitted_at.replace('Z', '+00:00'))
@@ -675,7 +769,6 @@ def add_watermark_to_photo(photo_path, latitude, longitude, submitted_at):
         date_str = dt.strftime("%d/%m/%Y")
         time_str = dt.strftime("%I:%M:%S %p")
         
-        # Watermark text
         watermark_lines = [
             f"Date: {date_str}",
             f"Time: {time_str}",
@@ -683,7 +776,6 @@ def add_watermark_to_photo(photo_path, latitude, longitude, submitted_at):
             f"Long: {longitude:.6f}" if longitude else "Long: N/A"
         ]
         
-        # Calculate font size based on image
         font_size = max(16, min(img.width, img.height) // 25)
         try:
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
@@ -693,16 +785,13 @@ def add_watermark_to_photo(photo_path, latitude, longitude, submitted_at):
         padding = font_size // 2
         line_height = font_size + 5
         
-        # Calculate box dimensions
         max_text_width = max([draw.textlength(line, font=font) for line in watermark_lines])
         box_width = int(max_text_width + padding * 2)
         box_height = line_height * len(watermark_lines) + padding * 2
         
-        # Position at bottom-left
         box_x = padding
         box_y = img.height - box_height - padding
         
-        # Draw semi-transparent background
         overlay = PILImage.new('RGBA', img.size, (0, 0, 0, 0))
         overlay_draw = ImageDraw.Draw(overlay)
         overlay_draw.rectangle(
@@ -710,14 +799,12 @@ def add_watermark_to_photo(photo_path, latitude, longitude, submitted_at):
             fill=(0, 0, 0, 180)
         )
         
-        # Convert to RGBA if needed
         if img.mode != 'RGBA':
             img = img.convert('RGBA')
         
         img = PILImage.alpha_composite(img, overlay)
         draw = ImageDraw.Draw(img)
         
-        # Draw text
         for i, line in enumerate(watermark_lines):
             draw.text(
                 (box_x + padding, box_y + padding + i * line_height),
@@ -726,10 +813,8 @@ def add_watermark_to_photo(photo_path, latitude, longitude, submitted_at):
                 fill=(255, 255, 255, 255)
             )
         
-        # Convert back to RGB for saving
         img = img.convert('RGB')
         
-        # Save to temp file
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
         img.save(temp_file.name, 'JPEG', quality=90)
         return temp_file.name
@@ -747,17 +832,16 @@ async def export_pdf(
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    query = {"status": "Completed"}  # Only export completed surveys
-    if batch_id:
+    query = {"status": "Completed"}
+    if batch_id and batch_id.strip():
         query["batch_id"] = batch_id
-    if employee_id:
+    if employee_id and employee_id.strip():
         query["assigned_employee_id"] = employee_id
-    if status:
+    if status and status.strip():
         query["status"] = status
     
     properties = await db.properties.find(query, {"_id": 0}).to_list(10000)
     
-    # Create PDF
     pdf_path = UPLOAD_DIR / f"survey_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     doc = SimpleDocTemplate(
         str(pdf_path),
@@ -769,55 +853,30 @@ async def export_pdf(
     )
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=18,
-        spaceAfter=20,
-        alignment=TA_CENTER,
-        textColor=colors.HexColor('#0f172a')
-    )
-    heading_style = ParagraphStyle(
-        'CustomHeading',
-        parent=styles['Heading2'],
-        fontSize=14,
-        spaceAfter=10,
-        textColor=colors.HexColor('#1e40af')
-    )
-    normal_style = ParagraphStyle(
-        'CustomNormal',
-        parent=styles['Normal'],
-        fontSize=10,
-        spaceAfter=5
-    )
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=20, alignment=TA_CENTER, textColor=colors.HexColor('#0f172a'))
+    heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'], fontSize=14, spaceAfter=10, textColor=colors.HexColor('#1e40af'))
+    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=10, spaceAfter=5)
     
     story = []
     
-    # Title
     story.append(Paragraph("NSTU Property Tax Survey Report", title_style))
     story.append(Paragraph(f"Generated on: {datetime.now().strftime('%d/%m/%Y %I:%M %p')}", normal_style))
     story.append(Spacer(1, 20))
     
-    # Process each property with submission
     for prop in properties:
-        submission = await db.submissions.find_one(
-            {"property_record_id": prop["id"]},
-            {"_id": 0}
-        )
+        submission = await db.submissions.find_one({"property_record_id": prop["id"]}, {"_id": 0})
         
         if not submission:
             continue
         
-        # Property header
         story.append(Paragraph(f"Property ID: {prop.get('property_id', 'N/A')}", heading_style))
         
-        # Property details table
         prop_data = [
             ["Owner Name", prop.get("owner_name", "N/A")],
             ["Mobile", prop.get("mobile", "N/A")],
-            ["Address", prop.get("plot_address", "N/A")],
-            ["Colony", prop.get("colony_name", "N/A")],
-            ["Area/Zone", prop.get("area", "N/A")],
+            ["Address", prop.get("address", "N/A")],
+            ["Ward", prop.get("ward", "N/A")],
+            ["Amount", prop.get("amount", "N/A")],
         ]
         
         prop_table = Table(prop_data, colWidths=[80*mm, 90*mm])
@@ -833,17 +892,21 @@ async def export_pdf(
         story.append(prop_table)
         story.append(Spacer(1, 10))
         
-        # Survey details
         story.append(Paragraph("Survey Information", heading_style))
         survey_data = [
-            ["Respondent Name", submission.get("respondent_name", "N/A")],
-            ["Phone", submission.get("respondent_phone", "N/A")],
-            ["House Number", submission.get("house_number", "N/A")],
-            ["Tax Number", submission.get("tax_number", "N/A")],
+            ["New Owner Name", submission.get("new_owner_name", "N/A")],
+            ["New Mobile", submission.get("new_mobile", "N/A")],
+            ["Receiver Name", submission.get("receiver_name", "N/A")],
+            ["Relation", submission.get("relation", "N/A")],
+            ["Old Property ID", submission.get("old_property_id", "N/A")],
+            ["Family ID", submission.get("family_id", "N/A")],
+            ["Aadhar Number", submission.get("aadhar_number", "N/A")],
+            ["Ward Number", submission.get("ward_number", "N/A")],
             ["Submitted By", submission.get("employee_name", "N/A")],
             ["Submitted At", submission.get("submitted_at", "N/A")],
             ["GPS Latitude", str(submission.get("latitude", "N/A"))],
             ["GPS Longitude", str(submission.get("longitude", "N/A"))],
+            ["Status", submission.get("status", "Pending")],
         ]
         
         if submission.get("remarks"):
@@ -862,23 +925,19 @@ async def export_pdf(
         story.append(survey_table)
         story.append(Spacer(1, 15))
         
-        # Photos with watermark
         photos = submission.get("photos", [])
         if photos:
             story.append(Paragraph("Photo Evidence (with GPS & Timestamp)", heading_style))
             
-            photo_elements = []
             for photo in photos:
                 photo_url = photo.get("file_url", "")
                 photo_type = photo.get("photo_type", "PHOTO")
                 
-                # Get actual file path
                 if photo_url.startswith("/api/uploads/"):
                     filename = photo_url.replace("/api/uploads/", "")
                     photo_path = UPLOAD_DIR / filename
                     
                     if photo_path.exists():
-                        # Add watermark to photo
                         watermarked_path = add_watermark_to_photo(
                             str(photo_path),
                             submission.get("latitude"),
@@ -888,35 +947,12 @@ async def export_pdf(
                         
                         try:
                             img = RLImage(watermarked_path, width=80*mm, height=60*mm)
-                            photo_elements.append([
-                                img,
-                                Paragraph(f"<b>{photo_type}</b>", normal_style)
-                            ])
+                            story.append(Paragraph(f"<b>{photo_type}</b>", normal_style))
+                            story.append(img)
+                            story.append(Spacer(1, 10))
                         except Exception as e:
                             logger.error(f"Error adding photo to PDF: {e}")
-            
-            if photo_elements:
-                # Create photo grid (2 per row)
-                photo_rows = []
-                for i in range(0, len(photo_elements), 2):
-                    row = photo_elements[i:i+2]
-                    if len(row) == 1:
-                        row.append(["", ""])
-                    photo_rows.append([row[0][0], row[1][0] if row[1][0] else ""])
-                    photo_rows.append([row[0][1], row[1][1] if row[1][1] else ""])
-                
-                if photo_rows:
-                    photo_table = Table(photo_rows, colWidths=[85*mm, 85*mm])
-                    photo_table.setStyle(TableStyle([
-                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                        ('PADDING', (0, 0), (-1, -1), 5),
-                    ]))
-                    story.append(photo_table)
         
-        story.append(Spacer(1, 10))
-        
-        # Signature
         signature_url = submission.get("signature_url")
         if signature_url:
             story.append(Paragraph("Property Holder Signature", heading_style))
@@ -939,10 +975,8 @@ async def export_pdf(
                     except Exception as e:
                         logger.error(f"Error adding signature to PDF: {e}")
         
-        # Page break between properties
         story.append(PageBreak())
     
-    # Build PDF
     doc.build(story)
     
     return FileResponse(
@@ -962,7 +996,7 @@ async def get_employee_properties(
     current_user: dict = Depends(get_current_user)
 ):
     query = {"assigned_employee_id": current_user["id"]}
-    if status:
+    if status and status.strip():
         query["status"] = status
     if search:
         query["$or"] = [
@@ -988,11 +1022,9 @@ async def get_property_detail(property_id: str, current_user: dict = Depends(get
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
     
-    # Check if employee has access
     if current_user["role"] != "ADMIN" and prop.get("assigned_employee_id") != current_user["id"]:
         raise HTTPException(status_code=403, detail="Access denied")
     
-    # Get existing submission if any
     submission = await db.submissions.find_one({"property_record_id": property_id}, {"_id": 0})
     
     return {
@@ -1003,10 +1035,15 @@ async def get_property_detail(property_id: str, current_user: dict = Depends(get
 @api_router.post("/employee/submit/{property_id}")
 async def submit_survey(
     property_id: str,
-    respondent_name: str = Form(...),
-    respondent_phone: str = Form(...),
-    house_number: str = Form(None),
-    tax_number: str = Form(None),
+    # New survey fields
+    new_owner_name: str = Form(...),
+    new_mobile: str = Form(...),
+    receiver_name: str = Form(...),
+    relation: str = Form(...),
+    old_property_id: str = Form(None),
+    family_id: str = Form(None),
+    aadhar_number: str = Form(None),
+    ward_number: str = Form(None),
     remarks: str = Form(None),
     latitude: float = Form(...),
     longitude: float = Form(...),
@@ -1018,7 +1055,6 @@ async def submit_survey(
 ):
     current_user = await get_current_user(authorization)
     
-    # Get property
     prop = await db.properties.find_one({"id": property_id}, {"_id": 0})
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
@@ -1026,7 +1062,6 @@ async def submit_survey(
     if current_user["role"] != "ADMIN" and prop.get("assigned_employee_id") != current_user["id"]:
         raise HTTPException(status_code=403, detail="Access denied")
     
-    # Save photos
     photos = []
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
@@ -1064,7 +1099,7 @@ async def submit_survey(
                 await f.write(content)
             photos.append({"photo_type": "EXTRA", "file_url": f"/api/uploads/{extra_filename}"})
     
-    # Create submission
+    # Create submission with new fields
     submission_doc = {
         "id": str(uuid.uuid4()),
         "property_record_id": property_id,
@@ -1072,16 +1107,22 @@ async def submit_survey(
         "batch_id": prop["batch_id"],
         "employee_id": current_user["id"],
         "employee_name": current_user["name"],
-        "respondent_name": respondent_name,
-        "respondent_phone": respondent_phone,
-        "house_number": house_number,
-        "tax_number": tax_number,
+        # New survey fields
+        "new_owner_name": new_owner_name,
+        "new_mobile": new_mobile,
+        "receiver_name": receiver_name,
+        "relation": relation,
+        "old_property_id": old_property_id,
+        "family_id": family_id,
+        "aadhar_number": aadhar_number,
+        "ward_number": ward_number,
         "remarks": remarks,
         "latitude": latitude,
         "longitude": longitude,
         "submitted_at": datetime.now(timezone.utc).isoformat(),
         "photos": photos,
-        "signature_url": signature_url
+        "signature_url": signature_url,
+        "status": "Pending"  # Pending approval
     }
     
     # Check if submission already exists
@@ -1094,16 +1135,16 @@ async def submit_survey(
     else:
         await db.submissions.insert_one(submission_doc)
     
-    # Update property status
+    # Update property status to In Progress (until approved)
     await db.properties.update_one(
         {"id": property_id},
-        {"$set": {"status": "Completed"}}
+        {"$set": {"status": "In Progress"}}
     )
     
     return {"message": "Survey submitted successfully", "submission_id": submission_doc["id"]}
 
-@api_router.post("/employee/flag/{property_id}")
-async def flag_property(property_id: str, remarks: str = Form(...), authorization: str = Form(...)):
+@api_router.post("/employee/reject/{property_id}")
+async def reject_property(property_id: str, remarks: str = Form(...), authorization: str = Form(...)):
     current_user = await get_current_user(authorization)
     
     prop = await db.properties.find_one({"id": property_id}, {"_id": 0})
@@ -1115,13 +1156,15 @@ async def flag_property(property_id: str, remarks: str = Form(...), authorizatio
     
     await db.properties.update_one(
         {"id": property_id},
-        {"$set": {"status": "Flagged", "flag_remarks": remarks}}
+        {"$set": {"status": "Rejected", "reject_remarks": remarks}}
     )
     
-    return {"message": "Property flagged successfully"}
+    return {"message": "Property rejected"}
 
 @api_router.get("/employee/progress")
 async def get_employee_own_progress(current_user: dict = Depends(get_current_user)):
+    today_start = get_today_start().isoformat()
+    
     total = await db.properties.count_documents({"assigned_employee_id": current_user["id"]})
     completed = await db.properties.count_documents({
         "assigned_employee_id": current_user["id"],
@@ -1131,16 +1174,34 @@ async def get_employee_own_progress(current_user: dict = Depends(get_current_use
         "assigned_employee_id": current_user["id"],
         "status": "Pending"
     })
-    flagged = await db.properties.count_documents({
+    rejected = await db.properties.count_documents({
         "assigned_employee_id": current_user["id"],
-        "status": "Flagged"
+        "status": "Rejected"
+    })
+    in_progress = await db.properties.count_documents({
+        "assigned_employee_id": current_user["id"],
+        "status": "In Progress"
+    })
+    
+    # Today's completed
+    today_completed = await db.submissions.count_documents({
+        "employee_id": current_user["id"],
+        "submitted_at": {"$gte": today_start}
+    })
+    
+    # Total completed (all time)
+    total_completed = await db.submissions.count_documents({
+        "employee_id": current_user["id"]
     })
     
     return {
         "total_assigned": total,
         "completed": completed,
         "pending": pending,
-        "flagged": flagged
+        "rejected": rejected,
+        "in_progress": in_progress,
+        "today_completed": today_completed,
+        "total_completed": total_completed
     }
 
 # ============== FILE SERVING ==============
