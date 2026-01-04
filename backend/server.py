@@ -657,10 +657,8 @@ async def get_employee_properties(
     status: Optional[str] = None,
     page: int = 1,
     limit: int = 20,
-    authorization: str = None
+    current_user: dict = Depends(get_current_user)
 ):
-    current_user = await get_current_user(authorization)
-    
     query = {"assigned_employee_id": current_user["id"]}
     if status:
         query["status"] = status
