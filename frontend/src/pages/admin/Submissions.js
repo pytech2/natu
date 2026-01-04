@@ -507,7 +507,7 @@ export default function Submissions() {
                     <Edit className="w-4 h-4 mr-2" />
                     Edit Details
                   </Button>
-                  {selectedSubmission.status === 'Pending' && (
+                  {(!selectedSubmission.status || selectedSubmission.status === 'Pending') && (
                     <>
                       <Button
                         onClick={() => handleApprove(selectedSubmission.id)}
