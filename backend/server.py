@@ -351,8 +351,7 @@ async def archive_batch(batch_id: str, current_user: dict = Depends(get_current_
     return {"message": "Batch archived"}
 
 @api_router.delete("/admin/batch/{batch_id}")
-async def delete_batch(batch_id: str, authorization: str = None):
-    current_user = await get_current_user(authorization)
+async def delete_batch(batch_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
