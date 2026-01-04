@@ -809,9 +809,7 @@ async def flag_property(property_id: str, remarks: str = Form(...), authorizatio
     return {"message": "Property flagged successfully"}
 
 @api_router.get("/employee/progress")
-async def get_employee_own_progress(authorization: str = None):
-    current_user = await get_current_user(authorization)
-    
+async def get_employee_own_progress(current_user: dict = Depends(get_current_user)):
     total = await db.properties.count_documents({"assigned_employee_id": current_user["id"]})
     completed = await db.properties.count_documents({
         "assigned_employee_id": current_user["id"],
