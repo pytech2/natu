@@ -556,6 +556,10 @@ export default function Survey() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
+              <span className="text-slate-500">Property ID</span>
+              <span className="font-mono font-medium">{property?.property_id}</span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-slate-500">Owner</span>
               <span className="font-medium">{property?.owner_name}</span>
             </div>
@@ -565,8 +569,20 @@ export default function Survey() {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Address</span>
-              <span className="text-right max-w-[60%]">{property?.plot_address || '-'}</span>
+              <span className="text-right max-w-[60%]">{property?.address || '-'}</span>
             </div>
+            {property?.amount && (
+              <div className="flex justify-between">
+                <span className="text-slate-500">Amount</span>
+                <span className="font-mono text-emerald-700 font-semibold">₹{property?.amount}</span>
+              </div>
+            )}
+            {property?.ward && (
+              <div className="flex justify-between">
+                <span className="text-slate-500">Ward</span>
+                <span>{property?.ward}</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
