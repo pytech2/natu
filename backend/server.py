@@ -254,8 +254,7 @@ async def list_users(current_user: dict = Depends(get_current_user)):
     return users
 
 @api_router.delete("/admin/users/{user_id}")
-async def delete_user(user_id: str, authorization: str = None):
-    current_user = await get_current_user(authorization)
+async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
