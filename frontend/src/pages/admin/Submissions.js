@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
-import { Card, CardContent } from '../../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import {
   Dialog,
@@ -22,9 +23,19 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { ClipboardCheck, MapPin, Camera, ChevronLeft, ChevronRight, Eye, Check, X, Edit } from 'lucide-react';
+import { 
+  ClipboardCheck, MapPin, Camera, ChevronLeft, ChevronRight, 
+  Eye, Check, X, Edit, User, Phone, Home, Hash, CreditCard, 
+  Building, Users, FileText, Pen, Image as ImageIcon, Save,
+  ExternalLink
+} from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
+
+const RELATION_OPTIONS = [
+  'Self', 'Spouse', 'Son', 'Daughter', 'Father', 'Mother',
+  'Brother', 'Sister', 'Tenant', 'Caretaker', 'Other'
+];
 
 export default function Submissions() {
   const { token } = useAuth();
@@ -39,6 +50,8 @@ export default function Submissions() {
   const [rejectRemarks, setRejectRemarks] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [editData, setEditData] = useState({});
+  const [editPropertyData, setEditPropertyData] = useState({});
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const employeeIdFilter = searchParams.get('employee_id') || '';
 
@@ -124,6 +137,7 @@ export default function Submissions() {
 
   const openEditDialog = (submission) => {
     setSelectedSubmission(submission);
+    // Submission data
     setEditData({
       new_owner_name: submission.new_owner_name || '',
       new_mobile: submission.new_mobile || '',
@@ -133,26 +147,51 @@ export default function Submissions() {
       family_id: submission.family_id || '',
       aadhar_number: submission.aadhar_number || '',
       ward_number: submission.ward_number || '',
-      remarks: submission.remarks || ''
+      remarks: submission.remarks || '',
+      latitude: submission.latitude || '',
+      longitude: submission.longitude || ''
+    });
+    // Property data
+    setEditPropertyData({
+      property_id: submission.property_id || '',
+      owner_name: submission.property_owner_name || '',
+      mobile: submission.property_mobile || '',
+      address: submission.property_address || '',
+      amount: submission.property_amount || '',
+      ward: submission.property_ward || ''
     });
     setEditDialog(true);
   };
 
   const handleEdit = async () => {
+    setSavingEdit(true);
     try {
-      const formData = new FormData();
-      Object.entries(editData).forEach(([key, value]) => {
-        if (value) formData.append(key, value);
+      // Update submission
+      await axios.put(`${API_URL}/admin/submissions/${selectedSubmission.id}`, editData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
-
-      await axios.put(`${API_URL}/admin/submissions/${selectedSubmission.id}`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('Submission updated');
+      
+      // Update property if needed
+      if (selectedSubmission.property_record_id) {
+        await axios.put(`${API_URL}/admin/properties/${selectedSubmission.property_record_id}`, editPropertyData, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      
+      toast.success('Changes saved successfully');
       fetchSubmissions();
       setEditDialog(false);
     } catch (error) {
-      toast.error('Failed to update submission');
+      console.error('Edit error:', error);
+      toast.error('Failed to save changes');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -190,6 +229,9 @@ export default function Submissions() {
               {employeeIdFilter && (
                 <span className="text-sm text-slate-500">Filtered by employee</span>
               )}
+              <span className="text-sm text-slate-500 ml-auto">
+                Total: {pagination.total} submissions
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -208,47 +250,48 @@ export default function Submissions() {
           </Card>
         ) : (
           <>
-            <Card>
+            <Card className="shadow-lg border-0">
               <CardContent className="p-0 overflow-x-auto">
-                <table className="data-table">
-                  <thead>
+                <table className="w-full">
+                  <thead className="bg-slate-50">
                     <tr>
-                      <th>Property ID</th>
-                      <th>Employee</th>
-                      <th>New Owner</th>
-                      <th>Receiver</th>
-                      <th>GPS</th>
-                      <th>Status</th>
-                      <th>Submitted</th>
-                      <th>Actions</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Property ID</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Employee</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">New Owner</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Receiver</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">GPS</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Submitted</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-100">
                     {submissions.map((sub) => (
-                      <tr key={sub.id}>
-                        <td className="font-mono text-sm font-medium">{sub.property_id}</td>
-                        <td>{sub.employee_name}</td>
-                        <td>{sub.new_owner_name || '-'}</td>
-                        <td>{sub.receiver_name || '-'}</td>
-                        <td>
+                      <tr key={sub.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3 font-mono text-sm font-medium text-blue-600">{sub.property_id}</td>
+                        <td className="px-4 py-3 text-sm">{sub.employee_name}</td>
+                        <td className="px-4 py-3 text-sm">{sub.new_owner_name || '-'}</td>
+                        <td className="px-4 py-3 text-sm">{sub.receiver_name || '-'}</td>
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-1 text-emerald-600">
-                            <MapPin className="w-4 h-4" />
+                            <MapPin className="w-3 h-3" />
                             <span className="text-xs font-mono">
                               {sub.latitude?.toFixed(4)}, {sub.longitude?.toFixed(4)}
                             </span>
                           </div>
                         </td>
-                        <td>{getStatusBadge(sub.status)}</td>
-                        <td className="text-sm text-slate-500">
+                        <td className="px-4 py-3">{getStatusBadge(sub.status)}</td>
+                        <td className="px-4 py-3 text-xs text-slate-500">
                           {new Date(sub.submitted_at).toLocaleString()}
                         </td>
-                        <td>
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => viewDetail(sub)}
                               title="View Details"
+                              className="h-8 w-8 p-0"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -257,8 +300,9 @@ export default function Submissions() {
                               size="sm"
                               onClick={() => openEditDialog(sub)}
                               title="Edit"
+                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             >
-                              <Edit className="w-4 h-4 text-blue-600" />
+                              <Edit className="w-4 h-4" />
                             </Button>
                             {sub.status === 'Pending' && (
                               <>
@@ -267,7 +311,7 @@ export default function Submissions() {
                                   size="sm"
                                   onClick={() => handleApprove(sub.id)}
                                   title="Approve"
-                                  className="text-emerald-600 hover:text-emerald-700"
+                                  className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                                 >
                                   <Check className="w-4 h-4" />
                                 </Button>
@@ -276,7 +320,7 @@ export default function Submissions() {
                                   size="sm"
                                   onClick={() => openRejectDialog(sub)}
                                   title="Reject"
-                                  className="text-red-600 hover:text-red-700"
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                 >
                                   <X className="w-4 h-4" />
                                 </Button>
@@ -294,7 +338,7 @@ export default function Submissions() {
             {/* Pagination */}
             <div className="flex items-center justify-between">
               <p className="text-sm text-slate-500">
-                Showing {((pagination.page - 1) * 20) + 1} to {Math.min(pagination.page * 20, pagination.total)} of {pagination.total} submissions
+                Showing {((pagination.page - 1) * 20) + 1} to {Math.min(pagination.page * 20, pagination.total)} of {pagination.total}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -321,9 +365,9 @@ export default function Submissions() {
           </>
         )}
 
-        {/* Detail Dialog */}
+        {/* Detail View Dialog */}
         <Dialog open={detailDialog} onOpenChange={setDetailDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-heading flex items-center justify-between">
                 <span>Submission Details - {selectedSubmission?.property_id}</span>
@@ -390,9 +434,9 @@ export default function Submissions() {
                     href={`https://www.google.com/maps?q=${selectedSubmission.latitude},${selectedSubmission.longitude}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-emerald-600 hover:underline"
+                    className="text-sm text-emerald-600 hover:underline inline-flex items-center gap-1 mt-1"
                   >
-                    View on Google Maps →
+                    View on Google Maps <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
 
@@ -417,11 +461,12 @@ export default function Submissions() {
                   <label className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3 block">Photos (with GPS & Timestamp)</label>
                   <div className="grid grid-cols-2 gap-4">
                     {selectedSubmission.photos?.map((photo, idx) => (
-                      <div key={idx} className="relative">
+                      <div key={idx} className="relative group">
                         <img
                           src={`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`}
                           alt={photo.photo_type}
-                          className="w-full h-48 object-cover rounded-lg"
+                          className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90"
+                          onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`, '_blank')}
                         />
                         <span className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-semibold ${
                           photo.photo_type === 'HOUSE' ? 'bg-blue-100 text-blue-700' :
@@ -450,25 +495,38 @@ export default function Submissions() {
                 )}
 
                 {/* Action Buttons */}
-                {selectedSubmission.status === 'Pending' && (
-                  <div className="flex gap-3 pt-4 border-t">
-                    <Button
-                      onClick={() => handleApprove(selectedSubmission.id)}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      Approve
-                    </Button>
-                    <Button
-                      onClick={() => openRejectDialog(selectedSubmission)}
-                      variant="destructive"
-                      className="flex-1"
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Reject
-                    </Button>
-                  </div>
-                )}
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDetailDialog(false);
+                      openEditDialog(selectedSubmission);
+                    }}
+                    className="flex-1"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Details
+                  </Button>
+                  {selectedSubmission.status === 'Pending' && (
+                    <>
+                      <Button
+                        onClick={() => handleApprove(selectedSubmission.id)}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        Approve
+                      </Button>
+                      <Button
+                        onClick={() => openRejectDialog(selectedSubmission)}
+                        variant="destructive"
+                        className="flex-1"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Reject
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </DialogContent>
@@ -499,83 +557,302 @@ export default function Submissions() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Dialog */}
+        {/* Full Edit Dialog */}
         <Dialog open={editDialog} onOpenChange={setEditDialog}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit Submission</DialogTitle>
+              <DialogTitle className="font-heading flex items-center gap-2">
+                <Edit className="w-5 h-5 text-blue-600" />
+                Edit Submission - {selectedSubmission?.property_id}
+              </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">New Owner Name</label>
-                  <Input
-                    value={editData.new_owner_name}
-                    onChange={(e) => setEditData({ ...editData, new_owner_name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">New Mobile</label>
-                  <Input
-                    value={editData.new_mobile}
-                    onChange={(e) => setEditData({ ...editData, new_mobile: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Receiver Name</label>
-                  <Input
-                    value={editData.receiver_name}
-                    onChange={(e) => setEditData({ ...editData, receiver_name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Relation</label>
-                  <Input
-                    value={editData.relation}
-                    onChange={(e) => setEditData({ ...editData, relation: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Old Property ID</label>
-                  <Input
-                    value={editData.old_property_id}
-                    onChange={(e) => setEditData({ ...editData, old_property_id: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Family ID</label>
-                  <Input
-                    value={editData.family_id}
-                    onChange={(e) => setEditData({ ...editData, family_id: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Aadhar Number</label>
-                  <Input
-                    value={editData.aadhar_number}
-                    onChange={(e) => setEditData({ ...editData, aadhar_number: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Ward Number</label>
-                  <Input
-                    value={editData.ward_number}
-                    onChange={(e) => setEditData({ ...editData, ward_number: e.target.value })}
-                  />
+
+            {selectedSubmission && (
+              <div className="space-y-6">
+                {/* Property Details Section */}
+                <Card className="border-blue-200 bg-blue-50/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-blue-700">
+                      <Home className="w-4 h-4" />
+                      PROPERTY DETAILS
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600">Property ID</Label>
+                        <Input
+                          value={editPropertyData.property_id}
+                          onChange={(e) => setEditPropertyData({ ...editPropertyData, property_id: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600">Owner Name</Label>
+                        <Input
+                          value={editPropertyData.owner_name}
+                          onChange={(e) => setEditPropertyData({ ...editPropertyData, owner_name: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600">Mobile</Label>
+                        <Input
+                          value={editPropertyData.mobile}
+                          onChange={(e) => setEditPropertyData({ ...editPropertyData, mobile: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label className="text-xs text-slate-600">Address</Label>
+                        <Input
+                          value={editPropertyData.address}
+                          onChange={(e) => setEditPropertyData({ ...editPropertyData, address: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600">Amount (₹)</Label>
+                        <Input
+                          value={editPropertyData.amount}
+                          onChange={(e) => setEditPropertyData({ ...editPropertyData, amount: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Survey Submission Details */}
+                <Card className="border-emerald-200 bg-emerald-50/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-emerald-700">
+                      <FileText className="w-4 h-4" />
+                      SURVEY SUBMISSION DETAILS
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 flex items-center gap-1">
+                          <User className="w-3 h-3" /> New Owner Name
+                        </Label>
+                        <Input
+                          value={editData.new_owner_name}
+                          onChange={(e) => setEditData({ ...editData, new_owner_name: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 flex items-center gap-1">
+                          <Phone className="w-3 h-3" /> New Mobile Number
+                        </Label>
+                        <Input
+                          value={editData.new_mobile}
+                          onChange={(e) => setEditData({ ...editData, new_mobile: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 flex items-center gap-1">
+                          <Users className="w-3 h-3" /> Receiver Name
+                        </Label>
+                        <Input
+                          value={editData.receiver_name}
+                          onChange={(e) => setEditData({ ...editData, receiver_name: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600">Relation with Owner</Label>
+                        <Select
+                          value={editData.relation}
+                          onValueChange={(value) => setEditData({ ...editData, relation: value })}
+                        >
+                          <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Select relation" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {RELATION_OPTIONS.map((rel) => (
+                              <SelectItem key={rel} value={rel}>{rel}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 flex items-center gap-1">
+                          <Hash className="w-3 h-3" /> Old Property ID
+                        </Label>
+                        <Input
+                          value={editData.old_property_id}
+                          onChange={(e) => setEditData({ ...editData, old_property_id: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 flex items-center gap-1">
+                          <Users className="w-3 h-3" /> Family ID
+                        </Label>
+                        <Input
+                          value={editData.family_id}
+                          onChange={(e) => setEditData({ ...editData, family_id: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 flex items-center gap-1">
+                          <CreditCard className="w-3 h-3" /> Aadhar Number
+                        </Label>
+                        <Input
+                          value={editData.aadhar_number}
+                          onChange={(e) => setEditData({ ...editData, aadhar_number: e.target.value })}
+                          className="bg-white"
+                          maxLength={12}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 flex items-center gap-1">
+                          <Building className="w-3 h-3" /> Ward Number
+                        </Label>
+                        <Input
+                          value={editData.ward_number}
+                          onChange={(e) => setEditData({ ...editData, ward_number: e.target.value })}
+                          className="bg-white"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* GPS Coordinates */}
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" /> Latitude
+                        </Label>
+                        <Input
+                          value={editData.latitude}
+                          onChange={(e) => setEditData({ ...editData, latitude: e.target.value })}
+                          className="bg-white font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" /> Longitude
+                        </Label>
+                        <Input
+                          value={editData.longitude}
+                          onChange={(e) => setEditData({ ...editData, longitude: e.target.value })}
+                          className="bg-white font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs text-slate-600">Remarks</Label>
+                      <Textarea
+                        value={editData.remarks}
+                        onChange={(e) => setEditData({ ...editData, remarks: e.target.value })}
+                        rows={2}
+                        className="bg-white"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Photos Section */}
+                <Card className="border-amber-200 bg-amber-50/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-amber-700">
+                      <Camera className="w-4 h-4" />
+                      PHOTOS (with GPS Watermark)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedSubmission.photos?.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        {selectedSubmission.photos.map((photo, idx) => (
+                          <div key={idx} className="relative group">
+                            <img
+                              src={`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`}
+                              alt={photo.photo_type}
+                              className="w-full h-40 object-cover rounded-lg border-2 border-white shadow"
+                              onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`, '_blank')}
+                            />
+                            <span className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-semibold shadow ${
+                              photo.photo_type === 'HOUSE' ? 'bg-blue-500 text-white' :
+                              photo.photo_type === 'GATE' ? 'bg-amber-500 text-white' :
+                              'bg-slate-500 text-white'
+                            }`}>
+                              {photo.photo_type}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="absolute bottom-2 right-2 h-7 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`, '_blank')}
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" /> View Full
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-slate-400">
+                        <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                        <p>No photos available</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Signature Section */}
+                <Card className="border-purple-200 bg-purple-50/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-purple-700">
+                      <Pen className="w-4 h-4" />
+                      PROPERTY HOLDER SIGNATURE
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedSubmission.signature_url ? (
+                      <div className="bg-white border-2 border-dashed border-purple-200 rounded-lg p-4">
+                        <img
+                          src={`${process.env.REACT_APP_BACKEND_URL}${selectedSubmission.signature_url}`}
+                          alt="Signature"
+                          className="max-h-28 mx-auto object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-slate-400">
+                        <Pen className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                        <p>No signature available</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Submission Info */}
+                <div className="flex items-center justify-between text-sm text-slate-500 pt-2 border-t">
+                  <span>Submitted by: <strong>{selectedSubmission.employee_name}</strong></span>
+                  <span>Date: <strong>{new Date(selectedSubmission.submitted_at).toLocaleString()}</strong></span>
+                  <span>Status: {getStatusBadge(selectedSubmission.status)}</span>
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Remarks</label>
-                <Textarea
-                  value={editData.remarks}
-                  onChange={(e) => setEditData({ ...editData, remarks: e.target.value })}
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditDialog(false)}>Cancel</Button>
-              <Button onClick={handleEdit}>Save Changes</Button>
+            )}
+
+            <DialogFooter className="mt-4 pt-4 border-t">
+              <Button variant="outline" onClick={() => setEditDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleEdit} disabled={savingEdit} className="bg-blue-600 hover:bg-blue-700">
+                {savingEdit ? (
+                  <>Saving...</>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save All Changes
+                  </>
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
