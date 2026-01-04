@@ -1,0 +1,142 @@
+{
+  "identity": {
+    "name": "NSTU Property Tax Manager",
+    "tone": "Professional, Authoritative, Efficient, High-Contrast",
+    "archetype": "Swiss & High-Contrast (Bureaucratic Chic)",
+    "target_audience": "Municipal Administrators & Field Surveyors"
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "usage": {
+      "h1": "text-4xl md:text-5xl font-bold tracking-tight text-slate-900 font-heading",
+      "h2": "text-3xl font-semibold tracking-tight text-slate-900 font-heading",
+      "h3": "text-xl font-semibold text-slate-800 font-heading",
+      "body": "text-base text-slate-600 leading-relaxed font-body",
+      "label": "text-xs font-bold uppercase tracking-wider text-slate-500 font-mono",
+      "data_value": "text-sm font-medium text-slate-900 font-mono"
+    },
+    "installation": "Import fonts via Google Fonts in index.css: @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');"
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#0f172a",
+        "foreground": "#f8fafc",
+        "hover": "#1e293b"
+      },
+      "secondary": {
+        "DEFAULT": "#f1f5f9",
+        "foreground": "#0f172a"
+      },
+      "accent": {
+        "DEFAULT": "#2563eb",
+        "foreground": "#ffffff"
+      },
+      "success": "#059669",
+      "warning": "#d97706",
+      "destructive": "#e11d48",
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "border": "#e2e8f0"
+    },
+    "tailwind_config_extension": {
+      "colors": {
+        "brand": {
+          "50": "#eff6ff",
+          "100": "#dbeafe",
+          "500": "#3b82f6",
+          "600": "#2563eb",
+          "700": "#1d4ed8",
+          "900": "#1e3a8a"
+        }
+      }
+    }
+  },
+  "layout_strategies": {
+    "admin_dashboard": {
+      "type": "Control Room Grid",
+      "grid_class": "grid grid-cols-1 md:grid-cols-12 gap-4 p-4 md:p-6 bg-slate-50/50",
+      "sidebar_width": "w-64",
+      "card_style": "bg-white border border-slate-200 shadow-sm rounded-none"
+    },
+    "mobile_survey": {
+      "type": "Stack Layout",
+      "container_class": "flex flex-col gap-4 p-4 pb-24 max-w-md mx-auto bg-slate-50 min-h-screen",
+      "card_style": "bg-white rounded-xl shadow-sm border border-slate-200 p-4 active:scale-[0.98] transition-transform duration-100",
+      "bottom_nav": "fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 flex justify-around z-50 pb-safe"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-slate-900 text-white hover:bg-slate-800 h-10 px-4 py-2 rounded-md font-medium transition-colors focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2",
+      "secondary": "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 h-10 px-4 py-2 rounded-md font-medium transition-colors",
+      "destructive": "bg-red-600 text-white hover:bg-red-700 h-10 px-4 py-2 rounded-md font-medium",
+      "mobile_action": "w-full h-12 text-lg font-bold bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-600/20 active:translate-y-0.5"
+    },
+    "cards": {
+      "stat_card": "p-6 bg-white border border-slate-100 shadow-sm rounded-lg flex flex-col gap-2",
+      "property_card": "p-4 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer group relative overflow-hidden"
+    },
+    "inputs": {
+      "default": "flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+      "mobile": "h-12 text-base px-4 rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+    },
+    "status_badges": {
+      "pending": "inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700",
+      "completed": "inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700",
+      "flagged": "inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700"
+    }
+  },
+  "assets": {
+    "images": {
+      "login_bg": {
+        "url": "https://images.unsplash.com/photo-1761733570309-d748db709a67?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwyfHxpbmRpYW4lMjBjaXR5JTIwYWVyaWFsJTIwdmlldyUyMG1vZGVybnxlbnwwfHx8fDE3Njc1MTE4Mzl8MA&ixlib=rb-4.1.0&q=85",
+        "alt": "Mumbai Sea Link Skyline",
+        "usage": "Full screen background for Login page with overlay 'bg-slate-900/80'"
+      },
+      "surveyor_hero": {
+        "url": "https://images.unsplash.com/photo-1526593740665-f57a5d42dd0a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHw0fHxzdXJ2ZXlvciUyMGVuZ2luZWVyJTIwd29ya2luZyUyMG91dGRvb3JzfGVufDB8fHx8MTc2NzUxMTg0MHww&ixlib=rb-4.1.0&q=85",
+        "alt": "Surveyor working",
+        "usage": "Optional hero image for employee onboarding or help section"
+      }
+    },
+    "icons": {
+      "library": "lucide-react",
+      "preferred_icons": [
+        "LayoutDashboard",
+        "MapPin",
+        "ClipboardCheck",
+        "Users",
+        "FileSpreadsheet",
+        "Camera",
+        "Navigation",
+        "AlertTriangle"
+      ]
+    }
+  },
+  "accessibility": {
+    "contrast": "Ensure all text meets WCAG AA (4.5:1). Use Slate-600+ on white backgrounds.",
+    "touch_targets": "All mobile interactive elements must be at least 44x44px.",
+    "focus_states": "Visible focus rings are mandatory for keyboard navigation."
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Install 'lucide-react', 'recharts', 'clsx', 'tailwind-merge' if not present.",
+    "2. FONTS: Add the Google Fonts import to index.css immediately.",
+    "3. THEME: Update tailwind.config.js with the custom colors defined above.",
+    "4. COMPONENTS: Use Shadcn UI for complex interactions (Dialog, Select, DatePicker) but style them using the 'card_style' and 'input' classes defined here.",
+    "5. LAYOUT: Build the Admin Dashboard using the 'Control Room Grid' strategy. Build the Employee App using the 'Stack Layout' strategy.",
+    "6. DATA-TESTID: Add data-testid attributes to all inputs and buttons (e.g., 'login-email-input', 'submit-survey-btn').",
+    "7. MAPS: Use a placeholder div with a gray background and 'Map View Placeholder' text if a real map library is not strictly required by the prompt, or use 'react-leaflet' if you are comfortable implementing it quickly. For now, a static placeholder is safer.",
+    "8. MOBILE: Ensure the survey form is split into small chunks (Wizard style) rather than one giant scrollable page."
+  ],
+  "universal_guidelines": [
+    "Do not use gradients for backgrounds, use solid Slate-50 or white.",
+    "Use 'sonner' for toast notifications.",
+    "Avoid 'Inter' for headings; use 'Manrope'.",
+    "Ensure 2-3x more padding than usual in the Admin Dashboard cards."
+  ]
+}
