@@ -821,20 +821,47 @@ export default function Submissions() {
               </div>
             )}
 
-            <DialogFooter className="mt-4 pt-4 border-t">
-              <Button variant="outline" onClick={() => setEditDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleEdit} disabled={savingEdit} className="bg-blue-600 hover:bg-blue-700">
-                {savingEdit ? (
-                  <>Saving...</>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save All Changes
-                  </>
-                )}
-              </Button>
+            <DialogFooter className="mt-4 pt-4 border-t flex-wrap gap-2">
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={() => setEditDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleEdit} disabled={savingEdit} className="bg-blue-600 hover:bg-blue-700">
+                  {savingEdit ? (
+                    <>Saving...</>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </div>
+              {(!selectedSubmission?.status || selectedSubmission?.status === 'Pending') && (
+                <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
+                  <Button
+                    onClick={() => {
+                      setEditDialog(false);
+                      handleApprove(selectedSubmission.id);
+                    }}
+                    className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Approve
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setEditDialog(false);
+                      openRejectDialog(selectedSubmission);
+                    }}
+                    variant="destructive"
+                    className="flex-1 sm:flex-none"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Reject
+                  </Button>
+                </div>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
