@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { CheckCircle, Clock, AlertTriangle, ArrowRight, FileSpreadsheet } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, ArrowRight, FileSpreadsheet, TrendingUp, XCircle } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -58,7 +58,7 @@ export default function EmployeeDashboard() {
           <p className="text-slate-500 mt-1">Ready for today's surveys?</p>
         </div>
 
-        {/* Progress Card */}
+        {/* Today's Progress Card */}
         <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white">
           <CardContent className="py-6">
             <div className="flex items-center justify-between mb-4">
