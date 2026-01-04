@@ -555,9 +555,8 @@ async def export_data(
     batch_id: Optional[str] = None,
     employee_id: Optional[str] = None,
     status: Optional[str] = None,
-    authorization: str = None
+    current_user: dict = Depends(get_current_user)
 ):
-    current_user = await get_current_user(authorization)
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
