@@ -38,7 +38,8 @@ const COLORS = ['#059669', '#f59e0b', '#3b82f6', '#ef4444'];
 const ROLE_LABELS = {
   'SURVEYOR': 'Surveyor',
   'SUPERVISOR': 'Supervisor',
-  'MC_OFFICER': 'MC Officer'
+  'MC_OFFICER': 'MC Officer',
+  'EMPLOYEE': 'Surveyor'  // Backward compatibility - old employees show as Surveyor
 };
 
 export default function Dashboard() {
