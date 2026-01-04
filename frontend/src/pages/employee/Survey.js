@@ -8,6 +8,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
+import SignatureCanvas from 'react-signature-canvas';
 import {
   ArrowLeft,
   MapPin,
@@ -21,10 +22,104 @@ import {
   FileText,
   Send,
   Flag,
-  Loader2
+  Loader2,
+  Pen,
+  RotateCcw
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
+
+// Function to add watermark to image
+const addWatermarkToImage = (file, latitude, longitude) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        // Draw original image
+        ctx.drawImage(img, 0, 0);
+        
+        // Watermark settings
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        const timeStr = now.toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+        
+        const watermarkLines = [
+          `Date: ${dateStr}`,
+          `Time: ${timeStr}`,
+          `Lat: ${latitude?.toFixed(6) || 'N/A'}`,
+          `Long: ${longitude?.toFixed(6) || 'N/A'}`
+        ];
+        
+        // Calculate font size based on image dimensions
+        const fontSize = Math.max(16, Math.min(img.width, img.height) * 0.025);
+        const padding = fontSize * 0.8;
+        const lineHeight = fontSize * 1.4;
+        
+        // Background rectangle dimensions
+        const textWidth = fontSize * 14;
+        const textHeight = lineHeight * watermarkLines.length + padding * 2;
+        
+        // Position at bottom-left with margin
+        const boxX = padding;
+        const boxY = img.height - textHeight - padding;
+        
+        // Draw semi-transparent background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(boxX, boxY, textWidth, textHeight);
+        
+        // Draw border
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(boxX, boxY, textWidth, textHeight);
+        
+        // Draw text
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        ctx.textBaseline = 'top';
+        
+        watermarkLines.forEach((line, index) => {
+          ctx.fillText(line, boxX + padding, boxY + padding + (index * lineHeight));
+        });
+        
+        // Also add Google Maps icon hint at top-right
+        const mapIconSize = fontSize * 2;
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+        ctx.beginPath();
+        ctx.arc(img.width - padding - mapIconSize/2, padding + mapIconSize/2, mapIconSize/2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${mapIconSize * 0.6}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('📍', img.width - padding - mapIconSize/2, padding + mapIconSize/2);
+        
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          const watermarkedFile = new File([blob], file.name, { type: 'image/jpeg' });
+          resolve(watermarkedFile);
+        }, 'image/jpeg', 0.9);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 export default function Survey() {
   const { propertyId } = useParams();
@@ -54,6 +149,10 @@ export default function Survey() {
   const [gatePhoto, setGatePhoto] = useState(null);
   const [housePhotoPreview, setHousePhotoPreview] = useState(null);
   const [gatePhotoPreview, setGatePhotoPreview] = useState(null);
+
+  // Signature State
+  const signatureRef = useRef(null);
+  const [signatureData, setSignatureData] = useState(null);
 
   const housePhotoRef = useRef(null);
   const gatePhotoRef = useRef(null);
@@ -111,7 +210,7 @@ export default function Survey() {
     );
   };
 
-  const handlePhotoChange = (e, type) => {
+  const handlePhotoChange = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -121,18 +220,61 @@ export default function Survey() {
       return;
     }
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (type === 'house') {
-        setHousePhoto(file);
-        setHousePhotoPreview(reader.result);
-      } else {
-        setGatePhoto(file);
-        setGatePhotoPreview(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    // Show loading toast
+    const loadingToast = toast.loading('Processing photo with watermark...');
+
+    try {
+      // Add watermark to photo
+      const watermarkedFile = await addWatermarkToImage(file, location.latitude, location.longitude);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (type === 'house') {
+          setHousePhoto(watermarkedFile);
+          setHousePhotoPreview(reader.result);
+        } else {
+          setGatePhoto(watermarkedFile);
+          setGatePhotoPreview(reader.result);
+        }
+        toast.dismiss(loadingToast);
+        toast.success('Photo captured with GPS watermark');
+      };
+      reader.readAsDataURL(watermarkedFile);
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error('Failed to process photo');
+    }
+  };
+
+  const clearSignature = () => {
+    if (signatureRef.current) {
+      signatureRef.current.clear();
+      setSignatureData(null);
+    }
+  };
+
+  const saveSignature = () => {
+    if (signatureRef.current && !signatureRef.current.isEmpty()) {
+      const dataUrl = signatureRef.current.toDataURL('image/png');
+      setSignatureData(dataUrl);
+      toast.success('Signature captured');
+    } else {
+      toast.error('Please provide a signature');
+    }
+  };
+
+  // Convert data URL to Blob
+  const dataURLtoBlob = (dataURL) => {
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
   };
 
   const handleSubmit = async () => {
@@ -152,6 +294,11 @@ export default function Survey() {
       return;
     }
 
+    if (!signatureData) {
+      toast.error('Property holder signature is required');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -165,6 +312,12 @@ export default function Survey() {
       formDataObj.append('longitude', location.longitude);
       formDataObj.append('house_photo', housePhoto);
       formDataObj.append('gate_photo', gatePhoto);
+      
+      // Add signature as a file
+      const signatureBlob = dataURLtoBlob(signatureData);
+      const signatureFile = new File([signatureBlob], 'signature.png', { type: 'image/png' });
+      formDataObj.append('signature', signatureFile);
+      
       formDataObj.append('authorization', `Bearer ${token}`);
 
       await axios.post(`${API_URL}/employee/submit/${propertyId}`, formDataObj, {
@@ -307,6 +460,16 @@ export default function Survey() {
                 </Button>
               )}
             </div>
+            {location.latitude && (
+              <a
+                href={`https://www.google.com/maps?q=${location.latitude},${location.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-emerald-600 hover:underline mt-2 block"
+              >
+                📍 View on Google Maps
+              </a>
+            )}
           </CardContent>
         </Card>
 
@@ -394,10 +557,14 @@ export default function Survey() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                  Photo Evidence
+                  Photo Evidence (with GPS & Timestamp)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <p className="text-xs text-slate-500 bg-blue-50 p-2 rounded-lg">
+                  📸 Photos will be automatically watermarked with date, time, and GPS coordinates
+                </p>
+                
                 {/* House Photo */}
                 <div>
                   <Label className="mb-2 block">House/Property Photo *</Label>
@@ -451,6 +618,77 @@ export default function Survey() {
                     )}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Digital Signature */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                  <Pen className="w-4 h-4" />
+                  Property Holder Signature *
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-slate-500">
+                  Please ask the property holder to sign below
+                </p>
+                
+                {!signatureData ? (
+                  <>
+                    <div className="border-2 border-dashed border-slate-300 rounded-lg bg-white">
+                      <SignatureCanvas
+                        ref={signatureRef}
+                        canvasProps={{
+                          className: 'w-full h-40 rounded-lg',
+                          style: { width: '100%', height: '160px' }
+                        }}
+                        backgroundColor="white"
+                        penColor="black"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearSignature}
+                        className="flex-1"
+                        data-testid="clear-signature-btn"
+                      >
+                        <RotateCcw className="w-4 h-4 mr-1" />
+                        Clear
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={saveSignature}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                        data-testid="save-signature-btn"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Confirm Signature
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="border-2 border-emerald-300 rounded-lg bg-emerald-50 p-2">
+                      <img src={signatureData} alt="Signature" className="w-full h-32 object-contain" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-emerald-600 flex items-center gap-1">
+                        <CheckCircle className="w-4 h-4" />
+                        Signature captured
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSignatureData(null)}
+                      >
+                        Re-sign
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </>
@@ -513,6 +751,26 @@ export default function Survey() {
                 ))}
               </CardContent>
             </Card>
+
+            {/* Signature */}
+            {submission.signature_url && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
+                    Property Holder Signature
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg bg-white p-2">
+                    <img
+                      src={`${process.env.REACT_APP_BACKEND_URL}${submission.signature_url}`}
+                      alt="Signature"
+                      className="w-full h-24 object-contain"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </main>
