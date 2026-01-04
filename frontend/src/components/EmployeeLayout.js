@@ -3,8 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard,
   FileSpreadsheet,
-  LogOut,
-  Building2
+  LogOut
 } from 'lucide-react';
 
 const navItems = [
@@ -28,9 +27,11 @@ export default function EmployeeLayout({ children, title, showBackButton = false
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-white" />
-            </div>
+            <img 
+              src="/nstu-logo.jpeg" 
+              alt="NSTU India Pvt Ltd" 
+              className="w-8 h-8 object-contain rounded-lg"
+            />
             <h1 className="font-heading font-semibold text-slate-900">{title}</h1>
           </div>
           <button
