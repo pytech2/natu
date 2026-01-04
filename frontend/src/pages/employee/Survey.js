@@ -29,94 +29,148 @@ import {
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
-// Function to add watermark to image
+// Function to add watermark to image with GPS, Date, Time
 const addWatermarkToImage = (file, latitude, longitude) => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    
     reader.onload = (e) => {
       const img = new Image();
+      
+      img.onerror = () => reject(new Error('Failed to load image'));
+      
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
-        // Draw original image
-        ctx.drawImage(img, 0, 0);
-        
-        // Watermark settings
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('en-IN', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
-        const timeStr = now.toLocaleTimeString('en-IN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true
-        });
-        
-        const watermarkLines = [
-          `Date: ${dateStr}`,
-          `Time: ${timeStr}`,
-          `Lat: ${latitude?.toFixed(6) || 'N/A'}`,
-          `Long: ${longitude?.toFixed(6) || 'N/A'}`
-        ];
-        
-        // Calculate font size based on image dimensions
-        const fontSize = Math.max(16, Math.min(img.width, img.height) * 0.025);
-        const padding = fontSize * 0.8;
-        const lineHeight = fontSize * 1.4;
-        
-        // Background rectangle dimensions
-        const textWidth = fontSize * 14;
-        const textHeight = lineHeight * watermarkLines.length + padding * 2;
-        
-        // Position at bottom-left with margin
-        const boxX = padding;
-        const boxY = img.height - textHeight - padding;
-        
-        // Draw semi-transparent background
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(boxX, boxY, textWidth, textHeight);
-        
-        // Draw border
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(boxX, boxY, textWidth, textHeight);
-        
-        // Draw text
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-        ctx.textBaseline = 'top';
-        
-        watermarkLines.forEach((line, index) => {
-          ctx.fillText(line, boxX + padding, boxY + padding + (index * lineHeight));
-        });
-        
-        // Also add Google Maps icon hint at top-right
-        const mapIconSize = fontSize * 2;
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
-        ctx.beginPath();
-        ctx.arc(img.width - padding - mapIconSize/2, padding + mapIconSize/2, mapIconSize/2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${mapIconSize * 0.6}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('📍', img.width - padding - mapIconSize/2, padding + mapIconSize/2);
-        
-        // Convert canvas to blob
-        canvas.toBlob((blob) => {
-          const watermarkedFile = new File([blob], file.name, { type: 'image/jpeg' });
-          resolve(watermarkedFile);
-        }, 'image/jpeg', 0.9);
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Set canvas size to match image
+          canvas.width = img.width;
+          canvas.height = img.height;
+          
+          // Draw original image
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+          
+          // Watermark settings
+          const now = new Date();
+          const dateStr = now.toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          });
+          const timeStr = now.toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+          });
+          
+          // Format GPS coordinates
+          const latStr = latitude ? latitude.toFixed(6) : 'N/A';
+          const longStr = longitude ? longitude.toFixed(6) : 'N/A';
+          
+          const watermarkLines = [
+            `Date: ${dateStr}`,
+            `Time: ${timeStr}`,
+            `Lat: ${latStr}`,
+            `Long: ${longStr}`,
+            `Maps: maps.google.com`
+          ];
+          
+          // Calculate font size based on image dimensions (responsive)
+          const minDimension = Math.min(img.width, img.height);
+          const fontSize = Math.max(20, Math.floor(minDimension * 0.035));
+          const padding = Math.floor(fontSize * 0.8);
+          const lineHeight = Math.floor(fontSize * 1.5);
+          
+          // Set font for measuring text
+          ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+          
+          // Calculate max text width
+          let maxTextWidth = 0;
+          watermarkLines.forEach(line => {
+            const metrics = ctx.measureText(line);
+            if (metrics.width > maxTextWidth) {
+              maxTextWidth = metrics.width;
+            }
+          });
+          
+          // Background rectangle dimensions
+          const boxWidth = maxTextWidth + padding * 2;
+          const boxHeight = lineHeight * watermarkLines.length + padding * 2;
+          
+          // Position at bottom-left with margin
+          const boxX = padding;
+          const boxY = img.height - boxHeight - padding;
+          
+          // Draw semi-transparent black background
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+          ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+          
+          // Draw yellow border
+          ctx.strokeStyle = '#FFD700';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+          
+          // Draw text
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+          ctx.textBaseline = 'top';
+          
+          watermarkLines.forEach((line, index) => {
+            // Highlight GPS coordinates in yellow
+            if (line.startsWith('Lat:') || line.startsWith('Long:')) {
+              ctx.fillStyle = '#FFD700';
+            } else {
+              ctx.fillStyle = '#FFFFFF';
+            }
+            ctx.fillText(line, boxX + padding, boxY + padding + (index * lineHeight));
+          });
+          
+          // Add location pin icon at top-right
+          const iconSize = Math.floor(fontSize * 2.5);
+          const iconX = img.width - iconSize - padding;
+          const iconY = padding;
+          
+          // Draw red circle background
+          ctx.beginPath();
+          ctx.arc(iconX + iconSize/2, iconY + iconSize/2, iconSize/2, 0, Math.PI * 2);
+          ctx.fillStyle = '#DC2626';
+          ctx.fill();
+          
+          // Draw white location pin
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = `${iconSize * 0.6}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('📍', iconX + iconSize/2, iconY + iconSize/2);
+          
+          // Reset text align
+          ctx.textAlign = 'left';
+          
+          // Convert canvas to blob
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const watermarkedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '') + '_watermarked.jpg', { 
+                type: 'image/jpeg' 
+              });
+              resolve(watermarkedFile);
+            } else {
+              reject(new Error('Failed to create blob from canvas'));
+            }
+          }, 'image/jpeg', 0.92);
+          
+        } catch (error) {
+          console.error('Canvas error:', error);
+          reject(error);
+        }
       };
+      
       img.src = e.target.result;
     };
+    
     reader.readAsDataURL(file);
   });
 };
@@ -206,7 +260,7 @@ export default function Survey() {
         setGpsStatus('error');
         toast.error('Failed to get location. Please enable GPS.');
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
@@ -220,14 +274,24 @@ export default function Survey() {
       return;
     }
 
+    // Check if GPS is captured
+    if (!location.latitude || !location.longitude) {
+      toast.error('Please capture GPS location first before taking photos');
+      return;
+    }
+
     // Show loading toast
-    const loadingToast = toast.loading('Processing photo with watermark...');
+    const loadingToast = toast.loading('Adding GPS & timestamp watermark to photo...');
 
     try {
-      // Add watermark to photo
-      const watermarkedFile = await addWatermarkToImage(file, location.latitude, location.longitude);
+      // Add watermark to photo with GPS coordinates
+      const watermarkedFile = await addWatermarkToImage(
+        file, 
+        location.latitude, 
+        location.longitude
+      );
       
-      // Create preview
+      // Create preview from watermarked file
       const reader = new FileReader();
       reader.onloadend = () => {
         if (type === 'house') {
@@ -238,12 +302,14 @@ export default function Survey() {
           setGatePhotoPreview(reader.result);
         }
         toast.dismiss(loadingToast);
-        toast.success('Photo captured with GPS watermark');
+        toast.success('Photo captured with GPS, Date & Time watermark!');
       };
       reader.readAsDataURL(watermarkedFile);
+      
     } catch (error) {
+      console.error('Watermark error:', error);
       toast.dismiss(loadingToast);
-      toast.error('Failed to process photo');
+      toast.error('Failed to process photo. Please try again.');
     }
   };
 
@@ -421,11 +487,11 @@ export default function Survey() {
           </CardContent>
         </Card>
 
-        {/* GPS Status */}
+        {/* GPS Status - MUST CAPTURE FIRST */}
         <Card className={`${
           gpsStatus === 'success' ? 'border-emerald-200 bg-emerald-50' :
           gpsStatus === 'error' ? 'border-red-200 bg-red-50' :
-          'border-slate-200'
+          'border-amber-200 bg-amber-50'
         }`}>
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
@@ -437,28 +503,31 @@ export default function Survey() {
                 ) : gpsStatus === 'error' ? (
                   <AlertTriangle className="w-5 h-5 text-red-600" />
                 ) : (
-                  <Navigation className="w-5 h-5 text-slate-400" />
+                  <Navigation className="w-5 h-5 text-amber-600" />
                 )}
                 <div>
-                  <p className="font-medium text-slate-900">GPS Location</p>
-                  {location.latitude && (
+                  <p className="font-medium text-slate-900">
+                    {gpsStatus === 'success' ? 'GPS Captured ✓' : 'Step 1: Capture GPS First'}
+                  </p>
+                  {location.latitude ? (
                     <p className="text-xs font-mono text-slate-500">
                       {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                     </p>
+                  ) : (
+                    <p className="text-xs text-amber-700">Required before taking photos</p>
                   )}
                 </div>
               </div>
-              {gpsStatus !== 'success' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={getLocation}
-                  data-testid="capture-gps-btn"
-                >
-                  <MapPin className="w-4 h-4 mr-1" />
-                  Capture
-                </Button>
-              )}
+              <Button
+                variant={gpsStatus === 'success' ? 'outline' : 'default'}
+                size="sm"
+                onClick={getLocation}
+                data-testid="capture-gps-btn"
+                className={gpsStatus !== 'success' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+              >
+                <MapPin className="w-4 h-4 mr-1" />
+                {gpsStatus === 'success' ? 'Recapture' : 'Capture GPS'}
+              </Button>
             </div>
             {location.latitude && (
               <a
@@ -557,13 +626,19 @@ export default function Survey() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                  Photo Evidence (with GPS & Timestamp)
+                  Step 2: Photo Evidence
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-xs text-slate-500 bg-blue-50 p-2 rounded-lg">
-                  📸 Photos will be automatically watermarked with date, time, and GPS coordinates
-                </p>
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800 font-medium flex items-center gap-2">
+                    <Camera className="w-4 h-4" />
+                    Photos will show GPS, Date & Time watermark
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Make sure GPS is captured before taking photos
+                  </p>
+                </div>
                 
                 {/* House Photo */}
                 <div>
@@ -579,14 +654,21 @@ export default function Survey() {
                   />
                   <div
                     className={`photo-upload-area ${housePhotoPreview ? 'has-image p-0 overflow-hidden' : ''}`}
-                    onClick={() => housePhotoRef.current?.click()}
+                    onClick={() => {
+                      if (!location.latitude) {
+                        toast.error('Please capture GPS location first!');
+                        return;
+                      }
+                      housePhotoRef.current?.click();
+                    }}
                   >
                     {housePhotoPreview ? (
-                      <img src={housePhotoPreview} alt="House" className="w-full h-40 object-cover" />
+                      <img src={housePhotoPreview} alt="House" className="w-full h-48 object-cover" />
                     ) : (
                       <div className="py-6">
                         <Camera className="w-8 h-8 mx-auto text-slate-400 mb-2" />
                         <p className="text-slate-600">Tap to capture house photo</p>
+                        <p className="text-xs text-slate-400 mt-1">GPS watermark will be added</p>
                       </div>
                     )}
                   </div>
@@ -606,14 +688,21 @@ export default function Survey() {
                   />
                   <div
                     className={`photo-upload-area ${gatePhotoPreview ? 'has-image p-0 overflow-hidden' : ''}`}
-                    onClick={() => gatePhotoRef.current?.click()}
+                    onClick={() => {
+                      if (!location.latitude) {
+                        toast.error('Please capture GPS location first!');
+                        return;
+                      }
+                      gatePhotoRef.current?.click();
+                    }}
                   >
                     {gatePhotoPreview ? (
-                      <img src={gatePhotoPreview} alt="Gate" className="w-full h-40 object-cover" />
+                      <img src={gatePhotoPreview} alt="Gate" className="w-full h-48 object-cover" />
                     ) : (
                       <div className="py-6">
                         <Camera className="w-8 h-8 mx-auto text-slate-400 mb-2" />
                         <p className="text-slate-600">Tap to capture gate photo</p>
+                        <p className="text-xs text-slate-400 mt-1">GPS watermark will be added</p>
                       </div>
                     )}
                   </div>
@@ -626,7 +715,7 @@ export default function Survey() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500 flex items-center gap-2">
                   <Pen className="w-4 h-4" />
-                  Property Holder Signature *
+                  Step 3: Property Holder Signature *
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -717,6 +806,10 @@ export default function Survey() {
                   <span>{submission.house_number || '-'}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-slate-500">GPS</span>
+                  <span className="font-mono text-xs">{submission.latitude?.toFixed(6)}, {submission.longitude?.toFixed(6)}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-slate-500">Submitted</span>
                   <span>{new Date(submission.submitted_at).toLocaleString()}</span>
                 </div>
@@ -733,7 +826,7 @@ export default function Survey() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                  Photos
+                  Photos (with GPS & Timestamp)
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3">
