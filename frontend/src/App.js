@@ -77,19 +77,19 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      {/* Employee Routes */}
+      {/* Employee/Surveyor Routes */}
       <Route path="/employee" element={
-        <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+        <ProtectedRoute allowedRoles={SURVEYOR_ROLES}>
           <EmployeeDashboard />
         </ProtectedRoute>
       } />
       <Route path="/employee/properties" element={
-        <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+        <ProtectedRoute allowedRoles={SURVEYOR_ROLES}>
           <EmployeeProperties />
         </ProtectedRoute>
       } />
       <Route path="/employee/survey/:propertyId" element={
-        <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+        <ProtectedRoute allowedRoles={SURVEYOR_ROLES}>
           <EmployeeSurvey />
         </ProtectedRoute>
       } />
