@@ -304,7 +304,7 @@ export default function Submissions() {
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                            {sub.status === 'Pending' && (
+                            {(!sub.status || sub.status === 'Pending') && (
                               <>
                                 <Button
                                   variant="ghost"
