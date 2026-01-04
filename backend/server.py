@@ -338,8 +338,7 @@ async def list_batches(current_user: dict = Depends(get_current_user)):
     return batches
 
 @api_router.post("/admin/batch/{batch_id}/archive")
-async def archive_batch(batch_id: str, authorization: str = None):
-    current_user = await get_current_user(authorization)
+async def archive_batch(batch_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
