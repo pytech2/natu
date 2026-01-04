@@ -994,13 +994,45 @@ export default function Survey() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Respondent</span>
-                  <span className="font-medium">{submission.respondent_name}</span>
+                  <span className="text-slate-500">New Owner Name</span>
+                  <span className="font-medium">{submission.new_owner_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Phone</span>
-                  <span className="font-mono">{submission.respondent_phone}</span>
+                  <span className="text-slate-500">New Mobile</span>
+                  <span className="font-mono">{submission.new_mobile}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Receiver Name</span>
+                  <span className="font-medium">{submission.receiver_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Relation</span>
+                  <span>{submission.relation}</span>
+                </div>
+                {submission.old_property_id && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Old Property ID</span>
+                    <span className="font-mono">{submission.old_property_id}</span>
+                  </div>
+                )}
+                {submission.family_id && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Family ID</span>
+                    <span className="font-mono">{submission.family_id}</span>
+                  </div>
+                )}
+                {submission.aadhar_number && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Aadhar Number</span>
+                    <span className="font-mono">{submission.aadhar_number}</span>
+                  </div>
+                )}
+                {submission.ward_number && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Ward Number</span>
+                    <span>{submission.ward_number}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-slate-500">GPS</span>
                   <span className="font-mono text-xs">{submission.latitude?.toFixed(6)}, {submission.longitude?.toFixed(6)}</span>
@@ -1009,6 +1041,28 @@ export default function Survey() {
                   <span className="text-slate-500">Submitted</span>
                   <span>{new Date(submission.submitted_at).toLocaleString()}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Status</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    submission.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
+                    submission.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                    'bg-amber-100 text-amber-700'
+                  }`}>
+                    {submission.status || 'Pending'}
+                  </span>
+                </div>
+                {submission.remarks && (
+                  <div>
+                    <span className="text-slate-500 block mb-1">Remarks</span>
+                    <p className="bg-slate-50 p-2 rounded">{submission.remarks}</p>
+                  </div>
+                )}
+                {submission.review_remarks && (
+                  <div className="p-3 bg-red-50 rounded-lg">
+                    <span className="text-red-600 text-xs font-semibold block mb-1">REJECTION REASON</span>
+                    <p className="text-red-800">{submission.review_remarks}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
