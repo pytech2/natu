@@ -681,9 +681,7 @@ async def get_employee_properties(
     }
 
 @api_router.get("/employee/property/{property_id}")
-async def get_property_detail(property_id: str, authorization: str = None):
-    current_user = await get_current_user(authorization)
-    
+async def get_property_detail(property_id: str, current_user: dict = Depends(get_current_user)):
     prop = await db.properties.find_one({"id": property_id}, {"_id": 0})
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
