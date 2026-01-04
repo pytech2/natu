@@ -121,3 +121,12 @@ code {
 ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
+
+/* Hide emergent badge */
+#emergent-badge {
+    display: none !important;
+}
+
+a[href*="emergent.sh"] {
+    display: none !important;
+}
