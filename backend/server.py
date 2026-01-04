@@ -452,8 +452,7 @@ async def bulk_assign_by_area(data: BulkAssignmentRequest, current_user: dict = 
     return {"message": f"Assigned {result.modified_count} properties in area {data.area} to {employee['name']}"}
 
 @api_router.get("/admin/areas")
-async def list_areas(authorization: str = None):
-    current_user = await get_current_user(authorization)
+async def list_areas(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
