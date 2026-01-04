@@ -198,82 +198,185 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Employee Progress Report - Clickable */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-heading flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
+        {/* Charts Section FIRST - Modern Card Style */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Employee Performance Bar Chart */}
+          <Card className="shadow-lg border-0 bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="font-heading text-lg flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-blue-600" />
+                </div>
+                Employee Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {employeeProgress.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={employeeProgress} layout="vertical" margin={{ left: 20, right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis type="number" stroke="#94a3b8" fontSize={12} />
+                    <YAxis 
+                      type="category" 
+                      dataKey="employee_name" 
+                      stroke="#94a3b8"
+                      width={80}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: 'none',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
+                      }} 
+                    />
+                    <Bar dataKey="today_completed" fill="#10b981" name="Today" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="overall_completed" fill="#3b82f6" name="Overall" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="pending" fill="#f59e0b" name="Pending" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-slate-400">
+                  No employee data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Status Distribution Pie Chart */}
+          <Card className="shadow-lg border-0 bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="font-heading text-lg flex items-center gap-2">
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <FolderOpen className="w-4 h-4 text-purple-600" />
+                </div>
+                Status Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      innerRadius={65}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: 'none',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-slate-400">
+                  No data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Employee Progress Report Table - Modern Style */}
+        <Card className="shadow-lg border-0 bg-white">
+          <CardHeader className="border-b border-slate-100">
+            <CardTitle className="font-heading text-lg flex items-center gap-2">
+              <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <Users className="w-4 h-4 text-emerald-600" />
+              </div>
               Employee Progress Report
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {employeeProgress.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="data-table">
-                  <thead>
+                <table className="w-full">
+                  <thead className="bg-slate-50">
                     <tr>
-                      <th>Employee</th>
-                      <th>Role</th>
-                      <th className="text-center">Today Done</th>
-                      <th className="text-center">Overall Done</th>
-                      <th className="text-center">Pending</th>
-                      <th>Progress</th>
-                      <th></th>
+                      <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Employee</th>
+                      <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
+                      <th className="text-center px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Today</th>
+                      <th className="text-center px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Overall</th>
+                      <th className="text-center px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending</th>
+                      <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Progress</th>
+                      <th className="px-6 py-4"></th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {employeeProgress.map((emp) => {
+                  <tbody className="divide-y divide-slate-100">
+                    {employeeProgress.map((emp, idx) => {
                       const percentage = emp.total_assigned > 0 
                         ? Math.round((emp.completed / emp.total_assigned) * 100) 
                         : 0;
                       return (
-                        <tr key={emp.employee_id} className="cursor-pointer hover:bg-slate-50">
-                          <td>
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                                <span className="text-xs font-bold">{emp.employee_name?.charAt(0)}</span>
+                        <tr key={emp.employee_id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                                ['bg-blue-500', 'bg-emerald-500', 'bg-purple-500', 'bg-amber-500', 'bg-rose-500'][idx % 5]
+                              }`}>
+                                {emp.employee_name?.charAt(0)}
                               </div>
-                              <span className="font-medium">{emp.employee_name}</span>
+                              <span className="font-medium text-slate-900">{emp.employee_name}</span>
                             </div>
                           </td>
-                          <td>
-                            <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                          <td className="px-6 py-4">
+                            <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${
+                              emp.role === 'SUPERVISOR' ? 'bg-purple-100 text-purple-700' :
+                              emp.role === 'MC_OFFICER' ? 'bg-amber-100 text-amber-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>
                               {ROLE_LABELS[emp.role] || emp.role}
                             </span>
                           </td>
-                          <td className="text-center">
-                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 font-bold">
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 font-bold">
                               {emp.today_completed}
                             </span>
                           </td>
-                          <td className="text-center">
-                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold">
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-blue-50 text-blue-700 font-bold">
                               {emp.overall_completed}
                             </span>
                           </td>
-                          <td className="text-center">
-                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 text-amber-700 font-bold">
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-amber-50 text-amber-700 font-bold">
                               {emp.pending}
                             </span>
                           </td>
-                          <td className="w-32">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 progress-bar">
+                          <td className="px-6 py-4 w-40">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                                 <div 
-                                  className="progress-bar-fill" 
+                                  className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500"
                                   style={{ width: `${percentage}%` }}
                                 />
                               </div>
-                              <span className="text-xs font-mono text-slate-600">{percentage}%</span>
+                              <span className="text-xs font-semibold text-slate-600 w-10">{percentage}%</span>
                             </div>
                           </td>
-                          <td>
+                          <td className="px-6 py-4">
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                               onClick={() => navigate(`/admin/submissions?employee_id=${emp.employee_id}`)}
                             >
-                              View All
+                              View →
                             </Button>
                           </td>
                         </tr>
@@ -283,87 +386,13 @@ export default function Dashboard() {
                 </table>
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-500">
+              <div className="text-center py-12 text-slate-400">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
                 No employee data available
               </div>
             )}
           </CardContent>
         </Card>
-
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Employee Progress Bar Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-heading">Employee Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {employeeProgress.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={employeeProgress} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis type="number" stroke="#64748b" />
-                    <YAxis 
-                      type="category" 
-                      dataKey="employee_name" 
-                      stroke="#64748b"
-                      width={100}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'white', 
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px'
-                      }} 
-                    />
-                    <Bar dataKey="today_completed" fill="#059669" name="Today" />
-                    <Bar dataKey="overall_completed" fill="#3b82f6" name="Overall" />
-                    <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-slate-500">
-                  No employee data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Status Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-heading">Status Distribution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {pieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      innerRadius={60}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-slate-500">
-                  No data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </AdminLayout>
   );
