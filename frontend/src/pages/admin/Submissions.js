@@ -561,73 +561,65 @@ export default function Submissions() {
         <Dialog open={editDialog} onOpenChange={setEditDialog}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="font-heading flex items-center gap-2">
-                <Edit className="w-5 h-5 text-blue-600" />
-                Edit Submission - {selectedSubmission?.property_id}
+              <DialogTitle className="font-heading flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Edit className="w-5 h-5 text-blue-600" />
+                  Edit Submission - {selectedSubmission?.property_id}
+                </span>
+                {selectedSubmission && getStatusBadge(selectedSubmission.status)}
               </DialogTitle>
             </DialogHeader>
 
             {selectedSubmission && (
               <div className="space-y-6">
-                {/* Property Details Section */}
-                <Card className="border-blue-200 bg-blue-50/50">
+                {/* Property Details Section - READ ONLY */}
+                <Card className="border-slate-200 bg-slate-50/50">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-blue-700">
-                      <Home className="w-4 h-4" />
-                      PROPERTY DETAILS
+                    <CardTitle className="text-sm font-semibold flex items-center justify-between text-slate-600">
+                      <span className="flex items-center gap-2">
+                        <Home className="w-4 h-4" />
+                        PROPERTY DETAILS (Excel Data - Read Only)
+                      </span>
+                      <span className="text-xs font-normal bg-slate-200 text-slate-600 px-2 py-1 rounded">Cannot Edit</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent>
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs text-slate-600">Property ID</Label>
-                        <Input
-                          value={editPropertyData.property_id}
-                          onChange={(e) => setEditPropertyData({ ...editPropertyData, property_id: e.target.value })}
-                          className="bg-white"
-                        />
+                      <div>
+                        <Label className="text-xs text-slate-500">Property ID</Label>
+                        <p className="font-mono font-medium text-slate-800">{selectedSubmission.property_id || '-'}</p>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs text-slate-600">Owner Name</Label>
-                        <Input
-                          value={editPropertyData.owner_name}
-                          onChange={(e) => setEditPropertyData({ ...editPropertyData, owner_name: e.target.value })}
-                          className="bg-white"
-                        />
+                      <div>
+                        <Label className="text-xs text-slate-500">Owner Name</Label>
+                        <p className="font-medium text-slate-800">{selectedSubmission.property_owner_name || '-'}</p>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs text-slate-600">Mobile</Label>
-                        <Input
-                          value={editPropertyData.mobile}
-                          onChange={(e) => setEditPropertyData({ ...editPropertyData, mobile: e.target.value })}
-                          className="bg-white"
-                        />
+                      <div>
+                        <Label className="text-xs text-slate-500">Mobile</Label>
+                        <p className="font-mono text-slate-800">{selectedSubmission.property_mobile || '-'}</p>
                       </div>
-                      <div className="space-y-2 col-span-2">
-                        <Label className="text-xs text-slate-600">Address</Label>
-                        <Input
-                          value={editPropertyData.address}
-                          onChange={(e) => setEditPropertyData({ ...editPropertyData, address: e.target.value })}
-                          className="bg-white"
-                        />
+                      <div className="col-span-2">
+                        <Label className="text-xs text-slate-500">Address</Label>
+                        <p className="text-slate-800">{selectedSubmission.property_address || '-'}</p>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs text-slate-600">Amount (₹)</Label>
-                        <Input
-                          value={editPropertyData.amount}
-                          onChange={(e) => setEditPropertyData({ ...editPropertyData, amount: e.target.value })}
-                          className="bg-white"
-                        />
+                      <div>
+                        <Label className="text-xs text-slate-500">Amount</Label>
+                        <p className="font-mono font-semibold text-emerald-700">₹{selectedSubmission.property_amount || '-'}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Survey Submission Details */}
+                {/* Survey Submission Details - EDITABLE */}
                 <Card className="border-emerald-200 bg-emerald-50/50">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-emerald-700">
-                      <FileText className="w-4 h-4" />
+                    <CardTitle className="text-sm font-semibold flex items-center justify-between text-emerald-700">
+                      <span className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        SURVEY SUBMISSION DETAILS (Surveyor Data)
+                      </span>
+                      <span className="text-xs font-normal bg-emerald-200 text-emerald-700 px-2 py-1 rounded">Editable</span>
+                    </CardTitle>
+                  </CardHeader>
                       SURVEY SUBMISSION DETAILS
                     </CardTitle>
                   </CardHeader>
