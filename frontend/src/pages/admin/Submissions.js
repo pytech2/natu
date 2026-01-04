@@ -227,7 +227,7 @@ export default function Submissions() {
 
                 {/* Photos */}
                 <div>
-                  <label className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3 block">Photos</label>
+                  <label className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3 block">Photos (with GPS & Timestamp watermark)</label>
                   <div className="grid grid-cols-2 gap-4">
                     {selectedSubmission.photos?.map((photo, idx) => (
                       <div key={idx} className="relative">
@@ -247,6 +247,20 @@ export default function Submissions() {
                     ))}
                   </div>
                 </div>
+
+                {/* Signature */}
+                {selectedSubmission.signature_url && (
+                  <div>
+                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3 block">Property Holder Signature</label>
+                    <div className="border rounded-lg bg-white p-4">
+                      <img
+                        src={`${process.env.REACT_APP_BACKEND_URL}${selectedSubmission.signature_url}`}
+                        alt="Signature"
+                        className="w-full h-24 object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
