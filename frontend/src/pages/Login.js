@@ -5,7 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { MapPin, Building2, Lock, User } from 'lucide-react';
+import { MapPin, Lock, User } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -50,12 +50,16 @@ export default function Login() {
       
       <Card className="w-full max-w-md relative z-10 animate-fadeIn border-0 shadow-2xl">
         <CardHeader className="space-y-4 text-center pb-2">
-          <div className="mx-auto w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center">
-            <Building2 className="w-8 h-8 text-white" />
+          <div className="mx-auto">
+            <img 
+              src="/nstu-logo.jpeg" 
+              alt="NSTU India Pvt Ltd" 
+              className="w-24 h-24 object-contain mx-auto"
+            />
           </div>
           <div>
             <CardTitle className="text-2xl font-heading font-bold text-slate-900">
-              NSTU Property Tax Manager
+              NSTU India Pvt Ltd
             </CardTitle>
             <CardDescription className="text-slate-500 mt-2">
               Property Survey & Notice Distribution System
@@ -116,7 +120,7 @@ export default function Login() {
           <div className="mt-6 pt-6 border-t border-slate-100">
             <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
               <MapPin className="w-3 h-3" />
-              <span>NSTU India Private Limited</span>
+              <span>NSTU India Pvt Ltd</span>
             </div>
             <p className="text-center text-xs text-slate-400 mt-2">
               Default Admin: admin / admin123
