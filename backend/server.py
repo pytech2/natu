@@ -163,10 +163,13 @@ def create_token(user_id: str, role: str) -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-async def get_current_user(token: str = None):
-    if not token:
+from fastapi import Header
+
+async def get_current_user(authorization: str = Header(None)):
+    if not authorization:
         raise HTTPException(status_code=401, detail="Token required")
     try:
+        token = authorization
         if token.startswith("Bearer "):
             token = token[7:]
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
