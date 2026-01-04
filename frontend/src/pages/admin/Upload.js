@@ -105,7 +105,7 @@ export default function UploadPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
-              {['property_id', 'owner_name', 'mobile', 'plot_address', 'colony_name', 'total_area', 'category', 'latitude', 'longitude', 'area'].map((col) => (
+              {['property_id', 'owner_name', 'mobile', 'address', 'amount', 'ward'].map((col) => (
                 <div key={col} className="px-3 py-2 bg-slate-100 rounded-md text-sm font-mono text-slate-700">
                   {col}
                 </div>
