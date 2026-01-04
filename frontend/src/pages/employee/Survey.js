@@ -624,7 +624,7 @@ export default function Survey() {
 
         {!isCompleted && (
           <>
-            {/* Survey Form Fields */}
+            {/* Survey Form Fields - NEW FIELDS */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
@@ -632,60 +632,129 @@ export default function Survey() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* New Owner Details */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <User className="w-4 h-4 text-slate-400" />
-                    Respondent Name *
+                    New Owner's Name *
                   </Label>
                   <Input
-                    data-testid="respondent-name-input"
-                    value={formData.respondent_name}
-                    onChange={(e) => setFormData({ ...formData, respondent_name: e.target.value })}
+                    data-testid="new-owner-name-input"
+                    value={formData.new_owner_name}
+                    onChange={(e) => setFormData({ ...formData, new_owner_name: e.target.value })}
                     className="h-12 text-base"
-                    placeholder="Enter name"
+                    placeholder="Enter new owner's name"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-slate-400" />
-                    Phone Number *
+                    New Mobile Number *
                   </Label>
                   <Input
-                    data-testid="respondent-phone-input"
+                    data-testid="new-mobile-input"
                     type="tel"
-                    value={formData.respondent_phone}
-                    onChange={(e) => setFormData({ ...formData, respondent_phone: e.target.value })}
+                    value={formData.new_mobile}
+                    onChange={(e) => setFormData({ ...formData, new_mobile: e.target.value })}
                     className="h-12 text-base"
-                    placeholder="Enter phone"
+                    placeholder="Enter new mobile number"
                   />
                 </div>
 
+                {/* Receiver Details */}
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs font-semibold text-blue-700 mb-3">NOTICE RECEIVER DETAILS</p>
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-sm">
+                        <Users className="w-4 h-4 text-slate-400" />
+                        Receiver Name *
+                      </Label>
+                      <Input
+                        data-testid="receiver-name-input"
+                        value={formData.receiver_name}
+                        onChange={(e) => setFormData({ ...formData, receiver_name: e.target.value })}
+                        className="h-12"
+                        placeholder="Name of person receiving notice"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm">Relation with Owner *</Label>
+                      <Select
+                        value={formData.relation}
+                        onValueChange={(value) => setFormData({ ...formData, relation: value })}
+                      >
+                        <SelectTrigger className="h-12" data-testid="relation-select">
+                          <SelectValue placeholder="Select relation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RELATION_OPTIONS.map((rel) => (
+                            <SelectItem key={rel} value={rel}>{rel}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Property IDs */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-sm">
-                      <Home className="w-4 h-4 text-slate-400" />
-                      House No.
+                      <Hash className="w-4 h-4 text-slate-400" />
+                      Old Property ID
                     </Label>
                     <Input
-                      data-testid="house-number-input"
-                      value={formData.house_number}
-                      onChange={(e) => setFormData({ ...formData, house_number: e.target.value })}
+                      data-testid="old-property-id-input"
+                      value={formData.old_property_id}
+                      onChange={(e) => setFormData({ ...formData, old_property_id: e.target.value })}
                       className="h-12"
-                      placeholder="House #"
+                      placeholder="Old Prop ID"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-sm">
-                      <FileText className="w-4 h-4 text-slate-400" />
-                      Tax No.
+                      <Users className="w-4 h-4 text-slate-400" />
+                      Family ID
                     </Label>
                     <Input
-                      data-testid="tax-number-input"
-                      value={formData.tax_number}
-                      onChange={(e) => setFormData({ ...formData, tax_number: e.target.value })}
+                      data-testid="family-id-input"
+                      value={formData.family_id}
+                      onChange={(e) => setFormData({ ...formData, family_id: e.target.value })}
                       className="h-12"
-                      placeholder="Tax #"
+                      placeholder="Family ID"
+                    />
+                  </div>
+                </div>
+
+                {/* Aadhar and Ward */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm">
+                      <CreditCard className="w-4 h-4 text-slate-400" />
+                      Aadhar Number
+                    </Label>
+                    <Input
+                      data-testid="aadhar-number-input"
+                      value={formData.aadhar_number}
+                      onChange={(e) => setFormData({ ...formData, aadhar_number: e.target.value })}
+                      className="h-12"
+                      placeholder="12-digit Aadhar"
+                      maxLength={12}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm">
+                      <Building className="w-4 h-4 text-slate-400" />
+                      Ward Number
+                    </Label>
+                    <Input
+                      data-testid="ward-number-input"
+                      value={formData.ward_number}
+                      onChange={(e) => setFormData({ ...formData, ward_number: e.target.value })}
+                      className="h-12"
+                      placeholder="Ward #"
                     />
                   </div>
                 </div>
