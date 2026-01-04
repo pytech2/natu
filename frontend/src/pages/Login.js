@@ -54,7 +54,7 @@ export default function Login() {
             <img 
               src="/nstu-logo.jpeg" 
               alt="NSTU India Pvt Ltd" 
-              className="w-24 h-24 object-contain mx-auto"
+              className="w-48 h-48 object-contain mx-auto"
             />
           </div>
           <div>

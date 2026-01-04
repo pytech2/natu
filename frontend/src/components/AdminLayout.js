@@ -43,7 +43,7 @@ export default function AdminLayout({ children, title }) {
             <img 
               src="/nstu-logo.jpeg" 
               alt="NSTU India Pvt Ltd" 
-              className="w-12 h-12 object-contain rounded-lg bg-white"
+              className="w-24 h-24 object-contain rounded-lg bg-white"
             />
             <div>
               <h1 className="font-heading font-bold text-white text-sm">NSTU India Pvt Ltd</h1>

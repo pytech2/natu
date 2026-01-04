@@ -30,7 +30,7 @@ export default function EmployeeLayout({ children, title, showBackButton = false
             <img 
               src="/nstu-logo.jpeg" 
               alt="NSTU India Pvt Ltd" 
-              className="w-8 h-8 object-contain rounded-lg"
+              className="w-16 h-16 object-contain rounded-lg"
             />
             <h1 className="font-heading font-semibold text-slate-900">{title}</h1>
           </div>
