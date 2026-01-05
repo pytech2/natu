@@ -327,14 +327,25 @@ export default function Properties() {
               </Button>
 
               {selectedProperties.length > 0 && (
-                <Button
-                  data-testid="assign-selected-btn"
-                  onClick={() => setAssignDialog(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Assign ({selectedProperties.length})
-                </Button>
+                <>
+                  <Button
+                    data-testid="assign-selected-btn"
+                    onClick={() => setAssignDialog(true)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Assign ({selectedProperties.length})
+                  </Button>
+                  <Button
+                    data-testid="delete-selected-btn"
+                    onClick={() => setDeleteDialog(true)}
+                    variant="destructive"
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete ({selectedProperties.length})
+                  </Button>
+                </>
               )}
 
               <Button
