@@ -379,17 +379,17 @@ export default function PropertyMap() {
                   {getTileLayer()}
                   <FitBounds properties={filteredProperties} />
                   
-                  {filteredProperties.map((property) => (
+                  {filteredProperties.map((property, index) => (
                     <Marker
                       key={property.id}
                       position={[property.latitude, property.longitude]}
-                      icon={createIcon(property.category)}
+                      icon={createNumberedIcon(index + 1, property.category)}
                     >
                       <Popup maxWidth={350} className="property-popup">
                         <div className="p-2 min-w-[280px]">
                           <div className="flex items-center justify-between mb-3">
                             <span className="font-mono text-sm font-bold text-blue-600">
-                              {property.property_id}
+                              #{index + 1} - {property.property_id}
                             </span>
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                               property.category === 'Residential' ? 'bg-blue-100 text-blue-700' :
