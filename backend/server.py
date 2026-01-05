@@ -354,6 +354,12 @@ async def delete_batch(batch_id: str, current_user: dict = Depends(get_current_u
     
     return {"message": "Batch and all related data deleted"}
 
+# ============== ROLE DEFINITIONS ==============
+# Roles with admin-level access (can modify data)
+ADMIN_ROLES = ["ADMIN", "SUPERVISOR"]
+# Roles that can view admin dashboard (including MC_OFFICER with limited access)
+ADMIN_VIEW_ROLES = ["ADMIN", "SUPERVISOR", "MC_OFFICER"]
+
 # ============== PROPERTY ROUTES ==============
 
 @api_router.get("/admin/properties")
