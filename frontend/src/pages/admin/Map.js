@@ -187,6 +187,9 @@ export default function PropertyMap() {
     // Only show properties with valid GPS
     filtered = filtered.filter(p => p.latitude && p.longitude && p.latitude !== 0 && p.longitude !== 0);
     
+    // Maintain sort by serial_number
+    filtered.sort((a, b) => (a.serial_number || 0) - (b.serial_number || 0));
+    
     setFilteredProperties(filtered);
   };
 
