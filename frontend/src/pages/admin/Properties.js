@@ -90,6 +90,7 @@ export default function Properties() {
   
   // Delete dialog
   const [deleteDialog, setDeleteDialog] = useState(false);
+  const [deleteAllDialog, setDeleteAllDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   
   // Property detail dialog
