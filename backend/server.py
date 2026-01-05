@@ -265,7 +265,7 @@ async def upload_batch(
     authorization: str = Form(...)
 ):
     current_user = await get_current_user(authorization)
-    if current_user["role"] != "ADMIN":
+    if current_user["role"] not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     # Read file content
@@ -276,9 +276,12 @@ async def upload_batch(
     reader = csv.DictReader(io.StringIO(content_str))
     properties = []
     
+    # Add serial number (1, 2, 3...) based on row order in Excel
+    serial_num = 1
     for row in reader:
         prop = {
             "id": str(uuid.uuid4()),
+            "serial_number": serial_num,  # Sequential serial number from Excel row order
             "property_id": row.get("property_id") or row.get("Property ID") or row.get("PropertyID") or str(uuid.uuid4())[:8].upper(),
             "owner_name": row.get("owner_name") or row.get("Owner Name") or row.get("OwnerName") or "Unknown",
             "mobile": row.get("mobile") or row.get("Mobile") or row.get("Mobile No") or "",
@@ -292,6 +295,7 @@ async def upload_batch(
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         properties.append(prop)
+        serial_num += 1
     
     # Create batch
     batch_doc = {
