@@ -662,9 +662,47 @@ export default function Survey() {
           </CardContent>
         </Card>
 
+        {/* 50m Radius Check - Only show when GPS is available */}
+        {!isCompleted && gpsStatus === 'success' && property?.latitude && property?.longitude && (
+          <Card className={`${
+            withinRange === true ? 'border-emerald-300 bg-emerald-50' :
+            withinRange === false ? 'border-red-300 bg-red-50' :
+            'border-amber-300 bg-amber-50'
+          }`}>
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                {withinRange === null ? (
+                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                ) : withinRange ? (
+                  <CheckCircle className="w-6 h-6 text-emerald-600" />
+                ) : (
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                )}
+                <div className="flex-1">
+                  <p className="font-semibold text-slate-900">
+                    {withinRange === null ? 'Checking distance...' :
+                     withinRange ? '✓ Within Survey Range' : '⚠️ Too Far from Property'}
+                  </p>
+                  <p className={`text-sm ${withinRange ? 'text-emerald-700' : 'text-red-700'}`}>
+                    Distance: <span className="font-mono font-bold">{distanceFromProperty}m</span>
+                    {withinRange ? ' (within 50m limit)' : ' - Must be within 50m to submit survey'}
+                  </p>
+                </div>
+              </div>
+              {!withinRange && withinRange !== null && (
+                <div className="mt-3 p-3 bg-red-100 rounded-lg">
+                  <p className="text-sm text-red-800">
+                    <strong>Please move closer to the property.</strong> You must be within 50 meters of the property location to submit the survey.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {!isCompleted && (
           <>
-            {/* Survey Form Fields - NEW FIELDS */}
+            {/* Survey Form Fields - Updated with locked fields */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
@@ -672,34 +710,47 @@ export default function Survey() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* New Owner Details */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-slate-400" />
-                    New Owner&apos;s Name *
-                  </Label>
-                  <Input
-                    data-testid="new-owner-name-input"
-                    value={formData.new_owner_name}
-                    onChange={(e) => setFormData({ ...formData, new_owner_name: e.target.value })}
-                    className="h-12 text-base"
-                    placeholder="Enter new owner's name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-slate-400" />
-                    New Mobile Number *
-                  </Label>
-                  <Input
-                    data-testid="new-mobile-input"
-                    type="tel"
-                    value={formData.new_mobile}
-                    onChange={(e) => setFormData({ ...formData, new_mobile: e.target.value })}
-                    className="h-12 text-base"
-                    placeholder="Enter new mobile number"
-                  />
+                {/* Locked Property Fields (Read-only from uploaded data) */}
+                <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-500 mb-3">PROPERTY DATA (READ ONLY)</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500">Property ID</p>
+                      <p className="font-mono font-medium text-slate-900">{property?.property_id || '-'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500">Owner</p>
+                      <p className="font-medium text-slate-900">{property?.owner_name || '-'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500">Mobile</p>
+                      <p className="font-mono text-slate-900">{property?.mobile || '-'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500">Colony</p>
+                      <p className="text-slate-900">{property?.colony || property?.ward || '-'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500">Total Area</p>
+                      <p className="text-slate-900">{property?.total_area || '-'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500">Amount</p>
+                      <p className="font-medium text-emerald-700">₹{property?.amount || '0'}</p>
+                    </div>
+                    {property?.latitude && property?.longitude && (
+                      <>
+                        <div className="space-y-1">
+                          <p className="text-xs text-slate-500">Latitude</p>
+                          <p className="font-mono text-xs text-slate-900">{property?.latitude?.toFixed(6)}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-slate-500">Longitude</p>
+                          <p className="font-mono text-xs text-slate-900">{property?.longitude?.toFixed(6)}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Receiver Details */}
@@ -738,21 +789,8 @@ export default function Survey() {
                   </div>
                 </div>
 
-                {/* Property IDs */}
+                {/* Family ID and Ward Number */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm">
-                      <Hash className="w-4 h-4 text-slate-400" />
-                      Old Property ID
-                    </Label>
-                    <Input
-                      data-testid="old-property-id-input"
-                      value={formData.old_property_id}
-                      onChange={(e) => setFormData({ ...formData, old_property_id: e.target.value })}
-                      className="h-12"
-                      placeholder="Old Prop ID"
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-sm">
                       <Users className="w-4 h-4 text-slate-400" />
@@ -766,24 +804,6 @@ export default function Survey() {
                       placeholder="Family ID"
                     />
                   </div>
-                </div>
-
-                {/* Aadhar and Ward */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm">
-                      <CreditCard className="w-4 h-4 text-slate-400" />
-                      Aadhar Number
-                    </Label>
-                    <Input
-                      data-testid="aadhar-number-input"
-                      value={formData.aadhar_number}
-                      onChange={(e) => setFormData({ ...formData, aadhar_number: e.target.value })}
-                      className="h-12"
-                      placeholder="12-digit Aadhar"
-                      maxLength={12}
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-sm">
                       <Building className="w-4 h-4 text-slate-400" />
@@ -794,8 +814,55 @@ export default function Survey() {
                       value={formData.ward_number}
                       onChange={(e) => setFormData({ ...formData, ward_number: e.target.value })}
                       className="h-12"
-                      placeholder="Ward #"
+                      placeholder="Enter Ward #"
                     />
+                  </div>
+                </div>
+
+                {/* Aadhar Number */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm">
+                    <CreditCard className="w-4 h-4 text-slate-400" />
+                    Aadhar Number
+                  </Label>
+                  <Input
+                    data-testid="aadhar-number-input"
+                    value={formData.aadhar_number}
+                    onChange={(e) => setFormData({ ...formData, aadhar_number: e.target.value })}
+                    className="h-12"
+                    placeholder="12-digit Aadhar Number"
+                    maxLength={12}
+                  />
+                </div>
+
+                {/* Self Satisfied - New field */}
+                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <Label className="text-sm font-semibold text-amber-700 mb-3 block">Self Satisfied? *</Label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="self_satisfied"
+                        value="yes"
+                        checked={formData.self_satisfied === 'yes'}
+                        onChange={(e) => setFormData({ ...formData, self_satisfied: e.target.value })}
+                        className="w-5 h-5 text-emerald-600"
+                        data-testid="self-satisfied-yes"
+                      />
+                      <span className="text-base font-medium text-emerald-700">Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="self_satisfied"
+                        value="no"
+                        checked={formData.self_satisfied === 'no'}
+                        onChange={(e) => setFormData({ ...formData, self_satisfied: e.target.value })}
+                        className="w-5 h-5 text-red-600"
+                        data-testid="self-satisfied-no"
+                      />
+                      <span className="text-base font-medium text-red-700">No</span>
+                    </label>
                   </div>
                 </div>
 
