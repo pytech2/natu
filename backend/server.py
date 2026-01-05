@@ -563,6 +563,57 @@ async def bulk_delete_properties(data: BulkDeleteRequest, current_user: dict = D
         "deleted_count": result.deleted_count
     }
 
+@api_router.post("/admin/properties/delete-all")
+async def delete_all_properties(
+    batch_id: Optional[str] = None,
+    ward: Optional[str] = None,
+    status: Optional[str] = None,
+    employee_id: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete all properties matching the given filters. If no filters, deletes ALL properties."""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Build query based on filters
+    query = {}
+    if batch_id and batch_id.strip():
+        query["batch_id"] = batch_id
+    if ward and ward.strip():
+        query["ward"] = ward
+    if status and status.strip():
+        query["status"] = status
+    if employee_id and employee_id.strip():
+        query["assigned_employee_id"] = employee_id
+    if search and search.strip():
+        query["$or"] = [
+            {"property_id": {"$regex": search, "$options": "i"}},
+            {"owner_name": {"$regex": search, "$options": "i"}},
+            {"mobile": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Get count first
+    count = await db.properties.count_documents(query)
+    
+    if count == 0:
+        return {"message": "No properties found to delete", "deleted_count": 0}
+    
+    # Get all property IDs to delete submissions
+    properties = await db.properties.find(query, {"id": 1, "_id": 0}).to_list(None)
+    property_ids = [p["id"] for p in properties]
+    
+    # Delete associated submissions first
+    await db.submissions.delete_many({"property_record_id": {"$in": property_ids}})
+    
+    # Delete the properties
+    result = await db.properties.delete_many(query)
+    
+    return {
+        "message": f"Successfully deleted {result.deleted_count} properties",
+        "deleted_count": result.deleted_count
+    }
+
 @api_router.get("/admin/wards")
 async def list_wards(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
