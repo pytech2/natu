@@ -1220,16 +1220,33 @@ export default function Survey() {
       {/* Submit Button */}
       {!isCompleted && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-lg">
+          {/* Show warning if outside 50m range */}
+          {property?.latitude && property?.longitude && withinRange === false && (
+            <div className="mb-3 p-2 bg-red-100 border border-red-300 rounded-lg text-center">
+              <p className="text-sm text-red-700 font-medium">
+                ⚠️ You are {distanceFromProperty}m away. Move within 50m to submit.
+              </p>
+            </div>
+          )}
           <Button
             onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700"
+            disabled={submitting || (property?.latitude && property?.longitude && !withinRange)}
+            className={`w-full h-14 text-lg font-bold ${
+              property?.latitude && property?.longitude && !withinRange 
+                ? 'bg-slate-400 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
             data-testid="submit-survey-btn"
           >
             {submitting ? (
               <>
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                 Submitting...
+              </>
+            ) : property?.latitude && property?.longitude && !withinRange ? (
+              <>
+                <AlertTriangle className="w-5 h-5 mr-2" />
+                Move Closer to Submit
               </>
             ) : (
               <>
