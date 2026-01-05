@@ -663,56 +663,6 @@ export default function Properties() {
             </div>
           </DialogContent>
         </Dialog>
-                    </div>
-                    <div style={{ height: '300px', width: '100%' }}>
-                      <MapContainer
-                        center={[selectedProperty.latitude, selectedProperty.longitude]}
-                        zoom={18}
-                        style={{ height: '100%', width: '100%' }}
-                        scrollWheelZoom={true}
-                      >
-                        <TileLayer
-                          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                          attribution='&copy; Esri'
-                          maxZoom={19}
-                        />
-                        <Marker 
-                          position={[selectedProperty.latitude, selectedProperty.longitude]}
-                          icon={redIcon}
-                        >
-                          <Popup>
-                            <div className="text-center">
-                              <p className="font-bold text-blue-600">{selectedProperty.property_id}</p>
-                              <p className="text-sm">{selectedProperty.owner_name}</p>
-                            </div>
-                          </Popup>
-                        </Marker>
-                      </MapContainer>
-                    </div>
-                  </div>
-                )}
-
-                {/* Status */}
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div>
-                    <Label className="text-xs text-slate-500 uppercase tracking-wider">Assigned To</Label>
-                    <p className="font-medium">{selectedProperty.assigned_employee_name || 'Unassigned'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-slate-500 uppercase tracking-wider">Status</Label>
-                    <p>{getStatusBadge(selectedProperty.status)}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDetailDialog(false)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </AdminLayout>
   );
