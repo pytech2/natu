@@ -778,6 +778,38 @@ export default function Properties() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Delete All Confirmation Dialog */}
+        <AlertDialog open={deleteAllDialog} onOpenChange={setDeleteAllDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Delete ALL Properties
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>
+                  Are you sure you want to delete <strong className="text-red-600 text-lg">{pagination.total}</strong> properties?
+                </p>
+                <p className="text-red-600 font-semibold">
+                  ⚠️ This will permanently delete ALL properties{filters.batch_id || filters.area || filters.status ? ' matching your current filters' : ''} and their submissions!
+                </p>
+                <p>This action cannot be undone.</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAll}
+                disabled={deleting}
+                className="bg-red-600 hover:bg-red-700"
+                data-testid="confirm-delete-all-btn"
+              >
+                {deleting ? 'Deleting...' : `Delete All ${pagination.total} Properties`}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );
