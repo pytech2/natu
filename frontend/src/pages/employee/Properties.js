@@ -31,12 +31,12 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Custom numbered marker for employee properties
+// Custom small numbered marker for employee properties
 const createNumberedIcon = (number, status) => {
   const colors = {
-    'Pending': '#f59e0b',      // Amber
-    'Completed': '#10b981',    // Green
-    'Approved': '#10b981',     // Green
+    'Pending': '#f97316',      // Orange
+    'Completed': '#22c55e',    // Green
+    'Approved': '#22c55e',     // Green
     'In Progress': '#3b82f6',  // Blue
     'Rejected': '#ef4444',     // Red
     'default': '#6b7280'       // Gray
@@ -45,25 +45,26 @@ const createNumberedIcon = (number, status) => {
   const color = colors[status] || colors['default'];
   
   return L.divIcon({
-    className: 'numbered-marker',
+    className: 'custom-numbered-marker',
     html: `<div style="
       background-color: ${color};
-      width: 22px;
-      height: 22px;
+      width: 18px;
+      height: 18px;
       border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      border: 1.5px solid white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 10px;
-      font-weight: bold;
+      font-size: 9px;
+      font-weight: 600;
       color: white;
       font-family: Arial, sans-serif;
+      line-height: 1;
     ">${number}</div>`,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
-    popupAnchor: [0, -11]
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -9]
   });
 };
 
@@ -72,7 +73,7 @@ const redIcon = L.divIcon({
   className: 'custom-marker',
   html: `<div style="
     background-color: #ef4444;
-    width: 28px;
+    width: 24px;
     height: 28px;
     border-radius: 50% 50% 50% 0;
     transform: rotate(-45deg);
