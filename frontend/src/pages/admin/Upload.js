@@ -98,20 +98,23 @@ export default function UploadPage() {
           <CardHeader>
             <CardTitle className="font-heading flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5" />
-              CSV File Format
+              File Format (CSV or Excel)
             </CardTitle>
             <CardDescription>
-              Upload a CSV file with property data. The file should contain the following columns:
+              Upload a CSV or Excel (.xlsx) file with property data. The file should contain columns like:
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
-              {['property_id', 'owner_name', 'mobile', 'address', 'amount', 'ward'].map((col) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+              {['Property Id', 'Owner Name', 'Mobile', 'Colony', 'Plot Address', 'Category', 'Latitude', 'Longitude'].map((col) => (
                 <div key={col} className="px-3 py-2 bg-slate-100 rounded-md text-sm font-mono text-slate-700">
                   {col}
                 </div>
               ))}
             </div>
+            <p className="text-sm text-slate-500 mb-4">
+              <strong>Note:</strong> Properties will be numbered sequentially (1, 2, 3...) based on row order in your file.
+            </p>
             <Button 
               variant="outline" 
               onClick={downloadTemplate}
@@ -140,12 +143,12 @@ export default function UploadPage() {
                 data-testid="batch-name-input"
                 value={batchName}
                 onChange={(e) => setBatchName(e.target.value)}
-                placeholder="e.g., Property Tax 2025-26 Batch 1"
+                placeholder="e.g., Akash Nagar PropertyTax 2025-26"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>CSV File</Label>
+              <Label>Excel or CSV File</Label>
               <div
                 className={`photo-upload-area ${file ? 'has-image' : ''}`}
                 onClick={() => fileInputRef.current?.click()}
@@ -153,7 +156,7 @@ export default function UploadPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   onChange={handleFileChange}
                   className="hidden"
                   data-testid="file-input"
