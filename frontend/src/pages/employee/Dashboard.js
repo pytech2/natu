@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { CheckCircle, Clock, AlertTriangle, ArrowRight, FileSpreadsheet, TrendingUp, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, ArrowRight, FileSpreadsheet, TrendingUp, XCircle, CalendarCheck, Camera } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -15,9 +15,12 @@ export default function EmployeeDashboard() {
   const navigate = useNavigate();
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasAttendance, setHasAttendance] = useState(false);
+  const [attendanceData, setAttendanceData] = useState(null);
 
   useEffect(() => {
     fetchProgress();
+    checkTodayAttendance();
   }, []);
 
   const fetchProgress = async () => {
@@ -30,6 +33,18 @@ export default function EmployeeDashboard() {
       toast.error('Failed to load progress');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkTodayAttendance = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/employee/attendance/today`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setHasAttendance(response.data.has_attendance);
+      setAttendanceData(response.data.attendance);
+    } catch (error) {
+      console.error('Failed to check attendance:', error);
     }
   };
 
@@ -57,6 +72,54 @@ export default function EmployeeDashboard() {
           </h2>
           <p className="text-slate-500 mt-1">Ready for today&apos;s surveys?</p>
         </div>
+
+        {/* Attendance Status Card */}
+        {!hasAttendance ? (
+          <Card className="border-amber-300 bg-amber-50">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                    <CalendarCheck className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-amber-800">Mark Your Attendance</p>
+                    <p className="text-sm text-amber-600">Required before starting surveys</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-amber-600 hover:bg-amber-700"
+                  onClick={() => navigate('/employee/attendance')}
+                  data-testid="mark-attendance-btn"
+                >
+                  <Camera className="w-4 h-4 mr-1" />
+                  Mark Now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-emerald-300 bg-emerald-50">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-emerald-800">✓ Attendance Marked</p>
+                  <p className="text-sm text-emerald-600">
+                    {attendanceData?.marked_at && new Date(attendanceData.marked_at).toLocaleTimeString('en-IN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Today's Progress Card */}
         <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white">
@@ -161,6 +224,7 @@ export default function EmployeeDashboard() {
               <li>• Take clear photos of gate and property</li>
               <li>• Verify owner details before submitting</li>
               <li>• Flag properties if owner is unavailable</li>
+              <li>• You must be within 50m of property to submit</li>
             </ul>
           </CardContent>
         </Card>
