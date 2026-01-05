@@ -32,38 +32,40 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Custom marker icons with serial number
+// Custom small marker icons with serial number
 const createNumberedIcon = (number, category) => {
   const colors = {
     'Residential': '#3b82f6',      // Blue
-    'Commercial': '#f59e0b',       // Amber
-    'Vacant Plot': '#10b981',      // Green
-    'Mix Use': '#8b5cf6',          // Purple
+    'Commercial': '#f97316',       // Orange
+    'Vacant Plot': '#22c55e',      // Green
+    'Mix Use': '#a855f7',          // Purple
     'default': '#ef4444'           // Red
   };
   
   const color = colors[category] || colors['default'];
   
+  // Small circular pin with number
   return L.divIcon({
-    className: 'numbered-marker',
+    className: 'custom-numbered-marker',
     html: `<div style="
       background-color: ${color};
-      width: 22px;
-      height: 22px;
+      width: 18px;
+      height: 18px;
       border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      border: 1.5px solid white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 10px;
-      font-weight: bold;
+      font-size: 9px;
+      font-weight: 600;
       color: white;
       font-family: Arial, sans-serif;
+      line-height: 1;
     ">${number}</div>`,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
-    popupAnchor: [0, -11]
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -9]
   });
 };
 
