@@ -328,7 +328,7 @@ export default function Properties() {
           </Card>
         ) : (
           <>
-            <Card>
+            <Card className="shadow-lg border-0">
               <CardContent className="p-0 overflow-x-auto">
                 <table className="data-table">
                   <thead>
@@ -346,8 +346,10 @@ export default function Properties() {
                       <th>Mobile</th>
                       <th>Address</th>
                       <th>Area</th>
+                      <th className="text-center">GPS</th>
                       <th>Assigned To</th>
                       <th>Status</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -361,15 +363,44 @@ export default function Properties() {
                             className="rounded"
                           />
                         </td>
-                        <td className="font-mono text-sm font-medium">{prop.property_id}</td>
+                        <td className="font-mono text-sm font-medium text-blue-600">{prop.property_id}</td>
                         <td>{prop.owner_name}</td>
                         <td className="font-mono text-sm">{prop.mobile}</td>
-                        <td className="max-w-[200px] truncate" title={prop.plot_address}>
-                          {prop.plot_address}
+                        <td className="max-w-[200px] truncate" title={prop.address || prop.plot_address}>
+                          {prop.address || prop.plot_address || '-'}
                         </td>
-                        <td>{prop.area || '-'}</td>
+                        <td>{prop.colony || prop.area || '-'}</td>
+                        <td className="text-center">
+                          {prop.latitude && prop.longitude ? (
+                            <a 
+                              href={`https://www.google.com/maps?q=${prop.latitude},${prop.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors"
+                              title={`${prop.latitude?.toFixed(6)}, ${prop.longitude?.toFixed(6)}`}
+                            >
+                              <MapPin className="w-4 h-4" />
+                            </a>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
                         <td>{prop.assigned_employee_name || <span className="text-slate-400">Unassigned</span>}</td>
                         <td>{getStatusBadge(prop.status)}</td>
+                        <td>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedProperty(prop);
+                              setDetailDialog(true);
+                            }}
+                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
