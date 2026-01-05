@@ -115,7 +115,7 @@ export default function Dashboard() {
                   <MapPin className="w-8 h-8" />
                 </div>
                 <div>
-                  <p className="text-blue-100 text-sm font-medium">Today Completed Wards</p>
+                  <p className="text-blue-100 text-sm font-medium">Completed Colony</p>
                   <p className="text-4xl font-heading font-bold">{stats?.today_wards || 0}</p>
                 </div>
               </div>
