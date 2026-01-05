@@ -188,20 +188,26 @@ const addWatermarkToImage = (file, latitude, longitude) => {
   });
 };
 
-// Relation options
+// Relation options - Updated as per requirements
 const RELATION_OPTIONS = [
   'Self',
-  'Spouse',
-  'Son',
-  'Daughter',
-  'Father',
-  'Mother',
-  'Brother',
-  'Sister',
+  'Family Member',
   'Tenant',
-  'Caretaker',
+  'Neighbour',
   'Other'
 ];
+
+// Calculate distance between two GPS coordinates in meters (Haversine formula)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371000; // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
 
 export default function Survey() {
   const { propertyId } = useParams();
@@ -224,12 +230,16 @@ export default function Survey() {
     new_mobile: '',
     receiver_name: '',
     relation: '',
-    old_property_id: '',
     family_id: '',
     aadhar_number: '',
     ward_number: '',
-    remarks: ''
+    remarks: '',
+    self_satisfied: '' // New field: 'yes' or 'no'
   });
+  
+  // 50m radius check state
+  const [withinRange, setWithinRange] = useState(null); // null = checking, true = in range, false = out of range
+  const [distanceFromProperty, setDistanceFromProperty] = useState(null);
 
   // Photo State
   const [housePhoto, setHousePhoto] = useState(null);
@@ -251,6 +261,20 @@ export default function Survey() {
     fetchProperty();
     getLocation();
   }, [propertyId]);
+
+  // Check distance when location and property are both available
+  useEffect(() => {
+    if (location.latitude && location.longitude && property?.latitude && property?.longitude) {
+      const distance = calculateDistance(
+        location.latitude,
+        location.longitude,
+        property.latitude,
+        property.longitude
+      );
+      setDistanceFromProperty(Math.round(distance));
+      setWithinRange(distance <= 50); // 50 meters radius
+    }
+  }, [location, property]);
 
   const fetchProperty = async () => {
     try {
@@ -427,13 +451,13 @@ export default function Survey() {
 
   const handleSubmit = async () => {
     // Validate required fields
-    if (!formData.new_owner_name || !formData.new_mobile) {
-      toast.error('Please fill in new owner name and mobile number');
+    if (!formData.receiver_name || !formData.relation) {
+      toast.error('Please fill in receiver name and relation');
       return;
     }
 
-    if (!formData.receiver_name || !formData.relation) {
-      toast.error('Please fill in receiver name and relation');
+    if (!formData.self_satisfied) {
+      toast.error('Please select Self Satisfied option');
       return;
     }
 
@@ -456,16 +480,17 @@ export default function Survey() {
 
     try {
       const formDataObj = new FormData();
-      // New survey fields
-      formDataObj.append('new_owner_name', formData.new_owner_name);
-      formDataObj.append('new_mobile', formData.new_mobile);
+      // Survey fields - using property data for locked fields
+      formDataObj.append('new_owner_name', property?.owner_name || '');
+      formDataObj.append('new_mobile', property?.mobile || '');
       formDataObj.append('receiver_name', formData.receiver_name);
       formDataObj.append('relation', formData.relation);
-      formDataObj.append('old_property_id', formData.old_property_id || '');
+      formDataObj.append('old_property_id', ''); // Removed field
       formDataObj.append('family_id', formData.family_id || '');
       formDataObj.append('aadhar_number', formData.aadhar_number || '');
       formDataObj.append('ward_number', formData.ward_number || '');
       formDataObj.append('remarks', formData.remarks || '');
+      formDataObj.append('self_satisfied', formData.self_satisfied || '');
       formDataObj.append('latitude', location.latitude);
       formDataObj.append('longitude', location.longitude);
       formDataObj.append('house_photo', housePhoto);
