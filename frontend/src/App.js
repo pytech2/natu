@@ -11,6 +11,7 @@ import AdminMap from "./pages/admin/Map";
 import EmployeeDashboard from "./pages/employee/Dashboard";
 import EmployeeProperties from "./pages/employee/Properties";
 import EmployeeSurvey from "./pages/employee/Survey";
+import EmployeeAttendance from "./pages/employee/Attendance";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import "@/App.css";
 
@@ -30,14 +31,26 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
   
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/employee'} replace />;
+    // Redirect based on role
+    if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') {
+      return <Navigate to="/admin" replace />;
+    } else if (user.role === 'MC_OFFICER') {
+      return <Navigate to="/admin" replace />; // MC Officer also goes to admin but with limited view
+    }
+    return <Navigate to="/employee" replace />;
   }
   
   return children;
 }
 
 // All non-admin roles that can access employee/surveyor routes
-const SURVEYOR_ROLES = ['EMPLOYEE', 'SURVEYOR', 'SUPERVISOR', 'MC_OFFICER'];
+const SURVEYOR_ROLES = ['EMPLOYEE', 'SURVEYOR'];
+
+// Admin-level roles (full access)
+const ADMIN_ROLES = ['ADMIN', 'SUPERVISOR'];
+
+// Roles that can view admin dashboard (includes MC_OFFICER with limited access)
+const ADMIN_VIEW_ROLES = ['ADMIN', 'SUPERVISOR', 'MC_OFFICER'];
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -46,39 +59,39 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       
-      {/* Admin Routes */}
+      {/* Admin Routes - Full Access (ADMIN, SUPERVISOR) */}
       <Route path="/admin" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ProtectedRoute allowedRoles={ADMIN_VIEW_ROLES}>
           <AdminDashboard />
         </ProtectedRoute>
       } />
       <Route path="/admin/employees" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
           <AdminEmployees />
         </ProtectedRoute>
       } />
       <Route path="/admin/properties" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ProtectedRoute allowedRoles={ADMIN_VIEW_ROLES}>
           <AdminProperties />
         </ProtectedRoute>
       } />
       <Route path="/admin/upload" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
           <AdminUpload />
         </ProtectedRoute>
       } />
       <Route path="/admin/submissions" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ProtectedRoute allowedRoles={ADMIN_VIEW_ROLES}>
           <AdminSubmissions />
         </ProtectedRoute>
       } />
       <Route path="/admin/export" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
           <AdminExport />
         </ProtectedRoute>
       } />
       <Route path="/admin/map" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ProtectedRoute allowedRoles={ADMIN_VIEW_ROLES}>
           <AdminMap />
         </ProtectedRoute>
       } />
@@ -99,11 +112,20 @@ function AppRoutes() {
           <EmployeeSurvey />
         </ProtectedRoute>
       } />
+      <Route path="/employee/attendance" element={
+        <ProtectedRoute allowedRoles={SURVEYOR_ROLES}>
+          <EmployeeAttendance />
+        </ProtectedRoute>
+      } />
       
       {/* Default redirect */}
       <Route path="/" element={
         user ? (
-          <Navigate to={user.role === 'ADMIN' ? '/admin' : '/employee'} replace />
+          <Navigate to={
+            user.role === 'ADMIN' || user.role === 'SUPERVISOR' || user.role === 'MC_OFFICER' 
+              ? '/admin' 
+              : '/employee'
+          } replace />
         ) : (
           <Navigate to="/login" replace />
         )
