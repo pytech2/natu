@@ -538,6 +538,18 @@ async def get_employee_progress(current_user: dict = Depends(get_current_user)):
 
 # ============== SUBMISSIONS ROUTES ==============
 
+@api_router.get("/admin/areas")
+async def list_areas(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get unique areas/wards from properties
+    areas = await db.properties.distinct("ward")
+    # Filter out None/empty values and sort
+    areas = sorted([a for a in areas if a])
+    
+    return {"areas": areas}
+
 @api_router.get("/admin/submissions")
 async def list_submissions(
     batch_id: Optional[str] = None,
