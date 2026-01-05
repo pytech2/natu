@@ -171,3 +171,34 @@
     border-radius: 9999px;
     transition: width 0.5s ease-out;
 }
+
+
+/* Leaflet Map Styles */
+.leaflet-container {
+    font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    padding: 0;
+}
+
+.leaflet-popup-content {
+    margin: 0;
+    min-width: 280px;
+}
+
+.leaflet-popup-tip {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.custom-marker {
+    background: transparent;
+    border: none;
+}
+
+.property-popup .leaflet-popup-content-wrapper {
+    padding: 0;
+}
+
