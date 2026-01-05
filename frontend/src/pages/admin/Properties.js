@@ -70,7 +70,7 @@ export default function Properties() {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
-      setEmployees(empRes.data.filter(u => u.role === 'EMPLOYEE'));
+      setEmployees(empRes.data.filter(u => u.role !== 'ADMIN'));
       setBatches(batchRes.data);
       setAreas(areaRes.data.areas || []);
     } catch (error) {
