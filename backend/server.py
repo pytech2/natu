@@ -1168,7 +1168,7 @@ async def submit_survey(
         "batch_id": prop["batch_id"],
         "employee_id": current_user["id"],
         "employee_name": current_user["name"],
-        # New survey fields
+        # Survey fields
         "new_owner_name": new_owner_name,
         "new_mobile": new_mobile,
         "receiver_name": receiver_name,
@@ -1178,6 +1178,7 @@ async def submit_survey(
         "aadhar_number": aadhar_number,
         "ward_number": ward_number,
         "remarks": remarks,
+        "self_satisfied": self_satisfied,  # New field
         "latitude": latitude,
         "longitude": longitude,
         "submitted_at": datetime.now(timezone.utc).isoformat(),
