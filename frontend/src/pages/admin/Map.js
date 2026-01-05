@@ -1,0 +1,452 @@
+import { useState, useEffect, useRef } from 'react';
+import AdminLayout from '../../components/AdminLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
+import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
+import { toast } from 'sonner';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { 
+  Map as MapIcon, Search, Filter, Home, User, Phone, 
+  MapPin, Layers, Navigation, Building, AreaChart 
+} from 'lucide-react';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
+
+// Fix for default marker icons in Leaflet with React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom marker icons based on category
+const createIcon = (category) => {
+  const colors = {
+    'Residential': '#3b82f6',      // Blue
+    'Commercial': '#f59e0b',       // Amber
+    'Vacant Plot': '#10b981',      // Green
+    'Mix Use': '#8b5cf6',          // Purple
+    'default': '#ef4444'           // Red
+  };
+  
+  const color = colors[category] || colors['default'];
+  
+  return L.divIcon({
+    className: 'custom-marker',
+    html: `<div style="
+      background-color: ${color};
+      width: 24px;
+      height: 24px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    "></div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -24]
+  });
+};
+
+// Component to fit bounds when properties change
+function FitBounds({ properties }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (properties.length > 0) {
+      const validProps = properties.filter(p => p.latitude && p.longitude);
+      if (validProps.length > 0) {
+        const bounds = L.latLngBounds(
+          validProps.map(p => [p.latitude, p.longitude])
+        );
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+    }
+  }, [properties, map]);
+  
+  return null;
+}
+
+export default function PropertyMap() {
+  const { token } = useAuth();
+  const [properties, setProperties] = useState([]);
+  const [filteredProperties, setFilteredProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [colonies, setColonies] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [mapType, setMapType] = useState('satellite');
+  
+  // Filters
+  const [filters, setFilters] = useState({
+    colony: '',
+    category: '',
+    search: ''
+  });
+
+  // Stats
+  const [stats, setStats] = useState({
+    total: 0,
+    withGPS: 0,
+    residential: 0,
+    commercial: 0,
+    vacant: 0
+  });
+
+  // Default center (Kurukshetra, Haryana)
+  const defaultCenter = [29.9506, 76.8378];
+
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [properties, filters]);
+
+  const fetchProperties = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/admin/properties?limit=1000`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const props = response.data.properties || [];
+      setProperties(props);
+      
+      // Extract unique colonies and categories
+      const uniqueColonies = [...new Set(props.map(p => p.colony).filter(Boolean))];
+      const uniqueCategories = [...new Set(props.map(p => p.category).filter(Boolean))];
+      setColonies(uniqueColonies.sort());
+      setCategories(uniqueCategories.sort());
+      
+      // Calculate stats
+      const withGPS = props.filter(p => p.latitude && p.longitude).length;
+      const residential = props.filter(p => p.category === 'Residential').length;
+      const commercial = props.filter(p => p.category === 'Commercial').length;
+      const vacant = props.filter(p => p.category === 'Vacant Plot').length;
+      
+      setStats({
+        total: props.length,
+        withGPS,
+        residential,
+        commercial,
+        vacant
+      });
+      
+    } catch (error) {
+      toast.error('Failed to load properties');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...properties];
+    
+    if (filters.colony) {
+      filtered = filtered.filter(p => p.colony === filters.colony);
+    }
+    
+    if (filters.category) {
+      filtered = filtered.filter(p => p.category === filters.category);
+    }
+    
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(p => 
+        p.property_id?.toLowerCase().includes(searchLower) ||
+        p.owner_name?.toLowerCase().includes(searchLower) ||
+        p.address?.toLowerCase().includes(searchLower) ||
+        p.mobile?.includes(filters.search)
+      );
+    }
+    
+    // Only show properties with valid GPS
+    filtered = filtered.filter(p => p.latitude && p.longitude && p.latitude !== 0 && p.longitude !== 0);
+    
+    setFilteredProperties(filtered);
+  };
+
+  const clearFilters = () => {
+    setFilters({ colony: '', category: '', search: '' });
+  };
+
+  const getTileLayer = () => {
+    if (mapType === 'satellite') {
+      return (
+        <TileLayer
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          attribution='&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP'
+          maxZoom={19}
+        />
+      );
+    }
+    return (
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        maxZoom={19}
+      />
+    );
+  };
+
+  return (
+    <AdminLayout title="Property Map">
+      <div data-testid="property-map-page" className="space-y-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 opacity-80" />
+                <span className="text-sm opacity-80">Total</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">{stats.total}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Navigation className="w-5 h-5 opacity-80" />
+                <span className="text-sm opacity-80">With GPS</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">{stats.withGPS}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-blue-400 to-blue-500 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Home className="w-5 h-5 opacity-80" />
+                <span className="text-sm opacity-80">Residential</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">{stats.residential}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Building className="w-5 h-5 opacity-80" />
+                <span className="text-sm opacity-80">Commercial</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">{stats.commercial}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <AreaChart className="w-5 h-5 opacity-80" />
+                <span className="text-sm opacity-80">Vacant</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">{stats.vacant}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters */}
+        <Card>
+          <CardContent className="py-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-500">Colony/Area</Label>
+                <Select 
+                  value={filters.colony} 
+                  onValueChange={(v) => setFilters({ ...filters, colony: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Colonies" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=" ">All Colonies</SelectItem>
+                    {colonies.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-500">Category</Label>
+                <Select 
+                  value={filters.category} 
+                  onValueChange={(v) => setFilters({ ...filters, category: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=" ">All Categories</SelectItem>
+                    {categories.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-500">Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    placeholder="Property ID, Name, Mobile..."
+                    value={filters.search}
+                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-500">Map Type</Label>
+                <Select value={mapType} onValueChange={setMapType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="satellite">Satellite</SelectItem>
+                    <SelectItem value="street">Street Map</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Button variant="outline" onClick={clearFilters}>
+                <Filter className="w-4 h-4 mr-2" />
+                Clear Filters
+              </Button>
+            </div>
+            
+            <div className="mt-3 flex items-center justify-between text-sm">
+              <p className="text-slate-500">
+                Showing <span className="font-semibold text-slate-900">{filteredProperties.length}</span> properties on map
+              </p>
+              <div className="flex gap-4 text-xs">
+                <span className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div> Residential
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-amber-500"></div> Commercial
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div> Vacant Plot
+                </span>
+                <span className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div> Mix Use
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Map */}
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-2 bg-slate-900 text-white">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <MapIcon className="w-4 h-4" />
+              Property Locations - Click on marker to view details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="h-[600px] flex items-center justify-center bg-slate-100">
+                <div className="text-slate-500 animate-pulse">Loading map...</div>
+              </div>
+            ) : (
+              <div style={{ height: '600px', width: '100%' }}>
+                <MapContainer
+                  center={defaultCenter}
+                  zoom={15}
+                  style={{ height: '100%', width: '100%' }}
+                  scrollWheelZoom={true}
+                >
+                  {getTileLayer()}
+                  <FitBounds properties={filteredProperties} />
+                  
+                  {filteredProperties.map((property) => (
+                    <Marker
+                      key={property.id}
+                      position={[property.latitude, property.longitude]}
+                      icon={createIcon(property.category)}
+                    >
+                      <Popup maxWidth={350} className="property-popup">
+                        <div className="p-2 min-w-[280px]">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="font-mono text-sm font-bold text-blue-600">
+                              {property.property_id}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              property.category === 'Residential' ? 'bg-blue-100 text-blue-700' :
+                              property.category === 'Commercial' ? 'bg-amber-100 text-amber-700' :
+                              property.category === 'Vacant Plot' ? 'bg-emerald-100 text-emerald-700' :
+                              'bg-purple-100 text-purple-700'
+                            }`}>
+                              {property.category}
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-start gap-2">
+                              <User className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs text-slate-500">Owner</p>
+                                <p className="font-medium">{property.owner_name || 'N/A'}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-start gap-2">
+                              <Phone className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs text-slate-500">Mobile</p>
+                                <p className="font-mono">{property.mobile || 'N/A'}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-start gap-2">
+                              <Home className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs text-slate-500">Address</p>
+                                <p className="text-slate-700">{property.address || 'N/A'}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                              <div>
+                                <p className="text-xs text-slate-500">Area</p>
+                                <p className="font-medium">{property.total_area || '-'} Sq.Yard</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-500">Outstanding</p>
+                                <p className="font-medium text-red-600">₹{property.amount || '0'}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="pt-2 border-t">
+                              <p className="text-xs text-slate-400 font-mono">
+                                GPS: {property.latitude?.toFixed(6)}, {property.longitude?.toFixed(6)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))}
+                </MapContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </AdminLayout>
+  );
+}
