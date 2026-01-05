@@ -1,195 +1,178 @@
-<analysis>**original_problem_statement:** The user wants a full-stack web application for a company named **NSTU India Private Limited** to manage property tax notice distribution and surveys.
+<analysis>**original_problem_statement:** The user wants a full-stack web application for a company named **NSTU India Private Limited** to manage property tax notice distribution and surveys. The application requires different user roles (Admin, Surveyor, Supervisor, MC Officer), bulk data upload via Excel, property assignment, a surveyor mobile interface for data collection (including photos with GPS watermarks and signatures), and an admin dashboard for progress tracking, review/approval, and data export. More recently, the user requested a map-based view of properties and a comprehensive set of UI/UX and feature updates.
 
 **PRODUCT REQUIREMENTS:**
-- **Roles:** Super Admin (1) and Field Employees/Surveyors (~15).
-- **Admin Workflow:**
-    - Login.
-    - Upload large property datasets (50,000+ records) via CSV/Excel.
-    - Create/Manage users (Surveyors, Supervisors, MC Officers).
-    - Assign properties to surveyors by area.
-    - View a dashboard with progress stats (e.g., total, completed, pending, today's completion).
-    - Review submissions, with options to approve or reject (with remarks).
-    - Export survey data (including photos, GPS, signatures) to Excel and PDF.
-    - Archive/delete old datasets.
-- **Surveyor Workflow:**
-    - Login (mobile-friendly UI).
-    - View a list of assigned properties.
-    - For each property, fill a survey form with new/updated information (new owner, mobile, receiver name, relation, etc.).
-    - Capture proof of visit:
-        - Photos of the property (via camera or upload).
-        - Photos must be watermarked with GPS coordinates, date, and time.
-        - Digital signature from the property holder on the device.
-    - The app must auto-capture GPS coordinates and a timestamp on submission.
-- **Data Model:**
-    - Uploaded data includes: , , , , .
-    - Survey data includes: , , , , , , , , and .
+- **Roles:** Super Admin, Surveyor, Supervisor, MC Officer.
+- **Admin Workflow:** Login, upload property data, manage users, assign properties, view a dashboard with stats, review/approve/reject submissions, export data, and view properties on a map.
+- **Surveyor Workflow:** Login, view assigned properties on a list/map, and submit a survey only when within a 50-meter radius of the property. The survey involves filling a form, capturing watermarked photos, and a digital signature.
+- **Attendance:** A one-time daily attendance system for surveyors with a selfie.
+- **Data Model:** Includes property details, survey submission data, and user information.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a FastAPI backend and React frontend has been developed. It uses JWT for authentication and MongoDB for the database.
-- **Admin Panel:** Features for login, dashboard, user management, property data upload (CSV), and viewing submissions are implemented. Excel and PDF export functionalities are also present.
-- **Employee/Surveyor Panel:** A mobile-friendly interface allows surveyors to log in, view assigned properties, and submit a survey. The survey form includes photo uploads, GPS capture, and a digital signature pad.
-- **Recent Changes:** The agent began a major update to align with new user requirements, including new user roles, a revised data model for uploads, UI changes to the admin dashboard, and new fields in the survey form. This work is incomplete, and the application is in a transitional, likely non-functional state.
+A full-stack application (FastAPI backend, React frontend, MongoDB) with JWT authentication.
+- **Admin Panel:** Features for login, user management, property upload, assignment, submission review (with an editable modal), and a dashboard with stats. A new map page using Leaflet displays all properties with color-coded, numbered pins and filters.
+- **Employee/Surveyor Panel:** A mobile-friendly interface for surveyors to log in, view assigned properties (as a list or on a map), and submit surveys.
+- The application has undergone significant UI and feature updates in this session, including a new logo, company name change, and improved page layouts.
 
 **Last working item**:
-- **Last item agent was working:** The agent was in the middle of implementing a large set of feature changes and refactoring requested by the user in their last detailed message. It had just overwritten , , and  and was about to modify .
+- **Last item agent was working:** The agent was in the middle of implementing a large set of new features requested by the user in messages #434 and #437. It had successfully updated the company logo, company name, and changed the admin map to use small, numbered pins. The agent was about to start updating the Surveyor's survey page to implement the 50-meter radius check and other form modifications.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
 - **Which testing method agent to use?** both
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1:** Complete the large feature update from the user's latest request (P0)
-- **Issue 2:** Fix the photo watermark bug on mobile devices (P1)
+- **Issue 1:** Complete the large feature update from user messages #434 and #437 (P0)
+- **Issue 2:** Fix the mobile photo watermark bug (P1)
 
 **Issues Detail:**
 - **Issue 1: Complete large feature update**
-    - **Description:** Implement all changes requested by the user in message #212. This is a large, multi-part task.
-        1.  **Role Change:** Change field employee to Surveyor and add new roles: Supervisor, MC Officer.
-        2.  **Data Model Update:** Modify the Excel upload format to use , , , , . Remove  and .
-        3.  **Admin Dashboard Update:** Add Today complete property and Today complete ward stats. Make the employee progress report clickable.
-        4.  **Surveyor Dashboard Update:** Show Total complete data below today progress.
-        5.  **Workflow Update:** Rename Flagged status to Reject. Allow surveyors to edit their own submissions. Add Approve and Reject (with mandatory remarks) options for Admins.
-        6.  **New Survey Fields:** Add fields for , , , , , , , , and .
-    - **Attempted fixes:** The agent started by overwriting , , and . The work is mid-flight.
+    - **Description:** Implement all remaining changes from the user's latest requests:
+        1.  **Survey Open Condition:** Implement a 50-meter radius check. A surveyor can only open the survey form if their current GPS location is within 40-50 meters of the property's coordinates.
+        2.  **Attendance System:** Create a one-time morning attendance feature for Surveyors and Supervisors, which requires taking a selfie.
+        3.  **Dashboard UI Changes:**
+            - Remove the batch statistics card.
+            - Rename the today completed ward stat to completed colony.
+        4.  **Role-Based Access (MC Officer):** Restrict MC Officer access to view-only for stats (total, completed, pending, today), employee numbers (not details), property list, map, and submissions. They should not see Upload Data or Manage Employee pages.
+        5.  **Role-Based Access (Supervisor):** Grant full admin-level access.
+        6.  **Survey Form Changes:**
+            - **Lock fields (read-only):** , , , , , , , .
+            - **Update Relation dropdown:** Use options: , , , , .
+            - **Remove field:** Old Property ID.
+            - **Ward Number:** Make this a blank, user-editable field.
+            - **New field:** Add a self-satisfied Yes/No radio button.
+        7.  **Map Pins (Employee View):** Update the employee properties map to also use small, numbered pins.
+    - **Attempted fixes:** The agent has already updated the logo, company name, and implemented numbered pins on the admin map page.
     - **Next debug checklist:**
-        1.  Verify changes in  for new roles, data models, and submission statuses.
-        2.  Continue frontend implementation:
-            - Update  for Approve/Reject functionality.
-            - Update  with new stats.
-            - Overhaul  to include all new form fields.
-            - Implement the edit submission flow for surveyors.
-        3.  Update the backend API endpoints to support all the new data fields and workflow logic.
+        1.  Modify  to implement the 50m radius check using the browser's Geolocation API. Prevent the survey form from opening if the check fails.
+        2.  Modify  to apply the form field changes (locking fields, updating relation options, etc.).
+        3.  Create new components and backend endpoints for the selfie-based attendance system.
+        4.  Update  to reflect the requested UI changes.
+        5.  Implement frontend and backend logic for role-based access control (RBAC) to restrict MC Officer views and grant Supervisor full access.
+        6.  Update  to use numbered map markers similar to the admin map.
     - **Status:** IN PROGRESS
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** both
     - **Blocked on other issue:** None
 
 - **Issue 2: Mobile Photo Watermark Bug**
-    - **Description:** When a surveyor uses a mobile device to take a photo with the camera, the GPS/timestamp watermark is not saved/displayed on the final submission, although it works correctly when uploading a file from a desktop.
-    - **Attempted fixes:** The agent rewrote  to use  instead of , aiming to improve compatibility with mobile browsers. This fix has not been verified by the user.
+    - **Description:** When a surveyor uses a mobile device to take a photo directly with the camera, the GPS/timestamp watermark is not applied to the final image. This was a known issue from the previous session.
+    - **Attempted fixes:** None in this session.
     - **Next debug checklist:**
-        1.  Perform an end-to-end test on a simulated mobile view.
-        2.  Log in as a surveyor, navigate to the survey form, and use the Take Photo button.
-        3.  Confirm the watermark appears on the image preview *before* submission.
-        4.  Submit the form.
-        5.  Log in as an admin and check the submission to see if the saved photo has the watermark.
-        6.  If the issue persists, investigate the  canvas logic in  for mobile browser-specific issues.
-    - **Status:** USER VERIFICATION PENDING
+        1.  Test the Take Photo functionality on a simulated mobile view.
+        2.  Submit a survey with a camera photo.
+        3.  As an admin, check the submission to see if the watermark is present.
+        4.  If not, investigate the  function in  for mobile-specific browser compatibility issues.
+    - **Status:** NOT STARTED
     - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** both
+    - **Should Test frontend/backend/both after fix?** frontend
+    - **Blocked on other issue:** None
 
 **In progress Task List**:
-- **Task 1: Complete Major Application Refactor (P0)**
-    - **Where to resume:** The agent has already updated , , and . The immediate next step is to update  to add the Approve/Reject functionality. After that, proceed with the remaining items from the user's request (new survey fields, employee dashboard changes, etc.).
-    - **What will be achieved with this?** The application will meet the user's updated and more detailed business requirements.
+- **Task 1: Complete Major Feature Update (P0)**
+    - **Where to resume:** The agent needs to modify  to implement the 50-meter radius check and the requested survey form changes.
+    - **What will be achieved with this?** The application will incorporate the user's latest and most detailed requirements, significantly enhancing its utility for their business process.
     - **Status:** IN PROGRESS
     - **Should Test frontend/backend/both after fix?** both
     - **Blocked on something:** None
 
 **Upcoming and Future Tasks**
-There are no other future tasks defined beyond the extensive refactoring currently in progress.
+- **GPS tracking for all field employees:** The user initially requested this but later clarified they prefer a one-time selfie-based attendance system instead of continuous tracking. This task is no longer required.
 
 **Completed work in this session**
-- **Initial Application Build:** A complete MVP of the full-stack application was created.
-- **Authentication:** JWT-based auth for Admin and Employee roles was implemented.
-- **Core Features:**
-    - Admin: User management, CSV data upload, submission viewing.
-    - Employee: Viewing assigned properties, filling survey form.
-- **Advanced Features:**
-    - **Digital Signature:** Implemented a signature pad on the survey form using .
-    - **Photo Watermarking:** Logic to add GPS/timestamp watermarks to photos was added (though it's buggy on mobile).
-    - **Data Export:** Added functionality to export data to Excel and PDF reports (including photos and signatures).
-- **UI/UX:**
-    - Removed the Made with Emergent badge.
-    - Improved mobile UI for the survey form with distinct Take Photo and Upload buttons and a full-width signature pad.
+- **Major Refactor Completion:** Finished the large feature update that was in-progress from the previous fork.
+- **Bug Fix (Employee Assignment):** Resolved an issue where the employee dropdown was empty. This was caused by a failing API call () and a data validation error on the  endpoint, which were both fixed.
+- **Feature (Property Map):** Implemented a new Property Map page for admins using Leaflet, showing all properties with color-coded, numbered markers, info popups, and filters.
+- **Feature (Submission Edit):** Created a comprehensive edit modal for admins on the Submissions page, allowing them to edit surveyor data while viewing property data as read-only.
+- **Feature (Property Details with Map):** Added a View button on property lists for both Admins and Employees, opening a dialog with property details displayed next to a satellite map with a highlighted pin.
+- **Bug Fix (Login):** Fixed an Invalid credentials bug caused by an inconsistent password field name ( vs. ) in the user document after a password change.
+- **UI/UX Updates:**
+    - Updated the company logo and name () across the application.
+    - Increased logo size as requested.
+    - Re-arranged the admin dashboard to show graphs before the employee table.
+- **Admin Password Change:** Successfully changed the admin password to  as requested.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, MongoDB with Motor (async driver), JWT for auth (), Passlib for hashing.
-- **Frontend:** React, React Router, Tailwind CSS, Shadcn UI components, Axios.
-- **File Handling:**  for uploads, local file storage for images/signatures.
-- **Features:**
-    - **Digital Signature:** .
-    - **Photo Watermarking:** HTML5 Canvas API on the frontend to draw text on images.
-    - **Excel Export:** .
-    - **PDF Export:** , .
+- **Backend:** FastAPI, MongoDB (Motor), JWT (), Passlib.
+- **Frontend:** React, React Router, Tailwind CSS, Shadcn UI, Axios.
+- **Mapping:** **Leaflet** and **React-Leaflet** for interactive maps with satellite view.
+- **File Handling:** Local file storage for images/signatures.
+- **Features:** Digital Signature (), Photo Watermarking (HTML5 Canvas), Excel/PDF Export.
 
 **key DB schema**
-- **users:** , , ,  (Enum: ADMIN, EMPLOYEE, SUPERVISOR, MC_OFFICER), .
-- **properties:** , , , , ,  (Enum: Pending, InProgress, Completed, Reject), .
-- **survey_submissions:** , , , , , , , and all new survey fields (, , etc.).
+- **users:** , , ,  (ADMIN, SURVEYOR, SUPERVISOR, MC_OFFICER).
+- **properties:** Contains ~25 fields including , , , , .
+- **survey_submissions:** All survey fields, , , , , , , .
+- **batches:** , . Schema was fixed to include  and  to resolve a validation error.
 
 **changes in tech stack**
-- The project was implemented with **MongoDB**, deviating from the initial prompt which suggested PostgreSQL.
-- Frontend dependencies added: , , , , .
-- Backend dependencies added: To use the fastapi command, please install "fastapi[standard]":
-
-	pip install "fastapi[standard]", , , , , , , , , .
+- Added  and  for map functionality.
 
 **All files of reference**
-- : The monolithic backend file, recently overwritten to begin a major refactor.
-- : A large, complex component for the survey form. It handles state for form fields, GPS, photo capture/upload, watermarking, and the signature pad. It was overwritten multiple times to fix bugs and add features.
-- : Admin dashboard display. Recently overwritten.
-- : Employee management page. Recently overwritten.
-- : Page for viewing submissions. Needs to be updated for Approve/Reject functionality.
-- : Governs the data upload process. Needs to be updated for the new CSV format.
-- : Project Requirements Document created by the agent.
+- : The backend monolith. Updated to add new endpoints (), fix bugs, and add new fields.
+- : Updated to fix employee dropdown and add a map-based detail view.
+- : Rewritten to provide a comprehensive edit modal with read-only sections.
+- : New file created for the main property map view.
+- : Rewritten to include a map and a better mobile layout.
+- : The next file to be heavily modified.
+- : Updated with new routes and role-based logic.
+- : Updated for navigation and logo.
+- : Updated with completed tasks.
 
 **Areas that need refactoring**
-- **:** This single file contains all models, API endpoints, and business logic. It should be broken down into a standard FastAPI project structure (e.g., , , ).
-- **:** This component is overly complex and manages too much state. The logic should be refactored into custom hooks (e.g., , ) and smaller, specialized components.
+- **:** Still a monolithic file that should be broken down into a standard FastAPI project structure (routers, models, services).
+- **:** Remains a very large and complex component that handles too much state. It will become even more complex with the new requirements.
 
 **key api endpoints**
-- : User login.
-- : Get current user details.
-- : CRUD for users.
-- : Upload property data CSV.
-- : Assign properties to employees.
-- : Get statistics for the admin dashboard.
-- : Export data to Excel.
-- : Export submissions to a PDF report.
-- : Get assigned properties for an employee.
-- : Submit a survey for a property.
+- : GET all data batches. (Fixed)
+- : GET unique areas/colonies. (Newly added)
+- : GET properties with pagination and filters.
+- : PUT to update property details.
+- : GET all submissions.
+- : PUT to update submission details.
 
 **Critical Info for New Agent**
-- You are resuming mid-way through a major refactoring effort requested by the user. Your first task is to complete this implementation. The application is currently in a broken state.
-- The mobile photo watermark bug is a key issue to resolve. The attempted fix needs to be thoroughly tested from a mobile perspective.
-- The tech stack is FastAPI + React + **MongoDB** (not PostgreSQL as mentioned in the initial prompt).
-- All file uploads (photos, signatures) are being saved to the local filesystem at .
+- You are resuming mid-way through another major feature implementation. Your first task is to complete all items from user messages #434 and #437.
+- The user is highly engaged and provides detailed, multi-part requests. Plan carefully and address all points.
+- A recurring bug where the employee assignment dropdown was empty was fixed. The root causes were a missing  endpoint and a response validation error in the  endpoint. Both have been resolved.
+- A login issue after a password change was also fixed. The cause was an inconsistent field name ( vs. ) in the  collection.
 
 **documents and test reports created in this job**
 - 
-- 
+-  (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (LATEST):** Requested a massive list of changes: new roles (Surveyor, Supervisor, etc.), updated Excel format, new dashboard stats, workflow changes (Approve/Reject), and many new fields for the survey form. **Status: IN PROGRESS**.
-2.  **User:** Reported the watermark issue on mobile camera photos and requested UI changes for camera/upload buttons and a full-width signature pad. **Status: Partially Addressed (bug remains).**
-3.  **User:** Reported that the watermark was not appearing on photos. **Status: Addressed (but led to the mobile-specific bug).**
-4.  **User:** Requested PDF export with watermarked photos and signatures. **Status: Completed.**
-5.  **User:** Requested two new features: digital signatures and watermarking photos with GPS/timestamp. **Status: Completed.**
-6.  **User:** Confirmed satisfaction with previous state. **Status: Acknowledged.**
-7.  **User:** Requested removal of Made with Emergent badge. **Status: Completed.**
+1.  **User (LATEST):** Clarified attendance (one-time selfie, not continuous tracking) and confirmed the 50m survey radius and numbered map pins. **Status: IN PROGRESS.**
+2.  **User:** Asks for clarification on GPS tracking. **Status: Addressed.**
+3.  **User:** Provided a very large list of new requirements: new logo, name change, dashboard updates, role-based access for MC Officer/Supervisor, attendance system, major survey form changes, and GPS tracking. **Status: IN PROGRESS.**
+4.  **User:** Said ok to a password change confirmation. **Status: Acknowledged.**
+5.  **User:** Requested changing the admin password to . **Status: Completed.**
+6.  **User:** Requested View/Edit buttons on the property list, with a side-by-side map/details view for both admin and employee roles. **Status: Completed.**
+7.  **User:** Confirmed the previous changes were working as expected. **Status: Acknowledged.**
+8.  **User:** Reported being unable to assign properties because the employee dropdown was empty. **Status: Completed (Fixed).**
+9.  **User:** Reported that Approve/Reject buttons were missing and that the admin edit dialog should not allow editing of the original property (Excel) data. **Status: Completed (Fixed).**
+10. **User:** Requested to increase the logo size by 100%. **Status: Completed.**
 
 **Project Health Check:**
-- **Broken:** The application is currently broken due to an in-progress major refactor. The backend models and frontend components are out of sync.
-- **Mocked:** GPS functionality does not work in the development environment and returns default coordinates. This is expected.
+- **Broken:** No. The application is functional but in a state of active development, with a major feature set partially implemented.
+- **Mocked:** The 50-meter radius check and the attendance system are not yet implemented.
 
 **3rd Party Integrations**
-- None.
+- **Leaflet & React-Leaflet:** Used for interactive maps. Does not require an API key.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES (once, after initial MVP build).
+- **Testing agent used after significant changes:** YES
 - **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:** None.
-- **Known regressions:** The photo watermarking feature regressed on mobile devices after its initial implementation.
+- **Test files created:** None
+- **Known regressions:** The mobile photo watermark bug from the previous session is still outstanding.
 
 **Credentials to test flow:**
 - **Admin:**  / 
-- **Employee:** An employee user (e.g.,  / ) needs to be created by the admin first.
+- **Employee/Surveyor:** Must be created via the admin panel (e.g.,  / ). New users will have , , or  roles.
 
 **What agent forgot to execute**
-The agent did not finish the large set of changes requested by the user in the last message (#212). It started the work but was interrupted, leaving the application in an inconsistent state. The next agent must complete this task.</analysis>
+The agent is actively working on the user's latest large request and has not forgotten any items. The task is simply incomplete due to its size.</analysis>
