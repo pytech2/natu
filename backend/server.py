@@ -1264,6 +1264,102 @@ async def get_employee_own_progress(current_user: dict = Depends(get_current_use
         "total_completed": total_completed
     }
 
+# ============== ATTENDANCE ROUTES ==============
+
+@api_router.get("/employee/attendance/today")
+async def check_today_attendance(current_user: dict = Depends(get_current_user)):
+    """Check if employee has marked attendance today"""
+    today_date = get_today_start().strftime("%Y-%m-%d")
+    
+    attendance = await db.attendance.find_one({
+        "employee_id": current_user["id"],
+        "date": today_date
+    }, {"_id": 0})
+    
+    return {
+        "has_attendance": attendance is not None,
+        "attendance": attendance
+    }
+
+@api_router.post("/employee/attendance")
+async def mark_attendance(
+    selfie: UploadFile = File(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    authorization: str = Form(...)
+):
+    """Mark one-time daily attendance with selfie"""
+    current_user = await get_current_user(authorization)
+    today_date = get_today_start().strftime("%Y-%m-%d")
+    
+    # Check if already marked
+    existing = await db.attendance.find_one({
+        "employee_id": current_user["id"],
+        "date": today_date
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Attendance already marked for today")
+    
+    # Save selfie
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    selfie_filename = f"attendance_{current_user['id']}_{timestamp}{Path(selfie.filename).suffix}"
+    selfie_path = UPLOAD_DIR / selfie_filename
+    async with aiofiles.open(selfie_path, 'wb') as f:
+        content = await selfie.read()
+        await f.write(content)
+    
+    selfie_url = f"/api/uploads/{selfie_filename}"
+    
+    # Create attendance record
+    attendance_doc = {
+        "id": str(uuid.uuid4()),
+        "employee_id": current_user["id"],
+        "employee_name": current_user["name"],
+        "date": today_date,
+        "marked_at": datetime.now(timezone.utc).isoformat(),
+        "selfie_url": selfie_url,
+        "latitude": latitude,
+        "longitude": longitude
+    }
+    
+    await db.attendance.insert_one(attendance_doc)
+    
+    return {
+        "message": "Attendance marked successfully",
+        "attendance_id": attendance_doc["id"],
+        "marked_at": attendance_doc["marked_at"]
+    }
+
+@api_router.get("/admin/attendance")
+async def get_attendance_records(
+    date: Optional[str] = None,
+    employee_id: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get attendance records (admin/supervisor only)"""
+    if current_user["role"] not in ADMIN_VIEW_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if date:
+        query["date"] = date
+    if employee_id and employee_id.strip():
+        query["employee_id"] = employee_id
+    
+    skip = (page - 1) * limit
+    total = await db.attendance.count_documents(query)
+    records = await db.attendance.find(query, {"_id": 0}).sort("marked_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    return {
+        "attendance": records,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
 # ============== FILE SERVING ==============
 
 @api_router.get("/uploads/{filename}")
