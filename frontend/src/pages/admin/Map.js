@@ -129,7 +129,11 @@ export default function PropertyMap() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const props = response.data.properties || [];
+      let props = response.data.properties || [];
+      
+      // Sort by serial_number for consistent sequential numbering (1, 2, 3...)
+      props.sort((a, b) => (a.serial_number || 0) - (b.serial_number || 0));
+      
       setProperties(props);
       
       // Extract unique colonies and categories
