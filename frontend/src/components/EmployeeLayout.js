@@ -28,9 +28,9 @@ export default function EmployeeLayout({ children, title, showBackButton = false
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
             <img 
-              src="/nstu-logo.jpeg" 
-              alt="NSTU India Pvt Ltd" 
-              className="w-16 h-16 object-contain rounded-lg"
+              src="/nstu-logo.png" 
+              alt="NSTU India Private Limited" 
+              className="w-12 h-12 object-contain rounded-lg bg-white p-1"
             />
             <h1 className="font-heading font-semibold text-slate-900">{title}</h1>
           </div>
