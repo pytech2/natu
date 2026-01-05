@@ -363,7 +363,7 @@ async def list_properties(
     limit: int = 50,
     current_user: dict = Depends(get_current_user)
 ):
-    if current_user["role"] != "ADMIN":
+    if current_user["role"] not in ADMIN_VIEW_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     query = {}
@@ -395,7 +395,7 @@ async def list_properties(
 
 @api_router.post("/admin/assign")
 async def assign_properties(data: AssignmentRequest, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "ADMIN":
+    if current_user["role"] not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     employee = await db.users.find_one({"id": data.employee_id}, {"_id": 0})
