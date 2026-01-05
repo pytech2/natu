@@ -49,16 +49,9 @@ export default function Properties() {
   const [assignEmployeeId, setAssignEmployeeId] = useState('');
   const [bulkAssignArea, setBulkAssignArea] = useState('');
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  useEffect(() => {
-    fetchProperties();
-  }, [filters, pagination.page]);
-
   const fetchInitialData = async () => {
     try {
+      console.log('Fetching initial data...');
       const [empRes, batchRes, areaRes] = await Promise.all([
         axios.get(`${API_URL}/admin/users`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -70,13 +63,25 @@ export default function Properties() {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
-      setEmployees(empRes.data.filter(u => u.role !== 'ADMIN'));
-      setBatches(batchRes.data);
+      console.log('Users fetched:', empRes.data.length);
+      const nonAdminUsers = empRes.data.filter(u => u.role !== 'ADMIN');
+      console.log('Non-admin users:', nonAdminUsers.length);
+      setEmployees(nonAdminUsers);
+      setBatches(batchRes.data || []);
       setAreas(areaRes.data.areas || []);
     } catch (error) {
-      console.error('Failed to fetch initial data');
+      console.error('Failed to fetch initial data:', error);
+      toast.error('Failed to load employees');
     }
   };
+
+  useEffect(() => {
+    fetchInitialData();
+  }, [token]);
+
+  useEffect(() => {
+    fetchProperties();
+  }, [filters, pagination.page]);
 
   const fetchProperties = async () => {
     setLoading(true);
