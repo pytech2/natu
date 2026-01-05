@@ -205,6 +205,30 @@ export default function Properties() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedProperties.length === 0) {
+      toast.error('No properties selected');
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const response = await axios.post(`${API_URL}/admin/properties/bulk-delete`, {
+        property_ids: selectedProperties
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(response.data.message || `Deleted ${selectedProperties.length} properties`);
+      setDeleteDialog(false);
+      setSelectedProperties([]);
+      fetchProperties();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete properties');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const toggleSelect = (id) => {
     setSelectedProperties(prev => 
       prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
