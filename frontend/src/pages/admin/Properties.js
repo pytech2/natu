@@ -88,6 +88,10 @@ export default function Properties() {
   const [assignEmployeeId, setAssignEmployeeId] = useState('');
   const [bulkAssignArea, setBulkAssignArea] = useState('');
   
+  // Delete dialog
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  
   // Property detail dialog
   const [detailDialog, setDetailDialog] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
