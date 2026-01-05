@@ -22,13 +22,14 @@ export default function UploadPage() {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      if (!selectedFile.name.endsWith('.csv')) {
-        toast.error('Please upload a CSV file');
+      const fileName = selectedFile.name.toLowerCase();
+      if (!fileName.endsWith('.csv') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+        toast.error('Please upload a CSV or Excel (.xlsx, .xls) file');
         return;
       }
       setFile(selectedFile);
       if (!batchName) {
-        setBatchName(selectedFile.name.replace('.csv', ''));
+        setBatchName(selectedFile.name.replace(/\.(csv|xlsx|xls)$/i, ''));
       }
     }
   };
