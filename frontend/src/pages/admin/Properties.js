@@ -3,6 +3,7 @@ import AdminLayout from '../../components/AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 import {
   Select,
   SelectContent,
@@ -21,7 +22,35 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, UserPlus, FileSpreadsheet, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, UserPlus, FileSpreadsheet, ChevronLeft, ChevronRight, MapPin, Eye, User, Phone, Home, Navigation, ExternalLink } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default marker icons
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom red marker for highlighted property
+const redIcon = L.divIcon({
+  className: 'custom-marker',
+  html: `<div style="
+    background-color: #ef4444;
+    width: 32px;
+    height: 32px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    border: 4px solid white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  "></div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32]
+});
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -48,6 +77,10 @@ export default function Properties() {
   const [selectedProperties, setSelectedProperties] = useState([]);
   const [assignEmployeeId, setAssignEmployeeId] = useState('');
   const [bulkAssignArea, setBulkAssignArea] = useState('');
+  
+  // Property detail dialog
+  const [detailDialog, setDetailDialog] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState(null);
 
   const fetchInitialData = async () => {
     try {
