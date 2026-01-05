@@ -10,7 +10,8 @@ import {
   Download,
   LogOut,
   Menu,
-  X
+  X,
+  Map
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -19,6 +20,7 @@ const navItems = [
   { path: '/admin/employees', icon: Users, label: 'Employees' },
   { path: '/admin/upload', icon: Upload, label: 'Upload Data' },
   { path: '/admin/properties', icon: FileSpreadsheet, label: 'Properties' },
+  { path: '/admin/map', icon: Map, label: 'Property Map' },
   { path: '/admin/submissions', icon: ClipboardCheck, label: 'Submissions' },
   { path: '/admin/export', icon: Download, label: 'Export' },
 ];
