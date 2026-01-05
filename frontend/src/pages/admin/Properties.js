@@ -384,6 +384,19 @@ export default function Properties() {
               >
                 Bulk Assign by Area
               </Button>
+
+              {/* Delete All Button - Always visible when there are properties */}
+              {pagination.total > 0 && (
+                <Button
+                  variant="destructive"
+                  data-testid="delete-all-btn"
+                  onClick={() => setDeleteAllDialog(true)}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete All ({pagination.total})
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
