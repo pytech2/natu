@@ -440,6 +440,28 @@ async def bulk_assign_by_ward(data: BulkAssignmentRequest, current_user: dict = 
     
     return {"message": f"Assigned {result.modified_count} properties in ward {data.area} to {employee['name']}"}
 
+class BulkDeleteRequest(BaseModel):
+    property_ids: List[str]
+
+@api_router.post("/admin/properties/bulk-delete")
+async def bulk_delete_properties(data: BulkDeleteRequest, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if not data.property_ids:
+        raise HTTPException(status_code=400, detail="No properties selected for deletion")
+    
+    # Delete associated submissions first
+    await db.submissions.delete_many({"property_record_id": {"$in": data.property_ids}})
+    
+    # Delete the properties
+    result = await db.properties.delete_many({"id": {"$in": data.property_ids}})
+    
+    return {
+        "message": f"Successfully deleted {result.deleted_count} properties",
+        "deleted_count": result.deleted_count
+    }
+
 @api_router.get("/admin/wards")
 async def list_wards(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
