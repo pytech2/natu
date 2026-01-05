@@ -174,8 +174,8 @@ export default function UploadPage() {
                 ) : (
                   <div>
                     <Upload className="w-8 h-8 mx-auto text-slate-400 mb-2" />
-                    <p className="text-slate-600">Click to select CSV file</p>
-                    <p className="text-sm text-slate-400">or drag and drop</p>
+                    <p className="text-slate-600">Click to select Excel or CSV file</p>
+                    <p className="text-sm text-slate-400">Supports .xlsx, .xls, .csv</p>
                   </div>
                 )}
               </div>
