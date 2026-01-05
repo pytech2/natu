@@ -43,148 +43,159 @@ import {
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 // Function to add watermark to image with GPS, Date, Time
+// Fixed for mobile browser compatibility
 const addWatermarkToImage = (file, latitude, longitude) => {
   return new Promise((resolve, reject) => {
-    // Create image from file
-    const img = new Image();
+    // Create a FileReader to properly load the image on mobile
+    const reader = new FileReader();
     
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Set canvas size to match image
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
-        // Draw original image
-        ctx.drawImage(img, 0, 0, img.width, img.height);
-        
-        // Watermark settings
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('en-IN', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
-        const timeStr = now.toLocaleTimeString('en-IN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true
-        });
-        
-        // Format GPS coordinates
-        const latStr = latitude ? latitude.toFixed(6) : 'N/A';
-        const longStr = longitude ? longitude.toFixed(6) : 'N/A';
-        
-        const watermarkLines = [
-          `Date: ${dateStr}`,
-          `Time: ${timeStr}`,
-          `Lat: ${latStr}`,
-          `Long: ${longStr}`,
-          `maps.google.com`
-        ];
-        
-        // Calculate font size based on image dimensions (responsive)
-        const minDimension = Math.min(img.width, img.height);
-        const fontSize = Math.max(24, Math.floor(minDimension * 0.04));
-        const padding = Math.floor(fontSize * 0.8);
-        const lineHeight = Math.floor(fontSize * 1.5);
-        
-        // Set font for measuring text
-        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-        
-        // Calculate max text width
-        let maxTextWidth = 0;
-        watermarkLines.forEach(line => {
-          const metrics = ctx.measureText(line);
-          if (metrics.width > maxTextWidth) {
-            maxTextWidth = metrics.width;
-          }
-        });
-        
-        // Background rectangle dimensions
-        const boxWidth = maxTextWidth + padding * 2;
-        const boxHeight = lineHeight * watermarkLines.length + padding * 2;
-        
-        // Position at bottom-left with margin
-        const boxX = padding;
-        const boxY = img.height - boxHeight - padding;
-        
-        // Draw semi-transparent black background
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
-        
-        // Draw yellow border
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
-        
-        // Draw text
-        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-        ctx.textBaseline = 'top';
-        
-        watermarkLines.forEach((line, index) => {
-          // Highlight GPS coordinates in yellow
-          if (line.startsWith('Lat:') || line.startsWith('Long:')) {
-            ctx.fillStyle = '#FFD700';
-          } else if (line.includes('google')) {
-            ctx.fillStyle = '#00FF00';
-          } else {
-            ctx.fillStyle = '#FFFFFF';
-          }
-          ctx.fillText(line, boxX + padding, boxY + padding + (index * lineHeight));
-        });
-        
-        // Add location pin icon at top-right
-        const iconSize = Math.floor(fontSize * 3);
-        const iconX = img.width - iconSize - padding;
-        const iconY = padding;
-        
-        // Draw red circle background
-        ctx.beginPath();
-        ctx.arc(iconX + iconSize/2, iconY + iconSize/2, iconSize/2, 0, Math.PI * 2);
-        ctx.fillStyle = '#DC2626';
-        ctx.fill();
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        
-        // Draw GPS text in circle
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = `bold ${iconSize * 0.35}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('GPS', iconX + iconSize/2, iconY + iconSize/2);
-        
-        // Reset text align
-        ctx.textAlign = 'left';
-        
-        // Convert canvas to blob with high quality
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const watermarkedFile = new File(
-              [blob], 
-              'photo_' + Date.now() + '.jpg', 
-              { type: 'image/jpeg' }
-            );
-            resolve(watermarkedFile);
-          } else {
-            reject(new Error('Failed to create blob'));
-          }
-        }, 'image/jpeg', 0.95);
-        
-      } catch (error) {
-        console.error('Canvas error:', error);
-        reject(error);
-      }
+    reader.onload = (e) => {
+      const img = new Image();
+      
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Set canvas size to match image
+          canvas.width = img.width;
+          canvas.height = img.height;
+          
+          // Draw original image
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+          
+          // Watermark settings
+          const now = new Date();
+          const dateStr = now.toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          });
+          const timeStr = now.toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+          });
+          
+          // Format GPS coordinates
+          const latStr = latitude ? latitude.toFixed(6) : 'N/A';
+          const longStr = longitude ? longitude.toFixed(6) : 'N/A';
+          
+          const watermarkLines = [
+            `Date: ${dateStr}`,
+            `Time: ${timeStr}`,
+            `Lat: ${latStr}`,
+            `Long: ${longStr}`,
+            `maps.google.com`
+          ];
+          
+          // Calculate font size based on image dimensions (responsive)
+          const minDimension = Math.min(img.width, img.height);
+          const fontSize = Math.max(24, Math.floor(minDimension * 0.04));
+          const padding = Math.floor(fontSize * 0.8);
+          const lineHeight = Math.floor(fontSize * 1.5);
+          
+          // Set font for measuring text
+          ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+          
+          // Calculate max text width
+          let maxTextWidth = 0;
+          watermarkLines.forEach(line => {
+            const metrics = ctx.measureText(line);
+            if (metrics.width > maxTextWidth) {
+              maxTextWidth = metrics.width;
+            }
+          });
+          
+          // Background rectangle dimensions
+          const boxWidth = maxTextWidth + padding * 2;
+          const boxHeight = lineHeight * watermarkLines.length + padding * 2;
+          
+          // Position at bottom-left with margin
+          const boxX = padding;
+          const boxY = img.height - boxHeight - padding;
+          
+          // Draw semi-transparent black background
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+          ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+          
+          // Draw yellow border
+          ctx.strokeStyle = '#FFD700';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+          
+          // Draw text
+          ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+          ctx.textBaseline = 'top';
+          
+          watermarkLines.forEach((line, index) => {
+            // Highlight GPS coordinates in yellow
+            if (line.startsWith('Lat:') || line.startsWith('Long:')) {
+              ctx.fillStyle = '#FFD700';
+            } else if (line.includes('google')) {
+              ctx.fillStyle = '#00FF00';
+            } else {
+              ctx.fillStyle = '#FFFFFF';
+            }
+            ctx.fillText(line, boxX + padding, boxY + padding + (index * lineHeight));
+          });
+          
+          // Add location pin icon at top-right
+          const iconSize = Math.floor(fontSize * 3);
+          const iconX = img.width - iconSize - padding;
+          const iconY = padding;
+          
+          // Draw red circle background
+          ctx.beginPath();
+          ctx.arc(iconX + iconSize/2, iconY + iconSize/2, iconSize/2, 0, Math.PI * 2);
+          ctx.fillStyle = '#DC2626';
+          ctx.fill();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          
+          // Draw GPS text in circle
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = `bold ${iconSize * 0.35}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('GPS', iconX + iconSize/2, iconY + iconSize/2);
+          
+          // Reset text align
+          ctx.textAlign = 'left';
+          
+          // Convert canvas to blob with high quality
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const watermarkedFile = new File(
+                [blob], 
+                'photo_' + Date.now() + '.jpg', 
+                { type: 'image/jpeg' }
+              );
+              resolve(watermarkedFile);
+            } else {
+              reject(new Error('Failed to create blob'));
+            }
+          }, 'image/jpeg', 0.95);
+          
+        } catch (error) {
+          console.error('Canvas error:', error);
+          reject(error);
+        }
+      };
+      
+      img.onerror = () => reject(new Error('Failed to load image'));
+      
+      // Use the FileReader result (base64 data URL) instead of object URL
+      // This is more reliable on mobile browsers
+      img.src = e.target.result;
     };
     
-    img.onerror = () => reject(new Error('Failed to load image'));
+    reader.onerror = () => reject(new Error('Failed to read file'));
     
-    // Create object URL from file and load image
-    img.src = URL.createObjectURL(file);
+    // Read file as data URL for better mobile compatibility
+    reader.readAsDataURL(file);
   });
 };
 
