@@ -211,9 +211,14 @@ export default function EmployeeProperties() {
                 <CardContent className="p-0">
                   {/* Property Header */}
                   <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-3 flex items-center justify-between">
-                    <div>
-                      <p className="font-mono text-lg font-bold">{prop.property_id}</p>
-                      <p className="text-xs text-slate-300">{prop.colony || prop.area || 'Akash Nagar'}</p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                        <span className="font-bold text-sm">{prop.serial_number || '-'}</span>
+                      </div>
+                      <div>
+                        <p className="font-mono text-lg font-bold">{prop.property_id}</p>
+                        <p className="text-xs text-slate-300">{prop.colony || prop.area || 'Akash Nagar'}</p>
+                      </div>
                     </div>
                     {getStatusBadge(prop.status)}
                   </div>
