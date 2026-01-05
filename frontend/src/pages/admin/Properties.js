@@ -712,6 +712,33 @@ export default function Properties() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Delete Properties
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete <strong>{selectedProperties.length}</strong> selected properties? 
+                This action cannot be undone. All associated submissions will also be removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleBulkDelete}
+                disabled={deleting}
+                className="bg-red-600 hover:bg-red-700"
+                data-testid="confirm-delete-btn"
+              >
+                {deleting ? 'Deleting...' : `Delete ${selectedProperties.length} Properties`}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );
