@@ -230,6 +230,31 @@ export default function Properties() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    setDeleting(true);
+    try {
+      // Build query params same as current filters
+      const params = new URLSearchParams();
+      if (filters.batch_id && filters.batch_id.trim()) params.append('batch_id', filters.batch_id);
+      if (filters.area && filters.area.trim()) params.append('ward', filters.area);
+      if (filters.status && filters.status.trim()) params.append('status', filters.status);
+      if (filters.employee_id && filters.employee_id.trim()) params.append('employee_id', filters.employee_id);
+      if (filters.search) params.append('search', filters.search);
+      
+      const response = await axios.post(`${API_URL}/admin/properties/delete-all?${params}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(response.data.message || `Deleted all properties`);
+      setDeleteAllDialog(false);
+      setSelectedProperties([]);
+      fetchProperties();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete properties');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const toggleSelect = (id) => {
     setSelectedProperties(prev => 
       prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
