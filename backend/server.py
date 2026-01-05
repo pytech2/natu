@@ -545,7 +545,7 @@ async def get_employee_progress(current_user: dict = Depends(get_current_user)):
 
 @api_router.get("/admin/areas")
 async def list_areas(current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "ADMIN":
+    if current_user["role"] not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     # Get unique areas/wards from properties
@@ -566,7 +566,7 @@ async def list_submissions(
     limit: int = 50,
     current_user: dict = Depends(get_current_user)
 ):
-    if current_user["role"] != "ADMIN":
+    if current_user["role"] not in ADMIN_VIEW_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     query = {}
