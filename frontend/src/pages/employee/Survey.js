@@ -292,11 +292,11 @@ export default function Survey() {
           new_mobile: sub.new_mobile || response.data.property.mobile || '',
           receiver_name: sub.receiver_name || '',
           relation: sub.relation || '',
-          old_property_id: sub.old_property_id || response.data.property.property_id || '',
           family_id: sub.family_id || '',
           aadhar_number: sub.aadhar_number || '',
-          ward_number: sub.ward_number || response.data.property.ward || '',
-          remarks: sub.remarks || ''
+          ward_number: sub.ward_number || '', // Now editable, blank
+          remarks: sub.remarks || '',
+          self_satisfied: sub.self_satisfied || ''
         });
       } else {
         // Pre-fill with property data for new submissions
@@ -304,8 +304,7 @@ export default function Survey() {
           ...prev,
           new_owner_name: response.data.property.owner_name || '',
           new_mobile: response.data.property.mobile || '',
-          old_property_id: response.data.property.property_id || '',
-          ward_number: response.data.property.ward || ''
+          ward_number: '' // Blank and editable
         }));
       }
     } catch (error) {
