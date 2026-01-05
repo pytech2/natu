@@ -388,18 +388,20 @@ export default function Properties() {
                         <td>{prop.assigned_employee_name || <span className="text-slate-400">Unassigned</span>}</td>
                         <td>{getStatusBadge(prop.status)}</td>
                         <td>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedProperty(prop);
-                              setDetailDialog(true);
-                            }}
-                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedProperty(prop);
+                                setDetailDialog(true);
+                              }}
+                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
