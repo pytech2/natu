@@ -7,6 +7,7 @@ import AdminProperties from "./pages/admin/Properties";
 import AdminUpload from "./pages/admin/Upload";
 import AdminSubmissions from "./pages/admin/Submissions";
 import AdminExport from "./pages/admin/Export";
+import AdminMap from "./pages/admin/Map";
 import EmployeeDashboard from "./pages/employee/Dashboard";
 import EmployeeProperties from "./pages/employee/Properties";
 import EmployeeSurvey from "./pages/employee/Survey";
