@@ -24,6 +24,8 @@ Build a web application for **NSTU India Private Limited** to manage property ta
 
 ### Latest Session Changes ✅
 - **50-Meter Radius Check**: Survey form only submits when surveyor is within 50m of property GPS
+- **Map Serial Numbers**: Properties now have sequential serial numbers (1, 2, 3...) based on Excel row order. Map pins display the actual serial number from the database instead of random load order.
+- **Mobile Photo Watermark Bug Fixed**: Using FileReader for better mobile browser compatibility
 - **Survey Form Updates**:
   - Locked property fields (Property ID, Owner, Mobile, Colony, Total Area, Amount, Lat/Lng) displayed as read-only
   - Updated relation dropdown: Self, Family Member, Tenant, Neighbour, Other
