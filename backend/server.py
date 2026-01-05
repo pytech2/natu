@@ -479,11 +479,6 @@ async def list_wards(current_user: dict = Depends(get_current_user)):
 
 # ============== DASHBOARD ROUTES ==============
 
-# Roles with admin-level access
-ADMIN_ROLES = ["ADMIN", "SUPERVISOR"]
-# Roles that can view admin dashboard (including MC_OFFICER with limited access)
-ADMIN_VIEW_ROLES = ["ADMIN", "SUPERVISOR", "MC_OFFICER"]
-
 @api_router.get("/admin/dashboard", response_model=DashboardStats)
 async def admin_dashboard(current_user: dict = Depends(get_current_user)):
     if current_user["role"] not in ADMIN_VIEW_ROLES:
