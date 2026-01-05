@@ -32,8 +32,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Custom marker icons based on category
-const createIcon = (category) => {
+// Custom marker icons with serial number
+const createNumberedIcon = (number, category) => {
   const colors = {
     'Residential': '#3b82f6',      // Blue
     'Commercial': '#f59e0b',       // Amber
@@ -45,19 +45,25 @@ const createIcon = (category) => {
   const color = colors[category] || colors['default'];
   
   return L.divIcon({
-    className: 'custom-marker',
+    className: 'numbered-marker',
     html: `<div style="
       background-color: ${color};
-      width: 24px;
-      height: 24px;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      border: 3px solid white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    "></div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 24],
-    popupAnchor: [0, -24]
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: bold;
+      color: white;
+      font-family: Arial, sans-serif;
+    ">${number}</div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -11]
   });
 };
 
