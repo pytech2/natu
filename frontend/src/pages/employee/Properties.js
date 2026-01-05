@@ -31,7 +31,43 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Custom red marker
+// Custom numbered marker for employee properties
+const createNumberedIcon = (number, status) => {
+  const colors = {
+    'Pending': '#f59e0b',      // Amber
+    'Completed': '#10b981',    // Green
+    'Approved': '#10b981',     // Green
+    'In Progress': '#3b82f6',  // Blue
+    'Rejected': '#ef4444',     // Red
+    'default': '#6b7280'       // Gray
+  };
+  
+  const color = colors[status] || colors['default'];
+  
+  return L.divIcon({
+    className: 'numbered-marker',
+    html: `<div style="
+      background-color: ${color};
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: bold;
+      color: white;
+      font-family: Arial, sans-serif;
+    ">${number}</div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -11]
+  });
+};
+
+// Custom red marker for detail view
 const redIcon = L.divIcon({
   className: 'custom-marker',
   html: `<div style="
