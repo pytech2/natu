@@ -19,10 +19,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, UserPlus, FileSpreadsheet, ChevronLeft, ChevronRight, MapPin, Eye, User, Phone, Home, Navigation, ExternalLink } from 'lucide-react';
+import { Search, UserPlus, FileSpreadsheet, ChevronLeft, ChevronRight, MapPin, Eye, User, Phone, Home, Navigation, ExternalLink, Trash2 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
