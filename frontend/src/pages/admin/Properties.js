@@ -499,6 +499,153 @@ export default function Properties() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Property Detail Dialog with Map */}
+        <Dialog open={detailDialog} onOpenChange={setDetailDialog}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-heading flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+                Property Details - {selectedProperty?.property_id}
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedProperty && (
+              <div className="space-y-6">
+                {/* Property Information */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase tracking-wider">Property ID</Label>
+                      <p className="font-mono font-bold text-lg text-blue-600">{selectedProperty.property_id}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                        <User className="w-3 h-3" /> Owner Name
+                      </Label>
+                      <p className="font-medium">{selectedProperty.owner_name || '-'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                        <Phone className="w-3 h-3" /> Mobile Number
+                      </Label>
+                      <p className="font-mono">{selectedProperty.mobile || '-'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                        <Home className="w-3 h-3" /> Address
+                      </Label>
+                      <p className="text-slate-700">{selectedProperty.address || selectedProperty.plot_address || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase tracking-wider">Colony/Area</Label>
+                      <p className="font-medium">{selectedProperty.colony || selectedProperty.area || '-'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase tracking-wider">Category</Label>
+                      <p className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                        selectedProperty.category === 'Residential' ? 'bg-blue-100 text-blue-700' :
+                        selectedProperty.category === 'Commercial' ? 'bg-amber-100 text-amber-700' :
+                        selectedProperty.category === 'Vacant Plot' ? 'bg-emerald-100 text-emerald-700' :
+                        'bg-purple-100 text-purple-700'
+                      }`}>
+                        {selectedProperty.category || '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase tracking-wider">Total Area</Label>
+                      <p>{selectedProperty.total_area || '-'} Sq.Yard</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 uppercase tracking-wider">Outstanding Amount</Label>
+                      <p className="font-mono font-bold text-red-600 text-lg">₹{selectedProperty.amount || '0'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* GPS Coordinates */}
+                {selectedProperty.latitude && selectedProperty.longitude && (
+                  <div className="p-3 bg-emerald-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Navigation className="w-5 h-5 text-emerald-600" />
+                        <div>
+                          <p className="text-xs text-emerald-600 font-semibold">GPS COORDINATES</p>
+                          <p className="font-mono text-emerald-800">
+                            {selectedProperty.latitude?.toFixed(6)}, {selectedProperty.longitude?.toFixed(6)}
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href={`https://www.google.com/maps?q=${selectedProperty.latitude},${selectedProperty.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-emerald-600 hover:underline inline-flex items-center gap-1"
+                      >
+                        Open in Google Maps <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Map */}
+                {selectedProperty.latitude && selectedProperty.longitude && (
+                  <div className="rounded-lg overflow-hidden border-2 border-slate-200">
+                    <div className="bg-slate-900 text-white px-3 py-2 text-sm font-medium flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Property Location
+                    </div>
+                    <div style={{ height: '300px', width: '100%' }}>
+                      <MapContainer
+                        center={[selectedProperty.latitude, selectedProperty.longitude]}
+                        zoom={18}
+                        style={{ height: '100%', width: '100%' }}
+                        scrollWheelZoom={true}
+                      >
+                        <TileLayer
+                          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                          attribution='&copy; Esri'
+                          maxZoom={19}
+                        />
+                        <Marker 
+                          position={[selectedProperty.latitude, selectedProperty.longitude]}
+                          icon={redIcon}
+                        >
+                          <Popup>
+                            <div className="text-center">
+                              <p className="font-bold text-blue-600">{selectedProperty.property_id}</p>
+                              <p className="text-sm">{selectedProperty.owner_name}</p>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      </MapContainer>
+                    </div>
+                  </div>
+                )}
+
+                {/* Status */}
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase tracking-wider">Assigned To</Label>
+                    <p className="font-medium">{selectedProperty.assigned_employee_name || 'Unassigned'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-500 uppercase tracking-wider">Status</Label>
+                    <p>{getStatusBadge(selectedProperty.status)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDetailDialog(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
