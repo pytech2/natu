@@ -112,7 +112,7 @@ Build a web application for **NSTU India Private Limited** to manage property ta
 - [x] PDF export with watermarked photos
 - [x] Digital signature
 - [x] GPS watermarking
-- [ ] Mobile photo watermark bug fix (photo capture on mobile)
+- [x] Mobile photo watermark bug fix (using FileReader for better mobile compatibility)
 
 ### P2 (Nice to Have)
 - [ ] Offline support for mobile
