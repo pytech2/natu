@@ -447,9 +447,14 @@ async def list_wards(current_user: dict = Depends(get_current_user)):
 
 # ============== DASHBOARD ROUTES ==============
 
+# Roles with admin-level access
+ADMIN_ROLES = ["ADMIN", "SUPERVISOR"]
+# Roles that can view admin dashboard (including MC_OFFICER with limited access)
+ADMIN_VIEW_ROLES = ["ADMIN", "SUPERVISOR", "MC_OFFICER"]
+
 @api_router.get("/admin/dashboard", response_model=DashboardStats)
 async def admin_dashboard(current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "ADMIN":
+    if current_user["role"] not in ADMIN_VIEW_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     today_start = get_today_start().isoformat()
@@ -468,7 +473,7 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
         "status": {"$ne": "Rejected"}
     })
     
-    # Today's unique wards
+    # Today's unique wards (now called "colonies")
     today_submissions = await db.submissions.find(
         {"submitted_at": {"$gte": today_start}},
         {"property_record_id": 1, "_id": 0}
@@ -495,7 +500,7 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
 
 @api_router.get("/admin/employee-progress")
 async def get_employee_progress(current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "ADMIN":
+    if current_user["role"] not in ADMIN_VIEW_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     today_start = get_today_start().isoformat()
