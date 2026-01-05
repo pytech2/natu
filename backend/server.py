@@ -1095,7 +1095,7 @@ async def get_property_detail(property_id: str, current_user: dict = Depends(get
 @api_router.post("/employee/submit/{property_id}")
 async def submit_survey(
     property_id: str,
-    # New survey fields
+    # Survey fields
     new_owner_name: str = Form(...),
     new_mobile: str = Form(...),
     receiver_name: str = Form(...),
@@ -1105,6 +1105,7 @@ async def submit_survey(
     aadhar_number: str = Form(None),
     ward_number: str = Form(None),
     remarks: str = Form(None),
+    self_satisfied: str = Form(None),  # New field: 'yes' or 'no'
     latitude: float = Form(...),
     longitude: float = Form(...),
     house_photo: UploadFile = File(...),
