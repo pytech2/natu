@@ -270,32 +270,127 @@ async def upload_batch(
     
     # Read file content
     content = await file.read()
-    content_str = content.decode('utf-8')
+    filename = file.filename.lower()
     
-    # Parse CSV - New fields: property_id, owner_name, mobile, address, total_area, amount, ward
-    reader = csv.DictReader(io.StringIO(content_str))
     properties = []
     
-    # Add serial number (1, 2, 3...) based on row order in Excel
-    serial_num = 1
-    for row in reader:
-        prop = {
-            "id": str(uuid.uuid4()),
-            "serial_number": serial_num,  # Sequential serial number from Excel row order
-            "property_id": row.get("property_id") or row.get("Property ID") or row.get("PropertyID") or str(uuid.uuid4())[:8].upper(),
-            "owner_name": row.get("owner_name") or row.get("Owner Name") or row.get("OwnerName") or "Unknown",
-            "mobile": row.get("mobile") or row.get("Mobile") or row.get("Mobile No") or "",
-            "address": row.get("address") or row.get("Address") or row.get("plot_address") or "",
-            "total_area": row.get("total_area") or row.get("Total Area") or "",
-            "amount": row.get("amount") or row.get("Amount") or row.get("category") or "",
-            "ward": row.get("ward") or row.get("Ward") or row.get("area") or "",
-            "assigned_employee_id": None,
-            "assigned_employee_name": None,
-            "status": "Pending",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        properties.append(prop)
-        serial_num += 1
+    # Check file type and parse accordingly
+    if filename.endswith('.xlsx') or filename.endswith('.xls'):
+        # Parse Excel file using openpyxl
+        import openpyxl
+        from io import BytesIO
+        
+        workbook = openpyxl.load_workbook(BytesIO(content), data_only=True)
+        sheet = workbook.active
+        
+        # Get headers from first row
+        headers = []
+        for cell in sheet[1]:
+            headers.append(str(cell.value).strip() if cell.value else "")
+        
+        # Create header mapping (case-insensitive)
+        header_map = {h.lower(): i for i, h in enumerate(headers)}
+        
+        # Parse data rows starting from row 2
+        serial_num = 1
+        for row in sheet.iter_rows(min_row=2, values_only=True):
+            if not any(row):  # Skip empty rows
+                continue
+            
+            # Get values using header mapping
+            def get_val(keys):
+                for k in keys:
+                    idx = header_map.get(k.lower())
+                    if idx is not None and idx < len(row) and row[idx]:
+                        return str(row[idx]).strip()
+                return ""
+            
+            prop = {
+                "id": str(uuid.uuid4()),
+                "serial_number": serial_num,
+                "property_id": get_val(["Property Id", "property_id", "PropertyID"]) or str(uuid.uuid4())[:8].upper(),
+                "old_property_id": get_val(["Old Property Id", "old_property_id", "OldPropertyId"]),
+                "owner_name": get_val(["Owner Name", "owner_name", "OwnerName"]) or "Unknown",
+                "mobile": get_val(["Mobile", "mobile", "Mobile No", "Phone"]),
+                "address": get_val(["Plot Address", "Address", "address", "plot_address"]),
+                "colony": get_val(["Colony", "colony", "Area", "area"]),
+                "ward": get_val(["Colony", "Ward", "ward", "area"]),
+                "latitude": None,
+                "longitude": None,
+                "total_area": get_val(["Total Area (SqYard)", "Total Area", "total_area", "Area"]),
+                "category": get_val(["Category", "category"]),
+                "amount": get_val(["Outstanding", "Total Outstanding", "Amount", "amount"]) or "0",
+                "financial_year": get_val(["Financial Year", "financial_year"]) or "2025-2026",
+                "assigned_employee_id": None,
+                "assigned_employee_name": None,
+                "status": "Pending",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            # Parse latitude/longitude if available
+            lat_str = get_val(["Latitude", "latitude", "Lat"])
+            lng_str = get_val(["Longitude", "longitude", "Long", "Lng"])
+            if lat_str:
+                try:
+                    prop["latitude"] = float(lat_str)
+                except:
+                    pass
+            if lng_str:
+                try:
+                    prop["longitude"] = float(lng_str)
+                except:
+                    pass
+            
+            properties.append(prop)
+            serial_num += 1
+    else:
+        # Parse CSV file
+        content_str = content.decode('utf-8')
+        reader = csv.DictReader(io.StringIO(content_str))
+        
+        serial_num = 1
+        for row in reader:
+            prop = {
+                "id": str(uuid.uuid4()),
+                "serial_number": serial_num,
+                "property_id": row.get("property_id") or row.get("Property Id") or row.get("PropertyID") or str(uuid.uuid4())[:8].upper(),
+                "old_property_id": row.get("old_property_id") or row.get("Old Property Id") or "",
+                "owner_name": row.get("owner_name") or row.get("Owner Name") or row.get("OwnerName") or "Unknown",
+                "mobile": row.get("mobile") or row.get("Mobile") or row.get("Mobile No") or "",
+                "address": row.get("address") or row.get("Address") or row.get("Plot Address") or row.get("plot_address") or "",
+                "colony": row.get("Colony") or row.get("colony") or row.get("Area") or "",
+                "ward": row.get("ward") or row.get("Ward") or row.get("Colony") or row.get("area") or "",
+                "latitude": None,
+                "longitude": None,
+                "total_area": row.get("total_area") or row.get("Total Area") or row.get("Total Area (SqYard)") or "",
+                "category": row.get("Category") or row.get("category") or "",
+                "amount": row.get("amount") or row.get("Amount") or row.get("Outstanding") or "0",
+                "financial_year": row.get("Financial Year") or row.get("financial_year") or "2025-2026",
+                "assigned_employee_id": None,
+                "assigned_employee_name": None,
+                "status": "Pending",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            # Parse latitude/longitude
+            lat_str = row.get("Latitude") or row.get("latitude")
+            lng_str = row.get("Longitude") or row.get("longitude")
+            if lat_str:
+                try:
+                    prop["latitude"] = float(lat_str)
+                except:
+                    pass
+            if lng_str:
+                try:
+                    prop["longitude"] = float(lng_str)
+                except:
+                    pass
+            
+            properties.append(prop)
+            serial_num += 1
+    
+    if not properties:
+        raise HTTPException(status_code=400, detail="No valid properties found in file")
     
     # Create batch
     batch_doc = {
