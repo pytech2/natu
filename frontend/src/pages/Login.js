@@ -52,14 +52,14 @@ export default function Login() {
         <CardHeader className="space-y-4 text-center pb-2">
           <div className="mx-auto">
             <img 
-              src="/nstu-logo.jpeg" 
-              alt="NSTU India Pvt Ltd" 
+              src="/nstu-logo.png" 
+              alt="NSTU India Private Limited" 
               className="w-48 h-48 object-contain mx-auto"
             />
           </div>
           <div>
             <CardTitle className="text-2xl font-heading font-bold text-slate-900">
-              NSTU India Pvt Ltd
+              NSTU India Private Limited
             </CardTitle>
             <CardDescription className="text-slate-500 mt-2">
               Property Survey & Notice Distribution System
@@ -120,10 +120,10 @@ export default function Login() {
           <div className="mt-6 pt-6 border-t border-slate-100">
             <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
               <MapPin className="w-3 h-3" />
-              <span>NSTU India Pvt Ltd</span>
+              <span>NSTU India Private Limited</span>
             </div>
             <p className="text-center text-xs text-slate-400 mt-2">
-              Default Admin: admin / admin123
+              Default Admin: admin / nastu123
             </p>
           </div>
         </CardContent>
