@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 
-const navItems = [
+// Full navigation for ADMIN and SUPERVISOR
+const fullNavItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/admin/employees', icon: Users, label: 'Employees' },
   { path: '/admin/upload', icon: Upload, label: 'Upload Data' },
@@ -24,6 +25,20 @@ const navItems = [
   { path: '/admin/submissions', icon: ClipboardCheck, label: 'Submissions' },
   { path: '/admin/export', icon: Download, label: 'Export' },
 ];
+
+// Limited navigation for MC_OFFICER (view-only)
+const mcOfficerNavItems = [
+  { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/admin/properties', icon: FileSpreadsheet, label: 'Properties' },
+  { path: '/admin/map', icon: Map, label: 'Property Map' },
+  { path: '/admin/submissions', icon: ClipboardCheck, label: 'Submissions' },
+];
+
+const ROLE_DISPLAY = {
+  'ADMIN': 'Super Admin',
+  'SUPERVISOR': 'Supervisor',
+  'MC_OFFICER': 'MC Officer'
+};
 
 export default function AdminLayout({ children, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,6 +50,9 @@ export default function AdminLayout({ children, title }) {
     logout();
     navigate('/login');
   };
+
+  // Determine which nav items to show based on role
+  const navItems = user?.role === 'MC_OFFICER' ? mcOfficerNavItems : fullNavItems;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -81,7 +99,7 @@ export default function AdminLayout({ children, title }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-              <p className="text-xs text-slate-400">Administrator</p>
+              <p className="text-xs text-slate-400">{ROLE_DISPLAY[user?.role] || user?.role}</p>
             </div>
           </div>
           <Button
