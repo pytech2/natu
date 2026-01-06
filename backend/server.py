@@ -2086,18 +2086,25 @@ async def generate_arranged_pdf(
         
         # Calculate SN position - adjusted for BillSrNo field location
         rect = new_page.rect
+        rotation = new_page.rotation
         
-        # The page could be landscape (842x595) or portrait
-        # BillSrNo field is typically near top-left after "BillSrNo. :" text
         # Search for BillSrNo position on this page
         bill_sr_positions = new_page.search_for("BillSrNo")
         
         if bill_sr_positions and sn_position == "top-right":
             # Place serial number right after the BillSrNo.: text
             bill_sr_rect = bill_sr_positions[0]
-            # Position to the right of BillSrNo text, same height
-            x = bill_sr_rect.x1 + 35  # After the ": " characters
-            y = bill_sr_rect.y0 + 20  # Same line
+            
+            # Account for page rotation (90 degrees = landscape)
+            if rotation == 90:
+                # For 90-degree rotated pages, adjust coordinates
+                # The visual "right" of BillSrNo is actually below in coordinate space
+                x = bill_sr_rect.x1 + 5   # Slightly below BillSrNo
+                y = bill_sr_rect.y1 + 10  # To the right visually
+            else:
+                # Normal orientation
+                x = bill_sr_rect.x1 + 35
+                y = bill_sr_rect.y0 + 20
         elif sn_position == "top-left":
             x, y = 50, 60
         elif sn_position == "top-right":
