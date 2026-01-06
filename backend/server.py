@@ -618,6 +618,177 @@ async def delete_all_properties(
         "deleted_count": result.deleted_count
     }
 
+@api_router.post("/admin/properties/arrange-by-route")
+async def arrange_properties_by_route(
+    ward: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Arrange properties by GPS route using nearest neighbor algorithm"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {"latitude": {"$ne": None}, "longitude": {"$ne": None}}
+    if ward and ward.strip():
+        query["ward"] = ward
+    
+    # Get all properties with GPS
+    properties = await db.properties.find(query, {"_id": 0}).to_list(None)
+    
+    if not properties:
+        raise HTTPException(status_code=404, detail="No properties with GPS found")
+    
+    # Sort by GPS route using nearest neighbor algorithm
+    sorted_props = []
+    remaining = list(properties)
+    
+    if remaining:
+        # Start from first property
+        sorted_props.append(remaining.pop(0))
+        
+        while remaining:
+            last = sorted_props[-1]
+            last_lat, last_lon = last['latitude'], last['longitude']
+            
+            # Find nearest neighbor
+            nearest_idx = 0
+            nearest_dist = float('inf')
+            
+            for i, prop in enumerate(remaining):
+                dist = haversine_distance(last_lat, last_lon, prop['latitude'], prop['longitude'])
+                if dist < nearest_dist:
+                    nearest_dist = dist
+                    nearest_idx = i
+            
+            sorted_props.append(remaining.pop(nearest_idx))
+    
+    # Update serial numbers based on route order
+    for i, prop in enumerate(sorted_props):
+        await db.properties.update_one(
+            {"id": prop["id"]},
+            {"$set": {"serial_number": i + 1, "route_ordered": True}}
+        )
+    
+    return {
+        "message": f"Arranged {len(sorted_props)} properties by GPS route",
+        "total_arranged": len(sorted_props)
+    }
+
+@api_router.post("/admin/properties/save-arranged")
+async def save_arranged_data(
+    ward: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Save the current arrangement as the permanent serial numbers"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if ward and ward.strip():
+        query["ward"] = ward
+    
+    # Get properties sorted by current serial_number
+    properties = await db.properties.find(query, {"_id": 0}).sort("serial_number", 1).to_list(None)
+    
+    if not properties:
+        raise HTTPException(status_code=404, detail="No properties found")
+    
+    # Re-assign serial numbers to ensure they're consecutive
+    for i, prop in enumerate(properties):
+        await db.properties.update_one(
+            {"id": prop["id"]},
+            {"$set": {"serial_number": i + 1, "arrangement_saved": True, "saved_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    return {
+        "message": f"Saved arrangement for {len(properties)} properties",
+        "total_saved": len(properties)
+    }
+
+@api_router.post("/admin/properties/download-pdf")
+async def download_properties_pdf(
+    ward: Optional[str] = None,
+    sn_position: str = "top-right",
+    sn_font_size: int = 48,
+    sn_color: str = "red",
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate PDF with property list arranged by serial number"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if ward and ward.strip():
+        query["ward"] = ward
+    
+    # Get properties sorted by serial_number
+    properties = await db.properties.find(query, {"_id": 0}).sort("serial_number", 1).to_list(None)
+    
+    if not properties:
+        raise HTTPException(status_code=404, detail="No properties found")
+    
+    # Generate PDF
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    colony_name = ward.replace(" ", "_") if ward else "all"
+    pdf_filename = f"properties_{colony_name}_{timestamp}.pdf"
+    pdf_path = UPLOAD_DIR / pdf_filename
+    
+    # Create PDF document
+    doc = SimpleDocTemplate(str(pdf_path), pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+    
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        alignment=TA_CENTER,
+        spaceAfter=20
+    )
+    elements.append(Paragraph(f"Property List - {ward or 'All Colonies'}", title_style))
+    elements.append(Paragraph(f"Total: {len(properties)} properties | Generated: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+    elements.append(Spacer(1, 20))
+    
+    # Table data
+    table_data = [['SN', 'Property ID', 'Owner Name', 'Mobile', 'Category', 'Area', 'Amount']]
+    
+    for prop in properties:
+        table_data.append([
+            str(prop.get('serial_number', '-')),
+            prop.get('property_id', '-'),
+            prop.get('owner_name', '-')[:20] if prop.get('owner_name') else '-',
+            prop.get('mobile', '-'),
+            prop.get('category', '-')[:10] if prop.get('category') else '-',
+            prop.get('total_area', '-'),
+            f"₹{prop.get('amount', '0')}"
+        ])
+    
+    # Create table
+    table = Table(table_data, colWidths=[30, 70, 100, 80, 60, 50, 60])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+    ]))
+    
+    elements.append(table)
+    doc.build(elements)
+    
+    return {
+        "message": f"Generated PDF with {len(properties)} properties",
+        "filename": pdf_filename,
+        "download_url": f"/api/uploads/{pdf_filename}"
+    }
+
 @api_router.get("/admin/wards")
 async def list_wards(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
