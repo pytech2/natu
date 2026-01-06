@@ -2487,9 +2487,9 @@ async def split_bills_by_specific_employees(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             new_page = output_pdf[-1]
             
-            # Add serial number to top-right (plain number: 1, 2, 3...)
+            # Add serial number to top-right - near BillSrNo field
             rect = new_page.rect
-            x, y = rect.width - 80, 50
+            x, y = rect.width - 80, 45
             sn_text = f"{bill['serial_number']}"
             new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv")
         
