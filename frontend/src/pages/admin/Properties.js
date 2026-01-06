@@ -542,15 +542,15 @@ export default function Properties() {
 
         {/* Assignment Dialog */}
         <Dialog open={assignDialog} onOpenChange={setAssignDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="font-heading">
                 {selectedProperties.length > 0 ? 'Assign Selected Properties' : 'Bulk Assign by Area'}
               </DialogTitle>
               <DialogDescription>
                 {selectedProperties.length > 0 
-                  ? `Assign ${selectedProperties.length} selected properties to an employee`
-                  : 'Assign all unassigned properties in an area to an employee'
+                  ? `Assign ${selectedProperties.length} selected properties to employees (they can work together)`
+                  : 'Assign all unassigned properties in an area to employees'
                 }
               </DialogDescription>
             </DialogHeader>
@@ -573,30 +573,59 @@ export default function Properties() {
               )}
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Assign to Employee</label>
-                <Select value={assignEmployeeId} onValueChange={setAssignEmployeeId}>
-                  <SelectTrigger data-testid="assign-employee-select">
-                    <SelectValue placeholder="Select employee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employees.map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="text-sm font-medium">
+                  Select Employees ({assignEmployeeIds.length} selected)
+                </label>
+                <p className="text-xs text-slate-500 mb-2">
+                  Select multiple employees to work together on these properties
+                </p>
+                <div className="max-h-60 overflow-y-auto border rounded-lg p-2 space-y-1">
+                  {employees.length === 0 ? (
+                    <p className="text-sm text-slate-500 text-center py-4">
+                      No employees found
+                    </p>
+                  ) : (
+                    employees.map((emp) => (
+                      <div
+                        key={emp.id}
+                        className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-slate-50 ${
+                          assignEmployeeIds.includes(emp.id) ? 'bg-blue-50 border border-blue-200' : ''
+                        }`}
+                        onClick={() => toggleEmployeeSelection(emp.id)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={assignEmployeeIds.includes(emp.id)}
+                          onChange={() => toggleEmployeeSelection(emp.id)}
+                          className="rounded"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900 text-sm">{emp.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {emp.username} • {emp.role}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAssignDialog(false)}>
+              <Button variant="outline" onClick={() => {
+                setAssignDialog(false);
+                setAssignEmployeeIds([]);
+              }}>
                 Cancel
               </Button>
               <Button 
                 onClick={selectedProperties.length > 0 ? handleAssign : handleBulkAssign}
                 data-testid="confirm-assign-btn"
                 className="bg-slate-900 hover:bg-slate-800"
+                disabled={assignEmployeeIds.length === 0}
               >
-                Assign Properties
+                Assign to {assignEmployeeIds.length} Employee(s)
               </Button>
             </DialogFooter>
           </DialogContent>
