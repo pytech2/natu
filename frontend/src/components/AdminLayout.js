@@ -103,13 +103,13 @@ export default function AdminLayout({ children, title }) {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-              <p className="text-xs text-slate-400">{ROLE_DISPLAY[user?.role] || user?.role}</p>
+              <p className="text-xs font-medium text-white truncate">{user?.name}</p>
+              <p className="text-[10px] text-slate-400">{ROLE_DISPLAY[user?.role] || user?.role}</p>
             </div>
           </div>
           <Button
             variant="ghost"
-            className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800"
+            className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800 text-sm h-8"
             onClick={handleLogout}
             data-testid="admin-logout-btn"
           >
