@@ -53,13 +53,13 @@ export default function Login() {
           <div className="mx-auto">
             <img 
               src="/nstu-logo.png" 
-              alt="NSTU India Private Limited" 
+              alt="NSTU INDIA PRIVATE LIMITED" 
               className="w-48 h-48 object-contain mx-auto"
             />
           </div>
           <div>
             <CardTitle className="text-2xl font-heading font-bold text-slate-900">
-              NSTU India Private Limited
+              NSTU INDIA PRIVATE LIMITED
             </CardTitle>
             <CardDescription className="text-slate-500 mt-2">
               Property Survey & Notice Distribution System
