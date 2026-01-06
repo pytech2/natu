@@ -2195,10 +2195,10 @@ async def split_bills_by_employee(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             new_page = output_pdf[-1]
             
-            # Add SN to top-right
+            # Add SN to top-right (format: SR : X)
             rect = new_page.rect
             x, y = rect.width - 120, 60
-            sn_text = f"SN: {bill['serial_number']}"
+            sn_text = f"SR : {bill['serial_number']}"
             new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv")
         
         output_pdf.save(str(output_path))
