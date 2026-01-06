@@ -447,6 +447,52 @@ export default function PropertyMap() {
                 </span>
               </div>
             </div>
+
+            {/* Action Buttons */}
+            <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-3">
+              <Button
+                onClick={handleArrangeByRoute}
+                disabled={arranging || filteredProperties.length === 0}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {arranging ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <ArrowUpDown className="w-4 h-4 mr-2" />
+                )}
+                Arrange by GPS Route
+              </Button>
+
+              <Button
+                onClick={handleSaveArrangedData}
+                disabled={saving || filteredProperties.length === 0}
+                variant="outline"
+                className="border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Save Arranged Data
+              </Button>
+
+              <Button
+                onClick={() => setPdfDialog(true)}
+                disabled={filteredProperties.length === 0}
+                variant="outline"
+                className="border-purple-500 text-purple-600 hover:bg-purple-50"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download Arranged PDF
+              </Button>
+
+              <div className="flex-1" />
+              
+              <span className="text-sm text-slate-500">
+                {filteredProperties.length} properties with GPS
+              </span>
+            </div>
           </CardContent>
         </Card>
 
