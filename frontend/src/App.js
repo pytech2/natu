@@ -97,6 +97,16 @@ function AppRoutes() {
           <AdminMap />
         </ProtectedRoute>
       } />
+      <Route path="/admin/bills" element={
+        <ProtectedRoute allowedRoles={ADMIN_VIEW_ROLES}>
+          <AdminBills />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/bills-map" element={
+        <ProtectedRoute allowedRoles={ADMIN_VIEW_ROLES}>
+          <AdminBillsMap />
+        </ProtectedRoute>
+      } />
       
       {/* Employee/Surveyor Routes */}
       <Route path="/employee" element={
