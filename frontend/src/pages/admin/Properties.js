@@ -594,11 +594,9 @@ export default function Properties() {
                         }`}
                         onClick={() => toggleEmployeeSelection(emp.id)}
                       >
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={assignEmployeeIds.includes(emp.id)}
-                          onChange={() => toggleEmployeeSelection(emp.id)}
-                          className="rounded"
+                          onCheckedChange={() => toggleEmployeeSelection(emp.id)}
                         />
                         <div className="flex-1">
                           <p className="font-medium text-slate-900 text-sm">{emp.name}</p>
@@ -608,7 +606,7 @@ export default function Properties() {
                         </div>
                       </div>
                     ))
-                  )}
+                  )}}
                 </div>
               </div>
             </div>
