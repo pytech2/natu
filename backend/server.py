@@ -1510,7 +1510,12 @@ async def submit_survey(
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
     
-    if current_user["role"] != "ADMIN" and prop.get("assigned_employee_id") != current_user["id"]:
+    # Check if employee is assigned (either single or in array)
+    is_assigned = (
+        prop.get("assigned_employee_id") == current_user["id"] or
+        current_user["id"] in (prop.get("assigned_employee_ids") or [])
+    )
+    if current_user["role"] != "ADMIN" and not is_assigned:
         raise HTTPException(status_code=403, detail="Access denied")
     
     photos = []
