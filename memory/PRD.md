@@ -20,25 +20,32 @@ Build a web application for **NSTU India Private Limited** to manage property ta
 - Excel & PDF export with all submission data
 - Batch management (archive/delete)
 
-## What's Been Implemented (January 5, 2026)
+## What's Been Implemented (January 6, 2026)
 
 ### Latest Session Changes ✅
-- **50-Meter Radius Check**: Survey form only submits when surveyor is within 50m of property GPS
-- **Map Serial Numbers**: Properties now have sequential serial numbers (1, 2, 3...) based on Excel row order. Map pins display the actual serial number from the database instead of random load order.
-- **Mobile Photo Watermark Bug Fixed**: Using FileReader for better mobile browser compatibility
-- **Survey Form Updates**:
-  - Locked property fields (Property ID, Owner, Mobile, Colony, Total Area, Amount, Lat/Lng) displayed as read-only
-  - Updated relation dropdown: Self, Family Member, Tenant, Neighbour, Other
-  - Removed "Old Property ID" field
-  - Added "Self Satisfied" Yes/No radio buttons
-  - Ward Number is now editable (blank by default)
-- **Dashboard UI Changes**:
-  - Removed "Batches" stat card
-  - Renamed "Today Completed Wards" to "Completed Colony"
-- **Role-Based Access Control**:
-  - SUPERVISOR: Full admin-level access
-  - MC_OFFICER: Limited view-only (Dashboard, Properties, Map, Submissions only)
-- **Attendance System**: One-time daily selfie check-in for surveyors with GPS location
+- **PDF Bills Management - New Features:**
+  - **Delete All Button**: Bulk delete all bills (with filter support)
+  - **Add to Properties Button**: Copy bills to properties database for survey workflow
+  - **Split by Employee - Select by Name**: Now shows employee list with names, usernames, roles; select specific employees instead of just a count
+  - **Serial Number Format**: Changed from "SN: X" to "SR : X" format in generated PDFs
+  
+- **Property Map Features - Complete:**
+  - "Arrange by GPS Route" - GPS-based nearest neighbor sorting
+  - "Save Arranged Data" - Save new serial order to database
+  - "Download Arranged PDF" - Generate PDF with properties sorted by GPS route
+
+### PDF Bill Processing System (Complete)
+- ✅ Upload multi-page PDFs
+- ✅ Extract bill data from each page using PyMuPDF
+- ✅ Store extracted data (owner, mobile, colony, GPS, amounts)
+- ✅ Filter by colony/batch
+- ✅ Arrange bills by GPS route (nearest neighbor algorithm)
+- ✅ Generate arranged PDFs with "SR : X" serial numbers
+- ✅ Split PDFs by specific employees (select by name)
+- ✅ Edit bill data
+- ✅ View bills on map
+- ✅ Delete all bills
+- ✅ Copy bills to properties database
 
 ### Branding & UI
 - ✅ NSTU India Pvt Ltd logo integration
@@ -49,72 +56,54 @@ Build a web application for **NSTU India Private Limited** to manage property ta
 ### Backend (FastAPI + MongoDB)
 - ✅ JWT Authentication (login/logout)
 - ✅ User Management with roles: ADMIN, SURVEYOR, SUPERVISOR, MC_OFFICER
-- ✅ Role-based access control (ADMIN/SUPERVISOR full access, MC_OFFICER limited)
-- ✅ Dataset Batch Upload (CSV)
+- ✅ Role-based access control
+- ✅ Dataset Batch Upload (CSV/Excel)
+- ✅ PDF Bills Upload & Processing
 - ✅ Property Management with pagination
-- ✅ Survey Submission with all fields including self_satisfied
-- ✅ Approve/Reject workflow with mandatory remarks
-- ✅ Dashboard Statistics with today_completed, today_wards (Completed Colony)
+- ✅ Survey Submission with 50m radius check
+- ✅ Approve/Reject workflow
+- ✅ Dashboard Statistics
 - ✅ Employee Progress Tracking
 - ✅ Attendance System (selfie + GPS)
 - ✅ Excel & PDF Export
-- ✅ Batch Archive/Delete
+- ✅ GPS Route Sorting (Nearest Neighbor Algorithm)
 
 ### Frontend (React + Tailwind + Shadcn UI)
 - ✅ Login Page with NSTU logo
-- ✅ Admin Dashboard: 5 stat cards (Total, Completed, Pending, Rejected, Employees)
-- ✅ Role-based navigation (SUPERVISOR full, MC_OFFICER limited)
-- ✅ Employee Management: Create Surveyor/Supervisor/MC Officer
-- ✅ Dataset Upload: CSV format
-- ✅ Submissions: Approve/Reject with remarks
-- ✅ Surveyor Dashboard: Attendance status card, Total Complete Data stat
-- ✅ Attendance Page: One-time daily selfie check-in
-- ✅ Survey Form with:
-  - Locked property fields (read-only section)
-  - Receiver Name & Relation (Self, Family Member, Tenant, Neighbour, Other)
-  - Family ID, Aadhar Number, Ward Number (editable)
-  - Self Satisfied Yes/No radio buttons
-  - 50m radius check with distance display
-  - Remarks
-- ✅ GPS-watermarked photos
-- ✅ Digital signature pad
-- ✅ Property Map with numbered pins
-
-### Data Model - Survey Fields
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| receiver_name | string | Yes | Name of notice receiver |
-| relation | enum | Yes | Relation with owner (Self, Family Member, Tenant, Neighbour, Other) |
-| family_id | string | No | Family identifier |
-| aadhar_number | string | No | 12-digit Aadhar |
-| ward_number | string | No | Ward number (editable) |
-| self_satisfied | enum | Yes | Yes or No |
-| remarks | string | No | Additional notes |
+- ✅ Admin Dashboard with stats and charts
+- ✅ Employee Management
+- ✅ Dataset Upload (CSV/Excel)
+- ✅ PDF Bills Management with all features
+- ✅ Property Map with GPS markers and action buttons
+- ✅ Bills Map visualization
+- ✅ Submissions review
+- ✅ Surveyor mobile interface
 
 ### Test Credentials
 - **Admin**: admin / nastu123
-- **Surveyor**: surveyor1 / test123
+- **Surveyors**: Created via admin panel
 
 ## Prioritized Backlog
 
 ### P0 (Critical - Done)
 - [x] Authentication system
-- [x] Property upload
+- [x] Property upload (CSV/Excel)
+- [x] PDF Bills upload & processing
 - [x] Employee management with roles
-- [x] Role-based access control
 - [x] Property assignment
-- [x] Survey submission with all fields
-- [x] 50m radius check
-- [x] Attendance system
-- [x] Approve/Reject workflow
-- [x] Admin dashboard
+- [x] Survey submission with 50m radius check
+- [x] GPS route arrangement
+- [x] PDF generation with serial numbers
+- [x] Split by employee (select by name)
+- [x] Copy bills to properties
+- [x] Delete all bills
 
-### P1 (Important)
+### P1 (Important - Done)
 - [x] Excel export
 - [x] PDF export with watermarked photos
 - [x] Digital signature
 - [x] GPS watermarking
-- [x] Mobile photo watermark bug fix (using FileReader for better mobile compatibility)
+- [x] Property Map with action buttons
 
 ### P2 (Nice to Have)
 - [ ] Offline support for mobile
@@ -127,9 +116,24 @@ Build a web application for **NSTU India Private Limited** to manage property ta
 - **Backend**: FastAPI + MongoDB (Motor async driver)
 - **Frontend**: React 19 + Tailwind CSS + Shadcn UI
 - **Maps**: Leaflet + React-Leaflet
+- **PDF Processing**: PyMuPDF (fitz)
 - **Auth**: JWT with bcrypt password hashing
 - **File Storage**: Local uploads directory
 - **Export**: openpyxl (Excel), reportlab (PDF)
+
+## API Endpoints - Bills Management
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/admin/bills/upload-pdf` | POST | Upload PDF and extract bills |
+| `/api/admin/bills` | GET | List bills with filters |
+| `/api/admin/bills/colonies` | GET | Get unique colonies |
+| `/api/admin/bills/{id}` | PUT | Update bill data |
+| `/api/admin/bills/arrange-by-route` | POST | Arrange by GPS route |
+| `/api/admin/bills/generate-pdf` | POST | Generate arranged PDF |
+| `/api/admin/bills/split-by-employees` | POST | Split by specific employees |
+| `/api/admin/bills/delete-all` | POST | Delete all bills |
+| `/api/admin/bills/copy-to-properties` | POST | Copy to properties DB |
+| `/api/admin/bills/map-data` | GET | Get bills for map |
 
 ## Code Architecture
 ```
@@ -138,33 +142,62 @@ Build a web application for **NSTU India Private Limited** to manage property ta
 │   ├── uploads/
 │   ├── .env
 │   ├── requirements.txt
-│   └── server.py     # FastAPI app with role-based access
+│   └── server.py
 └── frontend/
-    ├── public/
-    │   └── nstu-logo.png
     ├── src/
     │   ├── components/
-    │   │   ├── AdminLayout.js    # Role-based navigation
-    │   │   └── EmployeeLayout.js
     │   ├── context/
-    │   │   └── AuthContext.js
     │   ├── pages/
     │   │   ├── admin/
-    │   │   │   ├── Dashboard.js     # 5 stat cards, no Batches
-    │   │   │   ├── Employees.js
-    │   │   │   ├── Export.js
-    │   │   │   ├── Map.js
-    │   │   │   ├── Properties.js
-    │   │   │   ├── Submissions.js
-    │   │   │   └── Upload.js
-    │   │   ├── employee/
-    │   │   │   ├── Attendance.js   # NEW - Selfie check-in
+    │   │   │   ├── Bills.js       # PDF Bills Management
+    │   │   │   ├── BillsMap.js    # Bills Map View
     │   │   │   ├── Dashboard.js
+    │   │   │   ├── Map.js         # Property Map with actions
     │   │   │   ├── Properties.js
-    │   │   │   └── Survey.js       # 50m check, locked fields
+    │   │   │   └── ...
+    │   │   ├── employee/
     │   │   └── Login.js
-    │   ├── App.js                   # Role-based routing
-    │   └── index.css
-    ├── .env
+    │   └── App.js
     └── package.json
+```
+
+## Key Data Models
+
+### Bills Collection
+```javascript
+{
+  id: string,
+  batch_id: string,
+  serial_number: number,
+  page_number: number,
+  property_id: string,
+  owner_name: string,
+  mobile: string,
+  colony: string,
+  latitude: number,
+  longitude: number,
+  category: string,
+  total_outstanding: string,
+  // ... other extracted fields
+}
+```
+
+### Properties Collection
+```javascript
+{
+  id: string,
+  batch_id: string,
+  serial_number: number,
+  property_id: string,
+  owner_name: string,
+  mobile: string,
+  colony: string,
+  latitude: number,
+  longitude: number,
+  category: string,
+  amount: string,
+  assigned_employee_id: string,
+  status: string,
+  source_bill_id: string  // Reference to original bill
+}
 ```
