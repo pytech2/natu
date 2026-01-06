@@ -172,22 +172,23 @@ export default function Properties() {
   };
 
   const handleAssign = async () => {
-    if (!assignEmployeeId) {
-      toast.error('Please select an employee');
+    if (assignEmployeeIds.length === 0) {
+      toast.error('Please select at least one employee');
       return;
     }
 
     try {
+      // Assign to multiple employees (they work together)
       await axios.post(`${API_URL}/admin/assign`, {
         property_ids: selectedProperties,
-        employee_id: assignEmployeeId
+        employee_ids: assignEmployeeIds  // Send array of employee IDs
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('Properties assigned successfully');
+      toast.success(`Properties assigned to ${assignEmployeeIds.length} employee(s)`);
       setAssignDialog(false);
       setSelectedProperties([]);
-      setAssignEmployeeId('');
+      setAssignEmployeeIds([]);
       fetchProperties();
     } catch (error) {
       toast.error('Failed to assign properties');
@@ -195,22 +196,22 @@ export default function Properties() {
   };
 
   const handleBulkAssign = async () => {
-    if (!bulkAssignArea || !assignEmployeeId) {
-      toast.error('Please select area and employee');
+    if (!bulkAssignArea || assignEmployeeIds.length === 0) {
+      toast.error('Please select area and at least one employee');
       return;
     }
 
     try {
       const response = await axios.post(`${API_URL}/admin/assign-bulk`, {
         area: bulkAssignArea,
-        employee_id: assignEmployeeId
+        employee_ids: assignEmployeeIds  // Send array of employee IDs
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success(response.data.message);
       setAssignDialog(false);
       setBulkAssignArea('');
-      setAssignEmployeeId('');
+      setAssignEmployeeIds([]);
       fetchProperties();
     } catch (error) {
       toast.error('Failed to assign properties');
