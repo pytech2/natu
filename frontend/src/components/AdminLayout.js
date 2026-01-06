@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Map,
-  FileText
+  FileText,
+  Calendar
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -20,6 +21,7 @@ import { Button } from './ui/button';
 const fullNavItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/admin/employees', icon: Users, label: 'Employees' },
+  { path: '/admin/attendance', icon: Calendar, label: 'Attendance' },
   { path: '/admin/upload', icon: Upload, label: 'Upload Data' },
   { path: '/admin/bills', icon: FileText, label: 'PDF Bills' },
   { path: '/admin/properties', icon: FileSpreadsheet, label: 'Properties' },
@@ -61,21 +63,21 @@ export default function AdminLayout({ children, title }) {
     <div className="min-h-screen bg-slate-50">
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="p-4">
-          <div className="flex items-center gap-3">
+        <div className="p-3">
+          <div className="flex items-center gap-2">
             <img 
               src="/nstu-logo.png" 
-              alt="NSTU India Private Limited" 
-              className="w-20 h-20 object-contain rounded-lg bg-white p-1"
+              alt="NSTU INDIA PRIVATE LIMITED" 
+              className="w-14 h-14 object-contain rounded-lg bg-white p-1"
             />
             <div>
-              <h1 className="font-heading font-bold text-white text-sm">NSTU India Private Limited</h1>
-              <p className="text-xs text-slate-400">Property Tax Manager</p>
+              <h1 className="font-heading font-bold text-white text-xs leading-tight">NSTU INDIA PRIVATE LIMITED</h1>
+              <p className="text-[10px] text-slate-400">Property Tax Manager</p>
             </div>
           </div>
         </div>
 
-        <nav className="mt-4 px-2">
+        <nav className="mt-2 px-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -86,16 +88,16 @@ export default function AdminLayout({ children, title }) {
                 className={`sidebar-link ${isActive ? 'active' : ''}`}
                 onClick={() => setSidebarOpen(false)}
               >
-                <Icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <Icon className="w-4 h-4" />
+                <span className="text-sm">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 px-2 mb-3">
-            <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
+        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-slate-800">
+          <div className="flex items-center gap-2 px-2 mb-2">
+            <div className="w-7 h-7 bg-slate-700 rounded-full flex items-center justify-center">
               <span className="text-xs font-bold text-white">
                 {user?.name?.charAt(0) || 'A'}
               </span>
