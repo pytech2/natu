@@ -2087,17 +2087,26 @@ async def generate_arranged_pdf(
         # Calculate SN position - adjusted for BillSrNo field location
         rect = new_page.rect
         
-        # BillSrNo field is typically at top-right of the bill
-        # Standard A4: 595 x 842 points
-        if sn_position == "top-left":
+        # The page could be landscape (842x595) or portrait
+        # BillSrNo field is typically near top-left after "BillSrNo. :" text
+        # Search for BillSrNo position on this page
+        bill_sr_positions = new_page.search_for("BillSrNo")
+        
+        if bill_sr_positions and sn_position == "top-right":
+            # Place serial number right after the BillSrNo.: text
+            bill_sr_rect = bill_sr_positions[0]
+            # Position to the right of BillSrNo text, same height
+            x = bill_sr_rect.x1 + 35  # After the ": " characters
+            y = bill_sr_rect.y0 + 20  # Same line
+        elif sn_position == "top-left":
             x, y = 50, 60
         elif sn_position == "top-right":
-            # Position near the BillSrNo.: field area (top-right of bill)
-            x, y = rect.width - 80, 45
+            # Fallback position if BillSrNo not found
+            x, y = rect.width - 100, 50
         elif sn_position == "bottom-left":
             x, y = 50, rect.height - 50
         else:  # bottom-right
-            x, y = rect.width - 80, rect.height - 50
+            x, y = rect.width - 100, rect.height - 50
         
         # Add serial number text (plain number: 1, 2, 3...)
         sn_text = f"{bill['serial_number']}"
