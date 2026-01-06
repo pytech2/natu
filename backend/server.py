@@ -1432,15 +1432,23 @@ async def get_employee_properties(
     limit: int = 20,
     current_user: dict = Depends(get_current_user)
 ):
-    query = {"assigned_employee_id": current_user["id"]}
+    # Check both single assigned_employee_id and array assigned_employee_ids
+    query = {
+        "$or": [
+            {"assigned_employee_id": current_user["id"]},
+            {"assigned_employee_ids": current_user["id"]}
+        ]
+    }
     if status and status.strip():
         query["status"] = status
     if search:
-        query["$or"] = [
-            {"property_id": {"$regex": search, "$options": "i"}},
-            {"owner_name": {"$regex": search, "$options": "i"}},
-            {"mobile": {"$regex": search, "$options": "i"}}
-        ]
+        query["$and"] = query.get("$and", []) + [{
+            "$or": [
+                {"property_id": {"$regex": search, "$options": "i"}},
+                {"owner_name": {"$regex": search, "$options": "i"}},
+                {"mobile": {"$regex": search, "$options": "i"}}
+            ]
+        }]
     
     skip = (page - 1) * limit
     total = await db.properties.count_documents(query)
@@ -1459,7 +1467,12 @@ async def get_property_detail(property_id: str, current_user: dict = Depends(get
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
     
-    if current_user["role"] != "ADMIN" and prop.get("assigned_employee_id") != current_user["id"]:
+    # Check if employee is assigned (either single or in array)
+    is_assigned = (
+        prop.get("assigned_employee_id") == current_user["id"] or
+        current_user["id"] in (prop.get("assigned_employee_ids") or [])
+    )
+    if current_user["role"] != "ADMIN" and not is_assigned:
         raise HTTPException(status_code=403, detail="Access denied")
     
     submission = await db.submissions.find_one({"property_record_id": property_id}, {"_id": 0})
