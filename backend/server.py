@@ -1608,7 +1608,12 @@ async def reject_property(property_id: str, remarks: str = Form(...), authorizat
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
     
-    if current_user["role"] != "ADMIN" and prop.get("assigned_employee_id") != current_user["id"]:
+    # Check if employee is assigned (either single or in array)
+    is_assigned = (
+        prop.get("assigned_employee_id") == current_user["id"] or
+        current_user["id"] in (prop.get("assigned_employee_ids") or [])
+    )
+    if current_user["role"] != "ADMIN" and not is_assigned:
         raise HTTPException(status_code=403, detail="Access denied")
     
     await db.properties.update_one(
@@ -1622,21 +1627,29 @@ async def reject_property(property_id: str, remarks: str = Form(...), authorizat
 async def get_employee_own_progress(current_user: dict = Depends(get_current_user)):
     today_start = get_today_start().isoformat()
     
-    total = await db.properties.count_documents({"assigned_employee_id": current_user["id"]})
+    # Query for properties assigned to this employee (single or in array)
+    assign_query = {
+        "$or": [
+            {"assigned_employee_id": current_user["id"]},
+            {"assigned_employee_ids": current_user["id"]}
+        ]
+    }
+    
+    total = await db.properties.count_documents(assign_query)
     completed = await db.properties.count_documents({
-        "assigned_employee_id": current_user["id"],
+        **assign_query,
         "status": "Completed"
     })
     pending = await db.properties.count_documents({
-        "assigned_employee_id": current_user["id"],
+        **assign_query,
         "status": "Pending"
     })
     rejected = await db.properties.count_documents({
-        "assigned_employee_id": current_user["id"],
+        **assign_query,
         "status": "Rejected"
     })
     in_progress = await db.properties.count_documents({
-        "assigned_employee_id": current_user["id"],
+        **assign_query,
         "status": "In Progress"
     })
     
