@@ -2216,11 +2216,16 @@ async def split_bills_by_employee(
             # Find BillSrNo position and place serial number after it
             bill_sr_positions = new_page.search_for("BillSrNo")
             rect = new_page.rect
+            rotation = new_page.rotation
             
             if bill_sr_positions:
                 bill_sr_rect = bill_sr_positions[0]
-                x = bill_sr_rect.x1 + 35
-                y = bill_sr_rect.y0 + 20
+                if rotation == 90:
+                    x = bill_sr_rect.x1 + 5
+                    y = bill_sr_rect.y1 + 10
+                else:
+                    x = bill_sr_rect.x1 + 35
+                    y = bill_sr_rect.y0 + 20
             else:
                 x, y = rect.width - 100, 50
             
@@ -2514,11 +2519,16 @@ async def split_bills_by_specific_employees(
             # Find BillSrNo position and place serial number after it
             bill_sr_positions = new_page.search_for("BillSrNo")
             rect = new_page.rect
+            rotation = new_page.rotation
             
             if bill_sr_positions:
                 bill_sr_rect = bill_sr_positions[0]
-                x = bill_sr_rect.x1 + 35
-                y = bill_sr_rect.y0 + 20
+                if rotation == 90:
+                    x = bill_sr_rect.x1 + 5
+                    y = bill_sr_rect.y1 + 10
+                else:
+                    x = bill_sr_rect.x1 + 35
+                    y = bill_sr_rect.y0 + 20
             else:
                 x, y = rect.width - 100, 50
             
