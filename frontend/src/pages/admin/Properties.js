@@ -85,7 +85,7 @@ export default function Properties() {
   // Assignment dialog
   const [assignDialog, setAssignDialog] = useState(false);
   const [selectedProperties, setSelectedProperties] = useState([]);
-  const [assignEmployeeId, setAssignEmployeeId] = useState('');
+  const [assignEmployeeIds, setAssignEmployeeIds] = useState([]); // Changed to array for multi-select
   const [bulkAssignArea, setBulkAssignArea] = useState('');
   
   // Delete dialog
@@ -96,6 +96,17 @@ export default function Properties() {
   // Property detail dialog
   const [detailDialog, setDetailDialog] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
+
+  // Toggle employee selection for multi-assign
+  const toggleEmployeeSelection = (empId) => {
+    setAssignEmployeeIds(prev => {
+      if (prev.includes(empId)) {
+        return prev.filter(id => id !== empId);
+      } else {
+        return [...prev, empId];
+      }
+    });
+  };
 
   const fetchInitialData = async () => {
     try {
