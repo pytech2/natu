@@ -11,7 +11,8 @@ import {
   LogOut,
   Menu,
   X,
-  Map
+  Map,
+  FileText
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -20,6 +21,7 @@ const fullNavItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/admin/employees', icon: Users, label: 'Employees' },
   { path: '/admin/upload', icon: Upload, label: 'Upload Data' },
+  { path: '/admin/bills', icon: FileText, label: 'PDF Bills' },
   { path: '/admin/properties', icon: FileSpreadsheet, label: 'Properties' },
   { path: '/admin/map', icon: Map, label: 'Property Map' },
   { path: '/admin/submissions', icon: ClipboardCheck, label: 'Submissions' },
@@ -29,6 +31,7 @@ const fullNavItems = [
 // Limited navigation for MC_OFFICER (view-only)
 const mcOfficerNavItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/admin/bills', icon: FileText, label: 'PDF Bills' },
   { path: '/admin/properties', icon: FileSpreadsheet, label: 'Properties' },
   { path: '/admin/map', icon: Map, label: 'Property Map' },
   { path: '/admin/submissions', icon: ClipboardCheck, label: 'Submissions' },
