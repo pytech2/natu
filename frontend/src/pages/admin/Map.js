@@ -593,6 +593,97 @@ export default function PropertyMap() {
             )}
           </CardContent>
         </Card>
+
+        {/* Download PDF Dialog */}
+        <Dialog open={pdfDialog} onOpenChange={setPdfDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Download Arranged PDF</DialogTitle>
+              <DialogDescription>
+                Generate a PDF with properties arranged by GPS route order
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-600">
+                  <strong>{filteredProperties.length}</strong> properties will be included in the PDF
+                  {filters.colony && ` (Colony: ${filters.colony})`}
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Serial Number Position</Label>
+                <Select
+                  value={pdfOptions.sn_position}
+                  onValueChange={(value) => setPdfOptions({ ...pdfOptions, sn_position: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="top-left">Top Left</SelectItem>
+                    <SelectItem value="top-right">Top Right</SelectItem>
+                    <SelectItem value="bottom-left">Bottom Left</SelectItem>
+                    <SelectItem value="bottom-right">Bottom Right</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Font Size: {pdfOptions.sn_font_size}px</Label>
+                <input
+                  type="range"
+                  min="24"
+                  max="72"
+                  value={pdfOptions.sn_font_size}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, sn_font_size: parseInt(e.target.value) })}
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Serial Number Color</Label>
+                <Select
+                  value={pdfOptions.sn_color}
+                  onValueChange={(value) => setPdfOptions({ ...pdfOptions, sn_color: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="red">Red</SelectItem>
+                    <SelectItem value="blue">Blue</SelectItem>
+                    <SelectItem value="green">Green</SelectItem>
+                    <SelectItem value="orange">Orange</SelectItem>
+                    <SelectItem value="black">Black</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPdfDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDownloadPdf}
+                disabled={downloading}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {downloading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
