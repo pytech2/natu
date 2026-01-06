@@ -83,11 +83,15 @@ const createNumberedIcon = (number, category) => {
     'Residential': '#3b82f6',      // Blue
     'Commercial': '#f97316',       // Orange
     'Vacant Plot': '#22c55e',      // Green
+    'Vacant': '#22c55e',           // Green (alternate)
     'Mix Use': '#a855f7',          // Purple
-    'default': '#ef4444'           // Red
+    'Mixed': '#a855f7',            // Purple (alternate)
+    'default': '#6b7280'           // Gray
   };
   
-  const color = colors[category] || colors['default'];
+  // Normalize category for matching
+  const normalizedCategory = category?.trim() || 'default';
+  const color = colors[normalizedCategory] || colors['default'];
   
   // Small circular pin with number
   return L.divIcon({
