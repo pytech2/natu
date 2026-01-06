@@ -47,6 +47,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [employeeProgress, setEmployeeProgress] = useState([]);
+  const [attendanceStats, setAttendanceStats] = useState({ present: 0, total: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,16 +56,27 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const [statsRes, progressRes] = await Promise.all([
+      const [statsRes, progressRes, attendanceRes] = await Promise.all([
         axios.get(`${API_URL}/admin/dashboard`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
         axios.get(`${API_URL}/admin/employee-progress`, {
           headers: { Authorization: `Bearer ${token}` }
-        })
+        }),
+        axios.get(`${API_URL}/admin/attendance?date=${new Date().toISOString().split('T')[0]}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => ({ data: { records: [] } }))
       ]);
       setStats(statsRes.data);
       setEmployeeProgress(progressRes.data);
+      
+      // Calculate attendance stats
+      const records = attendanceRes.data?.records || [];
+      const totalEmployees = progressRes.data?.length || 0;
+      setAttendanceStats({
+        present: records.length,
+        total: totalEmployees
+      });
     } catch (error) {
       toast.error('Failed to load dashboard data');
     } finally {
