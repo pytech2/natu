@@ -1762,37 +1762,69 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     return R * c
 
-# Sort bills by GPS route (nearest neighbor algorithm)
+# Sort bills by GPS route (nearest neighbor algorithm with location grouping)
 def sort_by_gps_route(bills: list) -> list:
     if not bills:
         return bills
     
-    # Filter bills with valid GPS
+    # Separate bills with and without GPS
     valid_bills = [b for b in bills if b.get('latitude') and b.get('longitude')]
     no_gps_bills = [b for b in bills if not b.get('latitude') or not b.get('longitude')]
     
     if not valid_bills:
         return bills
     
-    # Start from the first bill
-    sorted_bills = [valid_bills[0]]
-    remaining = valid_bills[1:]
+    # Group bills by unique GPS location (round to 6 decimal places)
+    location_groups = {}
+    for bill in valid_bills:
+        # Round coordinates to group nearby points (within ~0.1 meter)
+        key = (round(bill['latitude'], 6), round(bill['longitude'], 6))
+        if key not in location_groups:
+            location_groups[key] = []
+        location_groups[key].append(bill)
     
-    while remaining:
-        last = sorted_bills[-1]
-        last_lat, last_lon = last['latitude'], last['longitude']
+    # Get list of unique locations
+    unique_locations = list(location_groups.keys())
+    
+    if len(unique_locations) <= 1:
+        # All bills at same location, just return them
+        return valid_bills + no_gps_bills
+    
+    # Find starting point - use the northwestern-most point (highest lat, lowest long)
+    # This gives a consistent starting point
+    start_idx = 0
+    best_score = float('-inf')
+    for i, loc in enumerate(unique_locations):
+        score = loc[0] - loc[1] * 0.1  # Favor north and west
+        if score > best_score:
+            best_score = score
+            start_idx = i
+    
+    # Sort unique locations using nearest neighbor algorithm
+    sorted_locations = [unique_locations[start_idx]]
+    remaining_locations = unique_locations[:start_idx] + unique_locations[start_idx+1:]
+    
+    while remaining_locations:
+        last_loc = sorted_locations[-1]
         
-        # Find nearest neighbor
+        # Find nearest location
         nearest_idx = 0
         nearest_dist = float('inf')
         
-        for i, bill in enumerate(remaining):
-            dist = haversine_distance(last_lat, last_lon, bill['latitude'], bill['longitude'])
+        for i, loc in enumerate(remaining_locations):
+            dist = haversine_distance(last_loc[0], last_loc[1], loc[0], loc[1])
             if dist < nearest_dist:
                 nearest_dist = dist
                 nearest_idx = i
         
-        sorted_bills.append(remaining.pop(nearest_idx))
+        sorted_locations.append(remaining_locations.pop(nearest_idx))
+    
+    # Build final sorted list with all bills from each location in order
+    sorted_bills = []
+    for loc in sorted_locations:
+        # Get all bills at this location and add them
+        bills_at_loc = location_groups[loc]
+        sorted_bills.extend(bills_at_loc)
     
     # Add bills without GPS at the end
     sorted_bills.extend(no_gps_bills)
