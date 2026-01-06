@@ -2227,16 +2227,16 @@ async def split_bills_by_employee(
             if bill_sr_positions:
                 bill_sr_rect = bill_sr_positions[0]
                 if rotation == 90:
-                    x = bill_sr_rect.x1 + 5
-                    y = bill_sr_rect.y1 + 10
+                    x = bill_sr_rect.x0
+                    y = bill_sr_rect.y1 + 5
                 else:
                     x = bill_sr_rect.x1 + 35
-                    y = bill_sr_rect.y0 + 20
+                    y = bill_sr_rect.y0
             else:
                 x, y = rect.width - 100, 50
             
             sn_text = f"{bill['serial_number']}"
-            new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv")
+            new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv", rotate=rotation)
         
         output_pdf.save(str(output_path))
         output_pdf.close()
@@ -2530,16 +2530,16 @@ async def split_bills_by_specific_employees(
             if bill_sr_positions:
                 bill_sr_rect = bill_sr_positions[0]
                 if rotation == 90:
-                    x = bill_sr_rect.x1 + 5
-                    y = bill_sr_rect.y1 + 10
+                    x = bill_sr_rect.x0
+                    y = bill_sr_rect.y1 + 5
                 else:
                     x = bill_sr_rect.x1 + 35
-                    y = bill_sr_rect.y0 + 20
+                    y = bill_sr_rect.y0
             else:
                 x, y = rect.width - 100, 50
             
             sn_text = f"{bill['serial_number']}"
-            new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv")
+            new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv", rotate=rotation)
         
         output_pdf.save(str(output_path))
         output_pdf.close()
