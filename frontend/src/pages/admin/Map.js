@@ -41,6 +41,42 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
+// Function to spread overlapping markers in a spiral pattern
+const spreadOverlappingMarkers = (properties) => {
+  const coordMap = {};
+  const spreadProperties = [];
+  const OFFSET = 0.00015; // About 15 meters offset
+  
+  properties.forEach((prop) => {
+    if (!prop.latitude || !prop.longitude) return;
+    const key = `${prop.latitude},${prop.longitude}`;
+    if (!coordMap[key]) {
+      coordMap[key] = [];
+    }
+    coordMap[key].push(prop);
+  });
+  
+  Object.values(coordMap).forEach((group) => {
+    if (group.length === 1) {
+      spreadProperties.push({ ...group[0], spreadLat: group[0].latitude, spreadLng: group[0].longitude });
+    } else {
+      group.forEach((prop, index) => {
+        if (index === 0) {
+          spreadProperties.push({ ...prop, spreadLat: prop.latitude, spreadLng: prop.longitude });
+        } else {
+          const angle = (index * 45) * (Math.PI / 180);
+          const radius = OFFSET * Math.ceil(index / 8);
+          const newLat = prop.latitude + radius * Math.cos(angle);
+          const newLng = prop.longitude + radius * Math.sin(angle);
+          spreadProperties.push({ ...prop, spreadLat: newLat, spreadLng: newLng });
+        }
+      });
+    }
+  });
+  
+  return spreadProperties;
+};
+
 // Custom small marker icons with serial number
 const createNumberedIcon = (number, category) => {
   const colors = {
