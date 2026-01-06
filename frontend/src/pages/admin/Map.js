@@ -122,6 +122,17 @@ export default function PropertyMap() {
     vacant: 0
   });
 
+  // Arrange & Download state
+  const [arranging, setArranging] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [pdfDialog, setPdfDialog] = useState(false);
+  const [pdfOptions, setPdfOptions] = useState({
+    sn_position: 'top-right',
+    sn_font_size: 48,
+    sn_color: 'red'
+  });
+
   // Default center (Kurukshetra, Haryana)
   const defaultCenter = [29.9506, 76.8378];
 
