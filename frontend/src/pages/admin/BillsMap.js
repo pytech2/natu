@@ -315,10 +315,11 @@ export default function BillsMapPage() {
                   
                   <FitBounds bills={bills} />
                   
-                  {bills.map((bill) => (
+                  {/* Spread overlapping markers so all serial numbers are visible */}
+                  {spreadOverlappingMarkers(bills).map((bill) => (
                     <Marker
                       key={bill.id}
-                      position={[bill.latitude, bill.longitude]}
+                      position={[bill.spreadLat, bill.spreadLng]}
                       icon={createBillIcon(bill.serial_number, bill.category)}
                     >
                       <Popup maxWidth={350}>
