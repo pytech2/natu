@@ -27,12 +27,17 @@ Build a web application for **NSTU India Private Limited** to manage property ta
   - **Delete All Button**: Bulk delete all bills (with filter support)
   - **Add to Properties Button**: Copy bills to properties database for survey workflow
   - **Split by Employee - Select by Name**: Now shows employee list with names, usernames, roles; select specific employees instead of just a count
-  - **Serial Number Format**: Changed from "SN: X" to "SR : X" format in generated PDFs
+  - **Serial Number Format**: Plain numbers (1, 2, 3) in generated PDFs
   
 - **Property Map Features - Complete:**
   - "Arrange by GPS Route" - GPS-based nearest neighbor sorting
   - "Save Arranged Data" - Save new serial order to database
   - "Download Arranged PDF" - Generate PDF with properties sorted by GPS route
+
+- **Backend Refactoring Started:**
+  - Created `/app/backend/routers/` directory structure
+  - Created `bills.py` router template for future modularization
+  - Server.py is 2570 lines - full refactoring pending
 
 ### PDF Bill Processing System (Complete)
 - ✅ Upload multi-page PDFs
