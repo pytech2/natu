@@ -2095,16 +2095,21 @@ async def generate_arranged_pdf(
             # Place serial number right after the BillSrNo.: text
             bill_sr_rect = bill_sr_positions[0]
             
-            # Account for page rotation (90 degrees = landscape)
+            # For rotated pages (90 degrees), the text needs to be placed
+            # considering the visual layout
+            # BillSrNo is at the top-right visually when page is rotated
+            # We need to place our number after the ": " in BillSrNo.: 
             if rotation == 90:
-                # For 90-degree rotated pages, adjust coordinates
-                # The visual "right" of BillSrNo is actually below in coordinate space
-                x = bill_sr_rect.x1 + 5   # Slightly below BillSrNo
-                y = bill_sr_rect.y1 + 10  # To the right visually
+                # In a 90-degree rotated page:
+                # - Visual "right" = increasing Y in coordinate space
+                # - Visual "down" = increasing X in coordinate space
+                # Place number to visual right of "BillSrNo. :"
+                x = bill_sr_rect.x0   # Same vertical position visually
+                y = bill_sr_rect.y1 + 5  # To the right of the text visually
             else:
                 # Normal orientation
                 x = bill_sr_rect.x1 + 35
-                y = bill_sr_rect.y0 + 20
+                y = bill_sr_rect.y0
         elif sn_position == "top-left":
             x, y = 50, 60
         elif sn_position == "top-right":
@@ -2115,14 +2120,15 @@ async def generate_arranged_pdf(
         else:  # bottom-right
             x, y = rect.width - 100, rect.height - 50
         
-        # Add serial number text (plain number: 1, 2, 3...)
+        # Add serial number text with rotation to match page
         sn_text = f"{bill['serial_number']}"
         new_page.insert_text(
             (x, y),
             sn_text,
             fontsize=sn_font_size,
             color=sn_rgb,
-            fontname="helv"
+            fontname="helv",
+            rotate=rotation  # Rotate text to match page orientation
         )
     
     output_pdf.save(str(output_path))
