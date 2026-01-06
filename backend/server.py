@@ -2097,8 +2097,8 @@ async def generate_arranged_pdf(
         else:  # bottom-right
             x, y = rect.width - margin - 100, rect.height - margin
         
-        # Add serial number text (format: SR : X)
-        sn_text = f"SR : {bill['serial_number']}"
+        # Add serial number text (plain number: 1, 2, 3...)
+        sn_text = f"{bill['serial_number']}"
         new_page.insert_text(
             (x, y),
             sn_text,
