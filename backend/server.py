@@ -509,43 +509,70 @@ async def assign_properties(data: AssignmentRequest, current_user: dict = Depend
     if current_user["role"] not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    employee = await db.users.find_one({"id": data.employee_id}, {"_id": 0})
-    if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found")
+    # Support both single employee_id and multiple employee_ids
+    emp_ids = data.employee_ids if data.employee_ids else ([data.employee_id] if data.employee_id else [])
     
+    if not emp_ids:
+        raise HTTPException(status_code=400, detail="At least one employee must be selected")
+    
+    # Get all selected employees
+    employees = await db.users.find({"id": {"$in": emp_ids}}, {"_id": 0}).to_list(None)
+    if not employees:
+        raise HTTPException(status_code=404, detail="No employees found")
+    
+    # Create combined names for display
+    employee_names = [emp["name"] for emp in employees]
+    combined_names = ", ".join(employee_names)
+    
+    # Store all assigned employee IDs
     result = await db.properties.update_many(
         {"id": {"$in": data.property_ids}},
         {"$set": {
-            "assigned_employee_id": data.employee_id,
-            "assigned_employee_name": employee["name"]
+            "assigned_employee_ids": emp_ids,  # Store array of all assigned employee IDs
+            "assigned_employee_id": emp_ids[0],  # Keep first one for backward compat
+            "assigned_employee_name": combined_names
         }}
     )
     
-    return {"message": f"Assigned {result.modified_count} properties to {employee['name']}"}
+    return {"message": f"Assigned {result.modified_count} properties to {combined_names}"}
 
 @api_router.post("/admin/assign-bulk")
 async def bulk_assign_by_ward(data: BulkAssignmentRequest, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    employee = await db.users.find_one({"id": data.employee_id}, {"_id": 0})
-    if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found")
+    # Support both single employee_id and multiple employee_ids
+    emp_ids = data.employee_ids if data.employee_ids else ([data.employee_id] if data.employee_id else [])
+    
+    if not emp_ids:
+        raise HTTPException(status_code=400, detail="At least one employee must be selected")
+    
+    # Get all selected employees
+    employees = await db.users.find({"id": {"$in": emp_ids}}, {"_id": 0}).to_list(None)
+    if not employees:
+        raise HTTPException(status_code=404, detail="No employees found")
+    
+    # Create combined names for display
+    employee_names = [emp["name"] for emp in employees]
+    combined_names = ", ".join(employee_names)
     
     result = await db.properties.update_many(
         {"ward": data.area, "assigned_employee_id": None},
         {"$set": {
-            "assigned_employee_id": data.employee_id,
-            "assigned_employee_name": employee["name"]
+            "assigned_employee_ids": emp_ids,
+            "assigned_employee_id": emp_ids[0],
+            "assigned_employee_name": combined_names
         }}
     )
     
-    await db.users.update_one(
-        {"id": data.employee_id},
-        {"$set": {"assigned_area": data.area}}
-    )
+    # Update all assigned employees with the area
+    for emp_id in emp_ids:
+        await db.users.update_one(
+            {"id": emp_id},
+            {"$set": {"assigned_area": data.area}}
+        )
     
-    return {"message": f"Assigned {result.modified_count} properties in ward {data.area} to {employee['name']}"}
+    return {"message": f"Assigned {result.modified_count} properties in {data.area} to {combined_names}"}
 
 class BulkDeleteRequest(BaseModel):
     property_ids: List[str]
