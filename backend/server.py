@@ -2274,6 +2274,244 @@ async def delete_bill_batch(batch_id: str, current_user: dict = Depends(get_curr
     
     return {"message": f"Deleted batch and {result.deleted_count} bills"}
 
+@api_router.post("/admin/bills/delete-all")
+async def delete_all_bills(
+    batch_id: str = Form(None),
+    colony: str = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete all bills matching the given filters. If no filters, deletes ALL bills."""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if batch_id and batch_id.strip():
+        query["batch_id"] = batch_id
+    if colony and colony.strip():
+        query["colony"] = {"$regex": colony, "$options": "i"}
+    
+    # Get count first
+    count = await db.bills.count_documents(query)
+    
+    if count == 0:
+        return {"message": "No bills found to delete", "deleted_count": 0}
+    
+    # Delete the bills
+    result = await db.bills.delete_many(query)
+    
+    # Update batch record counts if batch_id specified
+    if batch_id and batch_id.strip():
+        remaining = await db.bills.count_documents({"batch_id": batch_id})
+        await db.batches.update_one(
+            {"id": batch_id},
+            {"$set": {"total_records": remaining}}
+        )
+        # If no bills left, delete the batch
+        if remaining == 0:
+            await db.batches.delete_one({"id": batch_id})
+    
+    return {
+        "message": f"Successfully deleted {result.deleted_count} bills",
+        "deleted_count": result.deleted_count
+    }
+
+@api_router.post("/admin/bills/copy-to-properties")
+async def copy_bills_to_properties(
+    batch_id: str = Form(None),
+    colony: str = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Copy bill data to properties collection"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if batch_id and batch_id.strip():
+        query["batch_id"] = batch_id
+    if colony and colony.strip():
+        query["colony"] = {"$regex": colony, "$options": "i"}
+    
+    # Get bills to copy
+    bills = await db.bills.find(query, {"_id": 0}).sort("serial_number", 1).to_list(None)
+    
+    if not bills:
+        raise HTTPException(status_code=404, detail="No bills found to copy")
+    
+    # Create a new batch for properties
+    prop_batch_id = str(uuid.uuid4())
+    prop_batch_name = f"Bills Import {colony or 'All'} - {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    
+    prop_batch_doc = {
+        "id": prop_batch_id,
+        "name": prop_batch_name,
+        "uploaded_by": current_user["id"],
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "status": "ACTIVE",
+        "total_records": len(bills),
+        "source": "PDF_BILLS"
+    }
+    await db.batches.insert_one(prop_batch_doc)
+    
+    # Convert bills to properties
+    properties = []
+    for i, bill in enumerate(bills):
+        prop = {
+            "id": str(uuid.uuid4()),
+            "batch_id": prop_batch_id,
+            "serial_number": i + 1,
+            "property_id": bill.get("property_id", str(uuid.uuid4())[:8].upper()),
+            "old_property_id": bill.get("old_property_id", ""),
+            "owner_name": bill.get("owner_name", "Unknown"),
+            "mobile": bill.get("mobile", ""),
+            "address": bill.get("plot_address", ""),
+            "colony": bill.get("colony", ""),
+            "ward": bill.get("colony", ""),  # Use colony as ward
+            "latitude": bill.get("latitude"),
+            "longitude": bill.get("longitude"),
+            "total_area": bill.get("total_area", ""),
+            "category": bill.get("category", ""),
+            "amount": bill.get("total_outstanding", "0"),
+            "financial_year": bill.get("financial_year", "2025-2026"),
+            "assigned_employee_id": None,
+            "assigned_employee_name": None,
+            "status": "Pending",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "source_bill_id": bill.get("id")  # Reference to original bill
+        }
+        properties.append(prop)
+    
+    # Insert properties
+    if properties:
+        await db.properties.insert_many(properties)
+    
+    return {
+        "message": f"Successfully added {len(properties)} bills to properties",
+        "batch_id": prop_batch_id,
+        "batch_name": prop_batch_name,
+        "total_added": len(properties)
+    }
+
+@api_router.post("/admin/bills/split-by-employees")
+async def split_bills_by_specific_employees(
+    batch_id: str = Form(None),
+    colony: str = Form(None),
+    employee_ids: str = Form(...),  # Comma-separated employee IDs
+    sn_font_size: int = Form(48),
+    sn_color: str = Form("red"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Split bills among specific employees and generate separate PDFs"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Parse employee IDs
+    emp_ids = [e.strip() for e in employee_ids.split(",") if e.strip()]
+    
+    if not emp_ids:
+        raise HTTPException(status_code=400, detail="At least one employee must be selected")
+    
+    # Verify employees exist
+    employees = []
+    for emp_id in emp_ids:
+        emp = await db.users.find_one({"id": emp_id}, {"_id": 0, "id": 1, "name": 1, "username": 1})
+        if emp:
+            employees.append(emp)
+    
+    if not employees:
+        raise HTTPException(status_code=404, detail="No valid employees found")
+    
+    query = {}
+    if batch_id and batch_id.strip():
+        query["batch_id"] = batch_id
+    if colony and colony.strip():
+        query["colony"] = {"$regex": colony, "$options": "i"}
+    
+    # Get arranged bills
+    bills = await db.bills.find(query, {"_id": 0}).sort("serial_number", 1).to_list(None)
+    
+    if not bills:
+        raise HTTPException(status_code=404, detail="No bills found")
+    
+    # Get original PDF
+    batch = await db.batches.find_one({"id": bills[0]["batch_id"]})
+    if not batch or not batch.get("pdf_filename"):
+        raise HTTPException(status_code=404, detail="Original PDF not found")
+    
+    original_pdf_path = UPLOAD_DIR / batch["pdf_filename"]
+    if not original_pdf_path.exists():
+        raise HTTPException(status_code=404, detail="Original PDF file not found")
+    
+    # Calculate bills per employee
+    total_bills = len(bills)
+    employee_count = len(employees)
+    bills_per_employee = math.ceil(total_bills / employee_count)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    generated_files = []
+    
+    # Color mapping
+    color_map = {
+        "red": (1, 0, 0),
+        "blue": (0, 0, 1),
+        "green": (0, 0.5, 0),
+        "black": (0, 0, 0),
+        "orange": (1, 0.5, 0)
+    }
+    sn_rgb = color_map.get(sn_color.lower(), (1, 0, 0))
+    
+    src_pdf = fitz.open(str(original_pdf_path))
+    
+    for emp_idx, emp in enumerate(employees):
+        start_idx = emp_idx * bills_per_employee
+        end_idx = min(start_idx + bills_per_employee, total_bills)
+        
+        if start_idx >= total_bills:
+            break
+        
+        employee_bills = bills[start_idx:end_idx]
+        
+        # Use employee name in filename (sanitize for filename)
+        emp_name_safe = re.sub(r'[^\w\-_]', '_', emp.get('name', f'emp_{emp_idx+1}'))
+        output_filename = f"{emp_name_safe}_{colony or 'all'}_{timestamp}.pdf"
+        output_path = UPLOAD_DIR / output_filename
+        
+        output_pdf = fitz.open()
+        
+        for bill in employee_bills:
+            page_num = bill.get("page_number", 1) - 1
+            if page_num < 0 or page_num >= len(src_pdf):
+                continue
+            
+            output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
+            new_page = output_pdf[-1]
+            
+            # Add SN to top-right (format: SR : X)
+            rect = new_page.rect
+            x, y = rect.width - 120, 60
+            sn_text = f"SR : {bill['serial_number']}"
+            new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv")
+        
+        output_pdf.save(str(output_path))
+        output_pdf.close()
+        
+        generated_files.append({
+            "employee_id": emp["id"],
+            "employee_name": emp.get("name", emp.get("username", f"Employee {emp_idx+1}")),
+            "filename": output_filename,
+            "download_url": f"/api/uploads/{output_filename}",
+            "bill_range": f"SR {employee_bills[0]['serial_number']} - {employee_bills[-1]['serial_number']}",
+            "total_bills": len(employee_bills)
+        })
+    
+    src_pdf.close()
+    
+    return {
+        "message": f"Generated PDFs for {len(generated_files)} employees",
+        "total_bills": total_bills,
+        "bills_per_employee": bills_per_employee,
+        "files": generated_files
+    }
+
 # ============== FILE SERVING ==============
 
 @api_router.get("/uploads/{filename}")
