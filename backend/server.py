@@ -109,11 +109,13 @@ class PropertyResponse(BaseModel):
 
 class AssignmentRequest(BaseModel):
     property_ids: List[str]
-    employee_id: str
+    employee_id: Optional[str] = None  # Single employee (backward compat)
+    employee_ids: Optional[List[str]] = None  # Multiple employees (work together)
 
 class BulkAssignmentRequest(BaseModel):
     area: str
-    employee_id: str
+    employee_id: Optional[str] = None  # Single employee (backward compat)
+    employee_ids: Optional[List[str]] = None  # Multiple employees (work together)
 
 class SubmissionApproval(BaseModel):
     submission_id: str
