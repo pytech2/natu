@@ -10,6 +10,7 @@ import AdminExport from "./pages/admin/Export";
 import AdminMap from "./pages/admin/Map";
 import AdminBills from "./pages/admin/Bills";
 import AdminBillsMap from "./pages/admin/BillsMap";
+import AdminAttendance from "./pages/admin/Attendance";
 import EmployeeDashboard from "./pages/employee/Dashboard";
 import EmployeeProperties from "./pages/employee/Properties";
 import EmployeeSurvey from "./pages/employee/Survey";
