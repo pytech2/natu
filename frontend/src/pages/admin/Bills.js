@@ -1,0 +1,851 @@
+import { useState, useEffect, useRef } from 'react';
+import AdminLayout from '../../components/AdminLayout';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
+import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
+import { toast } from 'sonner';
+import {
+  Upload,
+  FileText,
+  CheckCircle,
+  Download,
+  Map,
+  Users,
+  ArrowUpDown,
+  Edit,
+  Trash2,
+  Search,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Eye
+} from 'lucide-react';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
+
+export default function BillsPage() {
+  const { token } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [bills, setBills] = useState([]);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
+  const [colonies, setColonies] = useState([]);
+  const [batches, setBatches] = useState([]);
+  
+  // Filters
+  const [filters, setFilters] = useState({
+    batch_id: '',
+    colony: '',
+    search: ''
+  });
+  
+  // Upload state
+  const [uploadDialog, setUploadDialog] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [file, setFile] = useState(null);
+  const [batchName, setBatchName] = useState('');
+  const fileInputRef = useRef(null);
+  
+  // Edit state
+  const [editDialog, setEditDialog] = useState(false);
+  const [editingBill, setEditingBill] = useState(null);
+  
+  // Generate PDF state
+  const [generateDialog, setGenerateDialog] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [pdfOptions, setPdfOptions] = useState({
+    sn_position: 'top-right',
+    sn_font_size: 48,
+    sn_color: 'red'
+  });
+  
+  // Split by employee state
+  const [splitDialog, setSplitDialog] = useState(false);
+  const [splitting, setSplitting] = useState(false);
+  const [employeeCount, setEmployeeCount] = useState(5);
+  const [generatedFiles, setGeneratedFiles] = useState([]);
+
+  useEffect(() => {
+    fetchBatches();
+    fetchColonies();
+  }, []);
+
+  useEffect(() => {
+    fetchBills();
+  }, [filters, pagination.page]);
+
+  const fetchBatches = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/batches`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const pdfBatches = (response.data || []).filter(b => b.type === 'PDF_BILLS');
+      setBatches(pdfBatches);
+    } catch (error) {
+      console.error('Failed to fetch batches:', error);
+    }
+  };
+
+  const fetchColonies = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/bills/colonies`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setColonies(response.data.colonies || []);
+    } catch (error) {
+      console.error('Failed to fetch colonies:', error);
+    }
+  };
+
+  const fetchBills = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filters.batch_id) params.append('batch_id', filters.batch_id);
+      if (filters.colony) params.append('colony', filters.colony);
+      params.append('page', pagination.page);
+      params.append('limit', 20);
+
+      const response = await axios.get(`${API_URL}/admin/bills?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBills(response.data.bills || []);
+      setPagination(prev => ({
+        ...prev,
+        total: response.data.total,
+        pages: response.data.pages
+      }));
+    } catch (error) {
+      toast.error('Failed to load bills');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      if (!selectedFile.name.toLowerCase().endsWith('.pdf')) {
+        toast.error('Please upload a PDF file');
+        return;
+      }
+      setFile(selectedFile);
+      if (!batchName) {
+        setBatchName(selectedFile.name.replace('.pdf', ''));
+      }
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file || !batchName) {
+      toast.error('Please select a file and enter batch name');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('batch_name', batchName);
+      formData.append('authorization', `Bearer ${token}`);
+
+      const response = await axios.post(`${API_URL}/admin/bills/upload-pdf`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      toast.success(response.data.message);
+      setUploadDialog(false);
+      setFile(null);
+      setBatchName('');
+      fetchBatches();
+      fetchColonies();
+      fetchBills();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to upload PDF');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleArrangeByRoute = async () => {
+    try {
+      const formData = new FormData();
+      if (filters.batch_id) formData.append('batch_id', filters.batch_id);
+      if (filters.colony) formData.append('colony', filters.colony);
+
+      const response = await axios.post(`${API_URL}/admin/bills/arrange-by-route`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      toast.success(response.data.message);
+      fetchBills();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to arrange bills');
+    }
+  };
+
+  const handleGeneratePdf = async () => {
+    setGenerating(true);
+    try {
+      const formData = new FormData();
+      if (filters.batch_id) formData.append('batch_id', filters.batch_id);
+      if (filters.colony) formData.append('colony', filters.colony);
+      formData.append('sn_position', pdfOptions.sn_position);
+      formData.append('sn_font_size', pdfOptions.sn_font_size);
+      formData.append('sn_color', pdfOptions.sn_color);
+
+      const response = await axios.post(`${API_URL}/admin/bills/generate-pdf`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      toast.success(response.data.message);
+      setGenerateDialog(false);
+      
+      // Auto download
+      window.open(`${process.env.REACT_APP_BACKEND_URL}${response.data.download_url}`, '_blank');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to generate PDF');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleSplitByEmployee = async () => {
+    setSplitting(true);
+    try {
+      const formData = new FormData();
+      if (filters.batch_id) formData.append('batch_id', filters.batch_id);
+      if (filters.colony) formData.append('colony', filters.colony);
+      formData.append('employee_count', employeeCount);
+      formData.append('sn_font_size', pdfOptions.sn_font_size);
+      formData.append('sn_color', pdfOptions.sn_color);
+
+      const response = await axios.post(`${API_URL}/admin/bills/split-by-employee`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      toast.success(response.data.message);
+      setGeneratedFiles(response.data.files);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to split PDF');
+    } finally {
+      setSplitting(false);
+    }
+  };
+
+  const handleEditBill = (bill) => {
+    setEditingBill({ ...bill });
+    setEditDialog(true);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const formData = new FormData();
+      Object.keys(editingBill).forEach(key => {
+        if (editingBill[key] !== null && editingBill[key] !== undefined) {
+          formData.append(key, editingBill[key]);
+        }
+      });
+
+      await axios.put(`${API_URL}/admin/bills/${editingBill.id}`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      toast.success('Bill updated successfully');
+      setEditDialog(false);
+      fetchBills();
+    } catch (error) {
+      toast.error('Failed to update bill');
+    }
+  };
+
+  return (
+    <AdminLayout title="PDF Bills Management">
+      <div data-testid="bills-page" className="space-y-6">
+        {/* Header Actions */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-heading font-bold text-slate-900">PDF Bills</h1>
+            <p className="text-slate-500">Upload, process, and manage property tax bills</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setUploadDialog(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+              data-testid="upload-pdf-btn"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Upload PDF
+            </Button>
+          </div>
+        </div>
+
+        {/* Filters & Actions */}
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                value={filters.batch_id}
+                onValueChange={(value) => setFilters({ ...filters, batch_id: value })}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select Batch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value=" ">All Batches</SelectItem>
+                  {batches.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.colony}
+                onValueChange={(value) => setFilters({ ...filters, colony: value })}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select Colony" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value=" ">All Colonies</SelectItem>
+                  {colonies.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="flex-1" />
+
+              <Button
+                variant="outline"
+                onClick={handleArrangeByRoute}
+                disabled={pagination.total === 0}
+              >
+                <ArrowUpDown className="w-4 h-4 mr-2" />
+                Arrange by GPS Route
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => setGenerateDialog(true)}
+                disabled={pagination.total === 0}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Generate PDF
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => setSplitDialog(true)}
+                disabled={pagination.total === 0}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Split by Employee
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => window.open('/admin/bills-map', '_self')}
+                disabled={pagination.total === 0}
+              >
+                <Map className="w-4 h-4 mr-2" />
+                View Map
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="stat-card">
+            <div className="text-center py-3">
+              <p className="text-3xl font-bold text-blue-600">{pagination.total}</p>
+              <p className="text-sm text-slate-500">Total Bills</p>
+            </div>
+          </Card>
+          <Card className="stat-card">
+            <div className="text-center py-3">
+              <p className="text-3xl font-bold text-emerald-600">{colonies.length}</p>
+              <p className="text-sm text-slate-500">Colonies</p>
+            </div>
+          </Card>
+          <Card className="stat-card">
+            <div className="text-center py-3">
+              <p className="text-3xl font-bold text-purple-600">{batches.length}</p>
+              <p className="text-sm text-slate-500">Batches</p>
+            </div>
+          </Card>
+          <Card className="stat-card">
+            <div className="text-center py-3">
+              <p className="text-3xl font-bold text-amber-600">
+                {bills.filter(b => b.latitude && b.longitude).length}
+              </p>
+              <p className="text-sm text-slate-500">With GPS</p>
+            </div>
+          </Card>
+        </div>
+
+        {/* Bills Table */}
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        ) : bills.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <FileText className="w-12 h-12 mx-auto text-slate-300 mb-4" />
+              <h3 className="font-heading font-semibold text-slate-900 mb-2">No bills found</h3>
+              <p className="text-slate-500 mb-4">Upload a PDF to get started</p>
+              <Button onClick={() => setUploadDialog(true)} className="bg-blue-600">
+                <Upload className="w-4 h-4 mr-2" />
+                Upload PDF
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>SN</th>
+                    <th>Property ID</th>
+                    <th>Owner Name</th>
+                    <th>Mobile</th>
+                    <th>Colony</th>
+                    <th>Category</th>
+                    <th>Outstanding</th>
+                    <th>GPS</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bills.map((bill) => (
+                    <tr key={bill.id}>
+                      <td>
+                        <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 font-bold rounded-full">
+                          {bill.serial_number}
+                        </span>
+                      </td>
+                      <td className="font-mono">{bill.property_id || '-'}</td>
+                      <td className="max-w-[150px] truncate">{bill.owner_name || '-'}</td>
+                      <td className="font-mono">{bill.mobile || '-'}</td>
+                      <td>{bill.colony || '-'}</td>
+                      <td>
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          bill.category?.includes('Vacant') ? 'bg-green-100 text-green-700' :
+                          bill.category?.includes('Commercial') ? 'bg-orange-100 text-orange-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {bill.category || '-'}
+                        </span>
+                      </td>
+                      <td className="font-mono">₹{bill.total_outstanding || '0'}</td>
+                      <td>
+                        {bill.latitude && bill.longitude ? (
+                          <span className="text-emerald-600">✓</span>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditBill(bill)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between p-4 border-t">
+              <p className="text-sm text-slate-500">
+                Showing {bills.length} of {pagination.total} bills
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                  disabled={pagination.page <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm">
+                  Page {pagination.page} of {pagination.pages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                  disabled={pagination.page >= pagination.pages}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Upload Dialog */}
+        <Dialog open={uploadDialog} onOpenChange={setUploadDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upload PDF Bills</DialogTitle>
+              <DialogDescription>
+                Upload a multi-page PDF where each page is a property tax bill
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Batch Name</Label>
+                <Input
+                  value={batchName}
+                  onChange={(e) => setBatchName(e.target.value)}
+                  placeholder="e.g., Akash Nagar Bills 2025-26"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>PDF File</Label>
+                <div
+                  className={`photo-upload-area ${file ? 'has-image' : ''}`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  {file ? (
+                    <div className="flex items-center justify-center gap-3">
+                      <CheckCircle className="w-6 h-6 text-emerald-600" />
+                      <div className="text-left">
+                        <p className="font-medium text-slate-900">{file.name}</p>
+                        <p className="text-sm text-slate-500">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <Upload className="w-8 h-8 mx-auto text-slate-400 mb-2" />
+                      <p className="text-slate-600">Click to select PDF file</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUploadDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpload}
+                disabled={uploading || !file || !batchName}
+                className="bg-blue-600"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload & Extract
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Bill Dialog */}
+        <Dialog open={editDialog} onOpenChange={setEditDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Bill Data</DialogTitle>
+              <DialogDescription>
+                Update bill information. Changes will be reflected in generated PDFs.
+              </DialogDescription>
+            </DialogHeader>
+            {editingBill && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Owner Name</Label>
+                  <Input
+                    value={editingBill.owner_name || ''}
+                    onChange={(e) => setEditingBill({ ...editingBill, owner_name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Mobile</Label>
+                  <Input
+                    value={editingBill.mobile || ''}
+                    onChange={(e) => setEditingBill({ ...editingBill, mobile: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Plot Address</Label>
+                  <Input
+                    value={editingBill.plot_address || ''}
+                    onChange={(e) => setEditingBill({ ...editingBill, plot_address: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Colony</Label>
+                  <Input
+                    value={editingBill.colony || ''}
+                    onChange={(e) => setEditingBill({ ...editingBill, colony: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Input
+                    value={editingBill.category || ''}
+                    onChange={(e) => setEditingBill({ ...editingBill, category: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Total Area</Label>
+                  <Input
+                    value={editingBill.total_area || ''}
+                    onChange={(e) => setEditingBill({ ...editingBill, total_area: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Total Outstanding</Label>
+                  <Input
+                    value={editingBill.total_outstanding || ''}
+                    onChange={(e) => setEditingBill({ ...editingBill, total_outstanding: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit} className="bg-blue-600">
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Generate PDF Dialog */}
+        <Dialog open={generateDialog} onOpenChange={setGenerateDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Generate Arranged PDF</DialogTitle>
+              <DialogDescription>
+                Generate a new PDF with bills arranged by GPS route order
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Serial Number Position</Label>
+                <Select
+                  value={pdfOptions.sn_position}
+                  onValueChange={(value) => setPdfOptions({ ...pdfOptions, sn_position: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="top-left">Top Left</SelectItem>
+                    <SelectItem value="top-right">Top Right</SelectItem>
+                    <SelectItem value="bottom-left">Bottom Left</SelectItem>
+                    <SelectItem value="bottom-right">Bottom Right</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Font Size: {pdfOptions.sn_font_size}px</Label>
+                <input
+                  type="range"
+                  min="24"
+                  max="72"
+                  value={pdfOptions.sn_font_size}
+                  onChange={(e) => setPdfOptions({ ...pdfOptions, sn_font_size: parseInt(e.target.value) })}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Serial Number Color</Label>
+                <Select
+                  value={pdfOptions.sn_color}
+                  onValueChange={(value) => setPdfOptions({ ...pdfOptions, sn_color: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="red">Red</SelectItem>
+                    <SelectItem value="blue">Blue</SelectItem>
+                    <SelectItem value="green">Green</SelectItem>
+                    <SelectItem value="orange">Orange</SelectItem>
+                    <SelectItem value="black">Black</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setGenerateDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleGeneratePdf}
+                disabled={generating}
+                className="bg-blue-600"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Generate & Download
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Split by Employee Dialog */}
+        <Dialog open={splitDialog} onOpenChange={setSplitDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Split Bills by Employee</DialogTitle>
+              <DialogDescription>
+                Distribute bills equally among employees and generate separate PDFs
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-lg font-semibold text-slate-900">
+                  Total Bills: <span className="text-blue-600">{pagination.total}</span>
+                </p>
+                <p className="text-sm text-slate-500">
+                  {pagination.total} bills ÷ {employeeCount} employees = ~{Math.ceil(pagination.total / employeeCount)} bills per employee
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Number of Employees</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={employeeCount}
+                  onChange={(e) => setEmployeeCount(parseInt(e.target.value) || 1)}
+                />
+              </div>
+              
+              {generatedFiles.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Generated Files</Label>
+                  <div className="max-h-60 overflow-y-auto space-y-2">
+                    {generatedFiles.map((file) => (
+                      <div key={file.employee_number} className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-emerald-900">
+                            Employee {file.employee_number}
+                          </p>
+                          <p className="text-sm text-emerald-600">
+                            {file.bill_range} ({file.total_bills} bills)
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}${file.download_url}`, '_blank')}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setSplitDialog(false);
+                setGeneratedFiles([]);
+              }}>
+                Close
+              </Button>
+              <Button
+                onClick={handleSplitByEmployee}
+                disabled={splitting}
+                className="bg-blue-600"
+              >
+                {splitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Splitting...
+                  </>
+                ) : (
+                  <>
+                    <Users className="w-4 h-4 mr-2" />
+                    Generate Employee PDFs
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </AdminLayout>
+  );
+}
