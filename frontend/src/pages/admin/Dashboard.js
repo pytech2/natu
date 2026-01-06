@@ -135,6 +135,37 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Attendance Card */}
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/admin/attendance')}>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-100 rounded-xl">
+                  <Users className="w-8 h-8 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Today's Attendance</p>
+                  <p className="text-2xl font-heading font-bold text-slate-900">
+                    {attendanceStats.present} / {attendanceStats.total}
+                    <span className="text-sm font-normal text-slate-500 ml-2">employees present</span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-purple-600">
+                    {attendanceStats.total > 0 ? Math.round((attendanceStats.present / attendanceStats.total) * 100) : 0}%
+                  </p>
+                  <p className="text-xs text-slate-500">Attendance Rate</p>
+                </div>
+                <Button variant="outline" size="sm">
+                  View All
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Overall Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card className="stat-card">
