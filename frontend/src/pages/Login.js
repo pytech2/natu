@@ -120,7 +120,7 @@ export default function Login() {
           <div className="mt-6 pt-6 border-t border-slate-100">
             <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
               <MapPin className="w-3 h-3" />
-              <span>NSTU India Private Limited</span>
+              <span>NSTU INDIA PRIVATE LIMITED</span>
             </div>
             <p className="text-center text-xs text-slate-400 mt-2">
               Default Admin: admin / nastu123
