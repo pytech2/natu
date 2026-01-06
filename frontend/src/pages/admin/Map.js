@@ -556,10 +556,11 @@ export default function PropertyMap() {
                   {getTileLayer()}
                   <FitBounds properties={filteredProperties} />
                   
-                  {filteredProperties.map((property) => (
+                  {/* Spread overlapping markers so all serial numbers are visible */}
+                  {spreadOverlappingMarkers(filteredProperties).map((property) => (
                     <Marker
                       key={property.id}
-                      position={[property.latitude, property.longitude]}
+                      position={[property.spreadLat, property.spreadLng]}
                       icon={createNumberedIcon(property.serial_number || 0, property.category)}
                     >
                       <Popup maxWidth={350} className="property-popup">
