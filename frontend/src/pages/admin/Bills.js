@@ -809,7 +809,7 @@ export default function BillsPage() {
             <DialogHeader>
               <DialogTitle>Generate Arranged PDF</DialogTitle>
               <DialogDescription>
-                Generate a new PDF with bills arranged by GPS route order. Serial numbers will be printed as "SR : 1", "SR : 2", etc.
+                Generate a new PDF with bills arranged by GPS route order. Serial numbers will be printed as plain numbers (1, 2, 3...)
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
