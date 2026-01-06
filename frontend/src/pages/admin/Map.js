@@ -219,6 +219,72 @@ export default function PropertyMap() {
     setFilters({ colony: '', category: '', search: '' });
   };
 
+  // Arrange properties by GPS route
+  const handleArrangeByRoute = async () => {
+    setArranging(true);
+    try {
+      const params = new URLSearchParams();
+      if (filters.colony) params.append('ward', filters.colony);
+      
+      const response = await axios.post(`${API_URL}/admin/properties/arrange-by-route?${params}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success(response.data.message || 'Properties arranged by GPS route');
+      fetchProperties(); // Reload to show new order
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to arrange properties');
+    } finally {
+      setArranging(false);
+    }
+  };
+
+  // Save arranged data to properties
+  const handleSaveArrangedData = async () => {
+    setSaving(true);
+    try {
+      const params = new URLSearchParams();
+      if (filters.colony) params.append('ward', filters.colony);
+      
+      const response = await axios.post(`${API_URL}/admin/properties/save-arranged?${params}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success(response.data.message || 'Arranged data saved successfully');
+      fetchProperties();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save arranged data');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Download arranged PDF
+  const handleDownloadPdf = async () => {
+    setDownloading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filters.colony) params.append('ward', filters.colony);
+      params.append('sn_position', pdfOptions.sn_position);
+      params.append('sn_font_size', pdfOptions.sn_font_size);
+      params.append('sn_color', pdfOptions.sn_color);
+      
+      const response = await axios.post(`${API_URL}/admin/properties/download-pdf?${params}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success('PDF generated successfully');
+      setPdfDialog(false);
+      
+      // Download the file
+      window.open(`${process.env.REACT_APP_BACKEND_URL}${response.data.download_url}`, '_blank');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to generate PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const getTileLayer = () => {
     if (mapType === 'satellite') {
       return (
