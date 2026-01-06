@@ -1539,6 +1539,570 @@ async def get_attendance_records(
         "pages": (total + limit - 1) // limit
     }
 
+# ============== PDF BILL PROCESSING ==============
+
+# Helper function to extract bill data from PDF text
+def extract_bill_data(text: str, page_num: int) -> dict:
+    """Extract structured bill data from PDF page text"""
+    
+    def find_value(patterns, text, default=""):
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if match:
+                return match.group(1).strip()
+        return default
+    
+    # Extract coordinates (latitude : longitude format)
+    coords_match = re.search(r'(\d+\.\d+)\s*:\s*(\d+\.\d+)', text)
+    latitude = float(coords_match.group(1)) if coords_match else None
+    longitude = float(coords_match.group(2)) if coords_match else None
+    
+    bill_data = {
+        "bill_sr_no": find_value([r'Bill\s*Sr\s*No[:\s]*(\d+)', r'BillSrNo[:\s]*(\d+)'], text),
+        "property_id": find_value([r'Property\s*Id[:\s]*([A-Z0-9]+)', r'PropertyId[:\s]*([A-Z0-9]+)'], text),
+        "old_property_id": find_value([r'Old\s*Property\s*Id[:\s]*([A-Z0-9/-]+)', r'OldPropertyId[:\s]*([A-Z0-9/-]+)'], text),
+        "financial_year": find_value([r'Financial\s*Year[:\s]*(\d{4}-\d{2,4})', r'FY[:\s]*(\d{4}-\d{2,4})'], text, "2025-26"),
+        "print_date": find_value([r'Print\s*Date[:\s]*([0-9/\-]+)', r'Date[:\s]*([0-9/\-]+)'], text),
+        "latitude": latitude,
+        "longitude": longitude,
+        "mobile": find_value([r'Mobile\s*No[:\s]*(\d{10})', r'Mobile[:\s]*(\d{10})', r'Phone[:\s]*(\d{10})'], text),
+        "colony": find_value([r'Colony\s*Name[:\s]*([^\n]+)', r'Colony[:\s]*([^\n]+)'], text),
+        "owner_name": find_value([r'Owner\s*Name[:\s]*([^\n]+)', r'Owner[:\s]*([^\n]+)'], text),
+        "plot_address": find_value([r'Plot\s*Address[:\s]*([^\n]+)', r'Address[:\s]*([^\n]+)'], text),
+        "permanent_address": find_value([r'Permanent\s*Address[:\s]*([^\n]+)'], text),
+        "total_area": find_value([r'Total\s*Area[:\s]*([0-9.]+\s*SqYard)', r'Area[:\s]*([0-9.]+)'], text),
+        "category": find_value([r'Category[:\s]*([^\n,]+)', r'Type[:\s]*([^\n,]+)'], text),
+        "authorized_status": find_value([r'Authorized\s*Status[:\s]*([^\n]+)'], text),
+        "total_outstanding": find_value([r'Total\s*Outstanding[:\s]*Rs?\.?\s*([0-9,.-]+)', r'Outstanding[:\s]*Rs?\.?\s*([0-9,.-]+)'], text),
+        "property_tax_outstanding": find_value([r'Property\s*&?\s*Fire\s*Tax\s*Outstanding[:\s]*Rs?\.?\s*([0-9,.-]+)'], text),
+        "page_number": page_num
+    }
+    
+    return bill_data
+
+# Calculate distance between two GPS points (Haversine formula)
+def haversine_distance(lat1, lon1, lat2, lon2):
+    R = 6371000  # Earth radius in meters
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return R * c
+
+# Sort bills by GPS route (nearest neighbor algorithm)
+def sort_by_gps_route(bills: list) -> list:
+    if not bills:
+        return bills
+    
+    # Filter bills with valid GPS
+    valid_bills = [b for b in bills if b.get('latitude') and b.get('longitude')]
+    no_gps_bills = [b for b in bills if not b.get('latitude') or not b.get('longitude')]
+    
+    if not valid_bills:
+        return bills
+    
+    # Start from the first bill
+    sorted_bills = [valid_bills[0]]
+    remaining = valid_bills[1:]
+    
+    while remaining:
+        last = sorted_bills[-1]
+        last_lat, last_lon = last['latitude'], last['longitude']
+        
+        # Find nearest neighbor
+        nearest_idx = 0
+        nearest_dist = float('inf')
+        
+        for i, bill in enumerate(remaining):
+            dist = haversine_distance(last_lat, last_lon, bill['latitude'], bill['longitude'])
+            if dist < nearest_dist:
+                nearest_dist = dist
+                nearest_idx = i
+        
+        sorted_bills.append(remaining.pop(nearest_idx))
+    
+    # Add bills without GPS at the end
+    sorted_bills.extend(no_gps_bills)
+    
+    return sorted_bills
+
+@api_router.post("/admin/bills/upload-pdf")
+async def upload_pdf_bills(
+    file: UploadFile = File(...),
+    batch_name: str = Form(...),
+    authorization: str = Form(...)
+):
+    """Upload multi-page PDF and extract bill data from each page"""
+    current_user = await get_current_user(authorization)
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Please upload a PDF file")
+    
+    # Save uploaded PDF
+    content = await file.read()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    pdf_filename = f"bills_{timestamp}.pdf"
+    pdf_path = UPLOAD_DIR / pdf_filename
+    
+    async with aiofiles.open(pdf_path, 'wb') as f:
+        await f.write(content)
+    
+    # Create batch record
+    batch_id = str(uuid.uuid4())
+    batch_doc = {
+        "id": batch_id,
+        "name": batch_name,
+        "type": "PDF_BILLS",
+        "pdf_filename": pdf_filename,
+        "pdf_url": f"/api/uploads/{pdf_filename}",
+        "uploaded_by": current_user["id"],
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "status": "ACTIVE",
+        "total_records": 0
+    }
+    
+    # Extract text from each page using PyMuPDF
+    bills = []
+    try:
+        pdf_doc = fitz.open(str(pdf_path))
+        
+        for page_num in range(len(pdf_doc)):
+            page = pdf_doc[page_num]
+            text = page.get_text()
+            
+            # Extract bill data
+            bill_data = extract_bill_data(text, page_num + 1)
+            bill_data["id"] = str(uuid.uuid4())
+            bill_data["batch_id"] = batch_id
+            bill_data["serial_number"] = page_num + 1  # Initial serial number
+            bill_data["created_at"] = datetime.now(timezone.utc).isoformat()
+            bill_data["status"] = "Pending"
+            
+            bills.append(bill_data)
+        
+        pdf_doc.close()
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
+    
+    # Insert bills into database
+    if bills:
+        await db.bills.insert_many(bills)
+        batch_doc["total_records"] = len(bills)
+    
+    await db.batches.insert_one(batch_doc)
+    
+    # Get unique colonies
+    colonies = list(set([b.get("colony", "").strip() for b in bills if b.get("colony")]))
+    
+    return {
+        "batch_id": batch_id,
+        "name": batch_name,
+        "total_bills": len(bills),
+        "colonies": colonies,
+        "message": f"Successfully extracted {len(bills)} bills from PDF"
+    }
+
+@api_router.get("/admin/bills")
+async def list_bills(
+    batch_id: Optional[str] = None,
+    colony: Optional[str] = None,
+    status: Optional[str] = None,
+    sorted_by_route: bool = False,
+    page: int = 1,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get bills with optional filtering"""
+    if current_user["role"] not in ADMIN_VIEW_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if batch_id and batch_id.strip():
+        query["batch_id"] = batch_id
+    if colony and colony.strip():
+        query["colony"] = {"$regex": colony, "$options": "i"}
+    if status and status.strip():
+        query["status"] = status
+    
+    total = await db.bills.count_documents(query)
+    
+    if sorted_by_route:
+        # Get all matching bills and sort by GPS route
+        all_bills = await db.bills.find(query, {"_id": 0}).to_list(None)
+        sorted_bills = sort_by_gps_route(all_bills)
+        
+        # Assign new serial numbers
+        for i, bill in enumerate(sorted_bills):
+            bill["route_serial"] = i + 1
+        
+        # Paginate
+        start = (page - 1) * limit
+        bills = sorted_bills[start:start + limit]
+    else:
+        bills = await db.bills.find(query, {"_id": 0}).sort("serial_number", 1).skip((page - 1) * limit).limit(limit).to_list(limit)
+    
+    return {
+        "bills": bills,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/admin/bills/colonies")
+async def get_bill_colonies(
+    batch_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get unique colonies from bills"""
+    if current_user["role"] not in ADMIN_VIEW_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if batch_id and batch_id.strip():
+        query["batch_id"] = batch_id
+    
+    colonies = await db.bills.distinct("colony", query)
+    colonies = [c for c in colonies if c and c.strip()]
+    
+    return {"colonies": sorted(colonies)}
+
+@api_router.put("/admin/bills/{bill_id}")
+async def update_bill(
+    bill_id: str,
+    current_user: dict = Depends(get_current_user),
+    owner_name: str = Form(None),
+    mobile: str = Form(None),
+    plot_address: str = Form(None),
+    permanent_address: str = Form(None),
+    category: str = Form(None),
+    total_area: str = Form(None),
+    total_outstanding: str = Form(None),
+    colony: str = Form(None)
+):
+    """Edit bill data"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    bill = await db.bills.find_one({"id": bill_id})
+    if not bill:
+        raise HTTPException(status_code=404, detail="Bill not found")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if owner_name is not None:
+        update_data["owner_name"] = owner_name
+    if mobile is not None:
+        update_data["mobile"] = mobile
+    if plot_address is not None:
+        update_data["plot_address"] = plot_address
+    if permanent_address is not None:
+        update_data["permanent_address"] = permanent_address
+    if category is not None:
+        update_data["category"] = category
+    if total_area is not None:
+        update_data["total_area"] = total_area
+    if total_outstanding is not None:
+        update_data["total_outstanding"] = total_outstanding
+    if colony is not None:
+        update_data["colony"] = colony
+    
+    await db.bills.update_one({"id": bill_id}, {"$set": update_data})
+    
+    return {"message": "Bill updated successfully"}
+
+@api_router.post("/admin/bills/arrange-by-route")
+async def arrange_bills_by_route(
+    batch_id: str = Form(None),
+    colony: str = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Arrange bills by GPS route and assign new serial numbers"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if batch_id and batch_id.strip():
+        query["batch_id"] = batch_id
+    if colony and colony.strip():
+        query["colony"] = {"$regex": colony, "$options": "i"}
+    
+    # Get all matching bills
+    bills = await db.bills.find(query, {"_id": 0}).to_list(None)
+    
+    if not bills:
+        raise HTTPException(status_code=404, detail="No bills found")
+    
+    # Sort by GPS route
+    sorted_bills = sort_by_gps_route(bills)
+    
+    # Update serial numbers in database
+    for i, bill in enumerate(sorted_bills):
+        await db.bills.update_one(
+            {"id": bill["id"]},
+            {"$set": {"serial_number": i + 1, "route_ordered": True}}
+        )
+    
+    return {
+        "message": f"Arranged {len(sorted_bills)} bills by GPS route",
+        "total_arranged": len(sorted_bills)
+    }
+
+@api_router.post("/admin/bills/generate-pdf")
+async def generate_arranged_pdf(
+    batch_id: str = Form(None),
+    colony: str = Form(None),
+    sn_position: str = Form("top-right"),  # top-left, top-right, bottom-left, bottom-right
+    sn_font_size: int = Form(48),
+    sn_color: str = Form("red"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate arranged PDF with serial numbers"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if batch_id and batch_id.strip():
+        query["batch_id"] = batch_id
+    if colony and colony.strip():
+        query["colony"] = {"$regex": colony, "$options": "i"}
+    
+    # Get arranged bills
+    bills = await db.bills.find(query, {"_id": 0}).sort("serial_number", 1).to_list(None)
+    
+    if not bills:
+        raise HTTPException(status_code=404, detail="No bills found")
+    
+    # Get original PDF
+    batch = await db.batches.find_one({"id": bills[0]["batch_id"]})
+    if not batch or not batch.get("pdf_filename"):
+        raise HTTPException(status_code=404, detail="Original PDF not found")
+    
+    original_pdf_path = UPLOAD_DIR / batch["pdf_filename"]
+    if not original_pdf_path.exists():
+        raise HTTPException(status_code=404, detail="Original PDF file not found")
+    
+    # Create new PDF with serial numbers
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_filename = f"arranged_{colony or 'all'}_{timestamp}.pdf"
+    output_path = UPLOAD_DIR / output_filename
+    
+    # Color mapping
+    color_map = {
+        "red": (1, 0, 0),
+        "blue": (0, 0, 1),
+        "green": (0, 0.5, 0),
+        "black": (0, 0, 0),
+        "orange": (1, 0.5, 0)
+    }
+    sn_rgb = color_map.get(sn_color.lower(), (1, 0, 0))
+    
+    # Open original PDF and create new one with SN overlay
+    src_pdf = fitz.open(str(original_pdf_path))
+    output_pdf = fitz.open()
+    
+    for bill in bills:
+        page_num = bill.get("page_number", 1) - 1
+        if page_num < 0 or page_num >= len(src_pdf):
+            continue
+        
+        # Copy page
+        output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
+        new_page = output_pdf[-1]
+        
+        # Calculate SN position
+        rect = new_page.rect
+        margin = 20
+        
+        if sn_position == "top-left":
+            x, y = margin, margin + sn_font_size
+        elif sn_position == "top-right":
+            x, y = rect.width - margin - 100, margin + sn_font_size
+        elif sn_position == "bottom-left":
+            x, y = margin, rect.height - margin
+        else:  # bottom-right
+            x, y = rect.width - margin - 100, rect.height - margin
+        
+        # Add serial number text
+        sn_text = f"SN: {bill['serial_number']}"
+        new_page.insert_text(
+            (x, y),
+            sn_text,
+            fontsize=sn_font_size,
+            color=sn_rgb,
+            fontname="helv"
+        )
+    
+    output_pdf.save(str(output_path))
+    output_pdf.close()
+    src_pdf.close()
+    
+    return {
+        "message": f"Generated PDF with {len(bills)} bills",
+        "filename": output_filename,
+        "download_url": f"/api/uploads/{output_filename}"
+    }
+
+@api_router.post("/admin/bills/split-by-employee")
+async def split_bills_by_employee(
+    batch_id: str = Form(None),
+    colony: str = Form(None),
+    employee_count: int = Form(...),
+    sn_font_size: int = Form(48),
+    sn_color: str = Form("red"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Split bills into separate PDFs for each employee"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if employee_count < 1 or employee_count > 100:
+        raise HTTPException(status_code=400, detail="Employee count must be between 1 and 100")
+    
+    query = {}
+    if batch_id and batch_id.strip():
+        query["batch_id"] = batch_id
+    if colony and colony.strip():
+        query["colony"] = {"$regex": colony, "$options": "i"}
+    
+    # Get arranged bills
+    bills = await db.bills.find(query, {"_id": 0}).sort("serial_number", 1).to_list(None)
+    
+    if not bills:
+        raise HTTPException(status_code=404, detail="No bills found")
+    
+    # Get original PDF
+    batch = await db.batches.find_one({"id": bills[0]["batch_id"]})
+    if not batch or not batch.get("pdf_filename"):
+        raise HTTPException(status_code=404, detail="Original PDF not found")
+    
+    original_pdf_path = UPLOAD_DIR / batch["pdf_filename"]
+    if not original_pdf_path.exists():
+        raise HTTPException(status_code=404, detail="Original PDF file not found")
+    
+    # Calculate bills per employee
+    total_bills = len(bills)
+    bills_per_employee = math.ceil(total_bills / employee_count)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    generated_files = []
+    
+    # Color mapping
+    color_map = {
+        "red": (1, 0, 0),
+        "blue": (0, 0, 1),
+        "green": (0, 0.5, 0),
+        "black": (0, 0, 0),
+        "orange": (1, 0.5, 0)
+    }
+    sn_rgb = color_map.get(sn_color.lower(), (1, 0, 0))
+    
+    src_pdf = fitz.open(str(original_pdf_path))
+    
+    for emp_idx in range(employee_count):
+        start_idx = emp_idx * bills_per_employee
+        end_idx = min(start_idx + bills_per_employee, total_bills)
+        
+        if start_idx >= total_bills:
+            break
+        
+        employee_bills = bills[start_idx:end_idx]
+        
+        output_filename = f"employee_{emp_idx + 1}_{colony or 'all'}_{timestamp}.pdf"
+        output_path = UPLOAD_DIR / output_filename
+        
+        output_pdf = fitz.open()
+        
+        for bill in employee_bills:
+            page_num = bill.get("page_number", 1) - 1
+            if page_num < 0 or page_num >= len(src_pdf):
+                continue
+            
+            output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
+            new_page = output_pdf[-1]
+            
+            # Add SN to top-right
+            rect = new_page.rect
+            x, y = rect.width - 120, 60
+            sn_text = f"SN: {bill['serial_number']}"
+            new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv")
+        
+        output_pdf.save(str(output_path))
+        output_pdf.close()
+        
+        generated_files.append({
+            "employee_number": emp_idx + 1,
+            "filename": output_filename,
+            "download_url": f"/api/uploads/{output_filename}",
+            "bill_range": f"SN {employee_bills[0]['serial_number']} - {employee_bills[-1]['serial_number']}",
+            "total_bills": len(employee_bills)
+        })
+    
+    src_pdf.close()
+    
+    return {
+        "message": f"Generated {len(generated_files)} employee PDFs",
+        "total_bills": total_bills,
+        "bills_per_employee": bills_per_employee,
+        "files": generated_files
+    }
+
+@api_router.get("/admin/bills/map-data")
+async def get_bills_map_data(
+    batch_id: Optional[str] = None,
+    colony: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get bill data for map display"""
+    if current_user["role"] not in ADMIN_VIEW_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if batch_id and batch_id.strip():
+        query["batch_id"] = batch_id
+    if colony and colony.strip():
+        query["colony"] = {"$regex": colony, "$options": "i"}
+    
+    # Only get bills with GPS coordinates
+    query["latitude"] = {"$ne": None}
+    query["longitude"] = {"$ne": None}
+    
+    bills = await db.bills.find(query, {
+        "_id": 0,
+        "id": 1,
+        "serial_number": 1,
+        "property_id": 1,
+        "owner_name": 1,
+        "mobile": 1,
+        "colony": 1,
+        "latitude": 1,
+        "longitude": 1,
+        "total_outstanding": 1,
+        "category": 1
+    }).sort("serial_number", 1).to_list(None)
+    
+    return {
+        "bills": bills,
+        "total": len(bills)
+    }
+
+@api_router.delete("/admin/bills/batch/{batch_id}")
+async def delete_bill_batch(batch_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a bill batch and all its bills"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Delete bills
+    result = await db.bills.delete_many({"batch_id": batch_id})
+    
+    # Delete batch
+    await db.batches.delete_one({"id": batch_id})
+    
+    return {"message": f"Deleted batch and {result.deleted_count} bills"}
+
 # ============== FILE SERVING ==============
 
 @api_router.get("/uploads/{filename}")
