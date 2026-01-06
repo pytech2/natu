@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Checkbox } from '../../components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -46,7 +47,9 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Eye
+  Eye,
+  Plus,
+  Copy
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -58,6 +61,7 @@ export default function BillsPage() {
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
   const [colonies, setColonies] = useState([]);
   const [batches, setBatches] = useState([]);
+  const [employees, setEmployees] = useState([]);
   
   // Filters
   const [filters, setFilters] = useState({
@@ -89,12 +93,21 @@ export default function BillsPage() {
   // Split by employee state
   const [splitDialog, setSplitDialog] = useState(false);
   const [splitting, setSplitting] = useState(false);
-  const [employeeCount, setEmployeeCount] = useState(5);
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [generatedFiles, setGeneratedFiles] = useState([]);
+
+  // Delete all state
+  const [deleteAllDialog, setDeleteAllDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Copy to properties state
+  const [copyDialog, setCopyDialog] = useState(false);
+  const [copying, setCopying] = useState(false);
 
   useEffect(() => {
     fetchBatches();
     fetchColonies();
+    fetchEmployees();
   }, []);
 
   useEffect(() => {
@@ -121,6 +134,19 @@ export default function BillsPage() {
       setColonies(response.data.colonies || []);
     } catch (error) {
       console.error('Failed to fetch colonies:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Filter to get surveyors and other field employees
+      const empList = (response.data || []).filter(u => u.role !== 'ADMIN');
+      setEmployees(empList);
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
     }
   };
 
@@ -244,16 +270,21 @@ export default function BillsPage() {
   };
 
   const handleSplitByEmployee = async () => {
+    if (selectedEmployees.length === 0) {
+      toast.error('Please select at least one employee');
+      return;
+    }
+
     setSplitting(true);
     try {
       const formData = new FormData();
       if (filters.batch_id) formData.append('batch_id', filters.batch_id);
       if (filters.colony) formData.append('colony', filters.colony);
-      formData.append('employee_count', employeeCount);
+      formData.append('employee_ids', selectedEmployees.join(','));
       formData.append('sn_font_size', pdfOptions.sn_font_size);
       formData.append('sn_color', pdfOptions.sn_color);
 
-      const response = await axios.post(`${API_URL}/admin/bills/split-by-employee`, formData, {
+      const response = await axios.post(`${API_URL}/admin/bills/split-by-employees`, formData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -266,6 +297,55 @@ export default function BillsPage() {
       toast.error(error.response?.data?.detail || 'Failed to split PDF');
     } finally {
       setSplitting(false);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    setDeleting(true);
+    try {
+      const formData = new FormData();
+      if (filters.batch_id) formData.append('batch_id', filters.batch_id);
+      if (filters.colony) formData.append('colony', filters.colony);
+
+      const response = await axios.post(`${API_URL}/admin/bills/delete-all`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      toast.success(response.data.message);
+      setDeleteAllDialog(false);
+      fetchBills();
+      fetchBatches();
+      fetchColonies();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete bills');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCopyToProperties = async () => {
+    setCopying(true);
+    try {
+      const formData = new FormData();
+      if (filters.batch_id) formData.append('batch_id', filters.batch_id);
+      if (filters.colony) formData.append('colony', filters.colony);
+
+      const response = await axios.post(`${API_URL}/admin/bills/copy-to-properties`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      toast.success(response.data.message);
+      setCopyDialog(false);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to copy bills to properties');
+    } finally {
+      setCopying(false);
     }
   };
 
@@ -296,6 +376,16 @@ export default function BillsPage() {
     } catch (error) {
       toast.error('Failed to update bill');
     }
+  };
+
+  const toggleEmployeeSelection = (empId) => {
+    setSelectedEmployees(prev => {
+      if (prev.includes(empId)) {
+        return prev.filter(id => id !== empId);
+      } else {
+        return [...prev, empId];
+      }
+    });
   };
 
   return (
@@ -375,7 +465,11 @@ export default function BillsPage() {
 
               <Button
                 variant="outline"
-                onClick={() => setSplitDialog(true)}
+                onClick={() => {
+                  setSplitDialog(true);
+                  setSelectedEmployees([]);
+                  setGeneratedFiles([]);
+                }}
                 disabled={pagination.total === 0}
               >
                 <Users className="w-4 h-4 mr-2" />
@@ -390,6 +484,35 @@ export default function BillsPage() {
                 <Map className="w-4 h-4 mr-2" />
                 View Map
               </Button>
+            </div>
+
+            {/* Second row of actions */}
+            <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setCopyDialog(true)}
+                disabled={pagination.total === 0}
+                className="border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add to Properties
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => setDeleteAllDialog(true)}
+                disabled={pagination.total === 0}
+                className="border-red-500 text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete All
+              </Button>
+
+              <div className="flex-1" />
+
+              <span className="text-sm text-slate-500">
+                {pagination.total} bills total
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -447,7 +570,7 @@ export default function BillsPage() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>SN</th>
+                    <th>SR</th>
                     <th>Property ID</th>
                     <th>Owner Name</th>
                     <th>Mobile</th>
@@ -686,7 +809,7 @@ export default function BillsPage() {
             <DialogHeader>
               <DialogTitle>Generate Arranged PDF</DialogTitle>
               <DialogDescription>
-                Generate a new PDF with bills arranged by GPS route order
+                Generate a new PDF with bills arranged by GPS route order. Serial numbers will be printed as "SR : 1", "SR : 2", etc.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -768,7 +891,7 @@ export default function BillsPage() {
             <DialogHeader>
               <DialogTitle>Split Bills by Employee</DialogTitle>
               <DialogDescription>
-                Distribute bills equally among employees and generate separate PDFs
+                Select employees to distribute bills and generate separate PDFs for each
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -776,19 +899,43 @@ export default function BillsPage() {
                 <p className="text-lg font-semibold text-slate-900">
                   Total Bills: <span className="text-blue-600">{pagination.total}</span>
                 </p>
-                <p className="text-sm text-slate-500">
-                  {pagination.total} bills ÷ {employeeCount} employees = ~{Math.ceil(pagination.total / employeeCount)} bills per employee
-                </p>
+                {selectedEmployees.length > 0 && (
+                  <p className="text-sm text-slate-500">
+                    {pagination.total} bills ÷ {selectedEmployees.length} employees = ~{Math.ceil(pagination.total / selectedEmployees.length)} bills per employee
+                  </p>
+                )}
               </div>
+
               <div className="space-y-2">
-                <Label>Number of Employees</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={employeeCount}
-                  onChange={(e) => setEmployeeCount(parseInt(e.target.value) || 1)}
-                />
+                <Label>Select Employees ({selectedEmployees.length} selected)</Label>
+                <div className="max-h-60 overflow-y-auto border rounded-lg p-2 space-y-2">
+                  {employees.length === 0 ? (
+                    <p className="text-sm text-slate-500 text-center py-4">
+                      No employees found. Create employees first.
+                    </p>
+                  ) : (
+                    employees.map((emp) => (
+                      <div
+                        key={emp.id}
+                        className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-slate-50 ${
+                          selectedEmployees.includes(emp.id) ? 'bg-blue-50 border border-blue-200' : ''
+                        }`}
+                        onClick={() => toggleEmployeeSelection(emp.id)}
+                      >
+                        <Checkbox
+                          checked={selectedEmployees.includes(emp.id)}
+                          onCheckedChange={() => toggleEmployeeSelection(emp.id)}
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{emp.name}</p>
+                          <p className="text-sm text-slate-500">
+                            {emp.username} • {emp.role}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
               
               {generatedFiles.length > 0 && (
@@ -796,10 +943,10 @@ export default function BillsPage() {
                   <Label>Generated Files</Label>
                   <div className="max-h-60 overflow-y-auto space-y-2">
                     {generatedFiles.map((file) => (
-                      <div key={file.employee_number} className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
+                      <div key={file.employee_id} className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
                         <div>
                           <p className="font-medium text-emerald-900">
-                            Employee {file.employee_number}
+                            {file.employee_name}
                           </p>
                           <p className="text-sm text-emerald-600">
                             {file.bill_range} ({file.total_bills} bills)
@@ -822,12 +969,13 @@ export default function BillsPage() {
               <Button variant="outline" onClick={() => {
                 setSplitDialog(false);
                 setGeneratedFiles([]);
+                setSelectedEmployees([]);
               }}>
                 Close
               </Button>
               <Button
                 onClick={handleSplitByEmployee}
-                disabled={splitting}
+                disabled={splitting || selectedEmployees.length === 0}
                 className="bg-blue-600"
               >
                 {splitting ? (
@@ -845,6 +993,76 @@ export default function BillsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete All Confirmation Dialog */}
+        <AlertDialog open={deleteAllDialog} onOpenChange={setDeleteAllDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete All Bills?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete <strong>{pagination.total}</strong> bills
+                {filters.colony && ` from ${filters.colony}`}
+                {filters.batch_id && ` in the selected batch`}.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAll}
+                disabled={deleting}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete All
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Copy to Properties Confirmation Dialog */}
+        <AlertDialog open={copyDialog} onOpenChange={setCopyDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Add Bills to Properties?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will copy <strong>{pagination.total}</strong> bills
+                {filters.colony && ` from ${filters.colony}`}
+                {filters.batch_id && ` in the selected batch`} to the Properties database.
+                A new batch will be created for these properties.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCopyToProperties}
+                disabled={copying}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {copying ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add to Properties
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );
