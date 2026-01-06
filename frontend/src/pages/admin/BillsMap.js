@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -25,6 +25,45 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
+
+// Function to spread overlapping markers in a spiral pattern
+const spreadOverlappingMarkers = (bills) => {
+  const coordMap = {};
+  const spreadBills = [];
+  const OFFSET = 0.00015; // About 15 meters offset
+  
+  bills.forEach((bill) => {
+    const key = `${bill.latitude},${bill.longitude}`;
+    if (!coordMap[key]) {
+      coordMap[key] = [];
+    }
+    coordMap[key].push(bill);
+  });
+  
+  Object.values(coordMap).forEach((group) => {
+    if (group.length === 1) {
+      // Single marker, no change
+      spreadBills.push({ ...group[0], spreadLat: group[0].latitude, spreadLng: group[0].longitude });
+    } else {
+      // Multiple markers at same location - spread in spiral pattern
+      group.forEach((bill, index) => {
+        if (index === 0) {
+          // First marker stays at original position
+          spreadBills.push({ ...bill, spreadLat: bill.latitude, spreadLng: bill.longitude });
+        } else {
+          // Spread others in a spiral
+          const angle = (index * 45) * (Math.PI / 180); // 45 degrees apart
+          const radius = OFFSET * Math.ceil(index / 8); // Increase radius every 8 markers
+          const newLat = bill.latitude + radius * Math.cos(angle);
+          const newLng = bill.longitude + radius * Math.sin(angle);
+          spreadBills.push({ ...bill, spreadLat: newLat, spreadLng: newLng });
+        }
+      });
+    }
+  });
+  
+  return spreadBills;
+};
 
 // Custom small marker with serial number
 const createBillIcon = (serialNumber, category) => {
