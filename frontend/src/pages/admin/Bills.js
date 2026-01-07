@@ -553,6 +553,20 @@ export default function BillsPage() {
 
               <Button
                 variant="outline"
+                onClick={() => {
+                  setDeleteColonyDialog(true);
+                  setSelectedColonyToDelete('');
+                  setColonyBillCount(0);
+                }}
+                disabled={colonies.length === 0}
+                className="border-orange-500 text-orange-600 hover:bg-orange-50"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete by Colony
+              </Button>
+
+              <Button
+                variant="outline"
                 onClick={() => setDeleteAllDialog(true)}
                 disabled={pagination.total === 0}
                 className="border-red-500 text-red-600 hover:bg-red-50"
