@@ -100,6 +100,11 @@ export default function BillsPage() {
   const [deleteAllDialog, setDeleteAllDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Delete by colony state
+  const [deleteColonyDialog, setDeleteColonyDialog] = useState(false);
+  const [selectedColonyToDelete, setSelectedColonyToDelete] = useState('');
+  const [colonyBillCount, setColonyBillCount] = useState(0);
+
   // Copy to properties state
   const [copyDialog, setCopyDialog] = useState(false);
   const [copying, setCopying] = useState(false);
