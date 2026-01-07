@@ -196,6 +196,10 @@ export default function Survey() {
   // File input refs
   const houseCameraRef = useRef(null);
   const houseGalleryRef = useRef(null);
+  const mapContainerRef = useRef(null);
+
+  // PDF download state
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     fetchProperty();
