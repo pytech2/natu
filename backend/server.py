@@ -1594,23 +1594,26 @@ async def submit_survey(
         "batch_id": prop["batch_id"],
         "employee_id": current_user["id"],
         "employee_name": current_user["name"],
-        # Survey fields
-        "new_owner_name": new_owner_name,
-        "new_mobile": new_mobile,
+        # Survey fields - NEW simplified structure
         "receiver_name": receiver_name,
+        "receiver_mobile": receiver_mobile,
         "relation": relation,
-        "old_property_id": old_property_id,
-        "family_id": family_id,
-        "aadhar_number": aadhar_number,
-        "ward_number": ward_number,
+        "correct_colony_name": correct_colony_name,
         "remarks": remarks,
-        "self_satisfied": self_satisfied,  # New field
+        "self_satisfied": self_satisfied,
         "latitude": latitude,
         "longitude": longitude,
         "submitted_at": datetime.now(timezone.utc).isoformat(),
         "photos": photos,
         "signature_url": signature_url,
-        "status": "Pending"  # Pending approval
+        "status": "Pending",
+        # Legacy fields for backward compat
+        "new_owner_name": new_owner_name or prop.get("owner_name"),
+        "new_mobile": new_mobile or prop.get("mobile"),
+        "old_property_id": old_property_id,
+        "family_id": family_id,
+        "aadhar_number": aadhar_number,
+        "ward_number": ward_number
     }
     
     # Check if submission already exists
