@@ -2157,9 +2157,9 @@ async def generate_arranged_pdf(
     sn_color: str = Form("red"),
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate arranged PDF with serial numbers"""
-    if current_user["role"] not in ADMIN_ROLES:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Generate arranged PDF with serial numbers (ADMIN only)"""
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
     query = {}
     if batch_id and batch_id.strip():
