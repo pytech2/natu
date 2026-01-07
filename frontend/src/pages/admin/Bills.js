@@ -1130,6 +1130,74 @@ export default function BillsPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Delete by Colony Dialog */}
+        <Dialog open={deleteColonyDialog} onOpenChange={setDeleteColonyDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-orange-600">Delete Bills by Colony</DialogTitle>
+              <DialogDescription>
+                Select a colony to delete all its bills. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Select Colony to Delete</Label>
+                <Select
+                  value={selectedColonyToDelete}
+                  onValueChange={(value) => {
+                    setSelectedColonyToDelete(value);
+                    if (value) fetchColonyBillCount(value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a colony..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colonies.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedColonyToDelete && (
+                <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                  <p className="text-orange-800">
+                    <strong>{colonyBillCount}</strong> bills will be permanently deleted from 
+                    <strong> {selectedColonyToDelete}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setDeleteColonyDialog(false);
+                setSelectedColonyToDelete('');
+                setColonyBillCount(0);
+              }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteByColony}
+                disabled={deleting || !selectedColonyToDelete}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Colony Bills
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
