@@ -1931,10 +1931,10 @@ async def upload_pdf_bills(
     batch_name: str = Form(...),
     authorization: str = Form(...)
 ):
-    """Upload multi-page PDF and extract bill data from each page"""
+    """Upload multi-page PDF and extract bill data from each page (ADMIN only)"""
     current_user = await get_current_user(authorization)
-    if current_user["role"] not in ADMIN_ROLES:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Only Admin can upload PDF bills")
     
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Please upload a PDF file")
