@@ -1838,8 +1838,16 @@ def extract_bill_data(text: str, page_num: int) -> dict:
         "total_area": find_value([r'Total\s*Area[:\s]*([0-9.]+\s*SqYard)', r'Area[:\s]*([0-9.]+)'], text),
         "category": find_value([r'Category[:\s]*([^\n,]+)', r'Type[:\s]*([^\n,]+)'], text),
         "authorized_status": find_value([r'Authorized\s*Status[:\s]*([^\n]+)'], text),
-        "total_outstanding": find_value([r'Total\s*Outstanding[:\s]*Rs?\.?\s*([0-9,.-]+)', r'Outstanding[:\s]*Rs?\.?\s*([0-9,.-]+)'], text),
-        "property_tax_outstanding": find_value([r'Property\s*&?\s*Fire\s*Tax\s*Outstanding[:\s]*Rs?\.?\s*([0-9,.-]+)'], text),
+        "total_outstanding": find_value([
+            r'Total\s*Outstanding\s*as\s*on\s*date[^=]*=\s*([0-9,.-]+)',  # Total Outstanding as on date (PO+AO+...)= 3179.16
+            r'Total\s*Outstanding[:\s]*Rs?\.?\s*([0-9,.-]+)', 
+            r'Outstanding[:\s]*Rs?\.?\s*([0-9,.-]+)'
+        ], text),
+        "property_tax_outstanding": find_value([r'Property\s*&?\s*Fire\s*Tax\s*Outstanding[^\d]*([0-9,.-]+)'], text),
+        "outstanding_property_arrear": find_value([r'Outstanding\s*Property\s*Tax\s*Arrear[^\d]*([0-9,.-]+)', r'AO[=:\s]*([0-9,.-]+)'], text),
+        "outstanding_fire_arrear": find_value([r'Outstanding\s*Fire\s*Tax\s*Arrear[^\d]*([0-9,.-]+)', r'FO[=:\s]*([0-9,.-]+)'], text),
+        "outstanding_interest": find_value([r'Outstanding\s*Interest\s*on\s*Arrear[^\d]*([0-9,.-]+)', r'IO[=:\s]*([0-9,.-]+)'], text),
+        "outstanding_garbage": find_value([r'Outstanding\s*Garbage\s*Collection\s*Charges[^\d]*([0-9,.-]+)', r'SO1[=:\s]*([0-9,.-]+)'], text),
         "page_number": page_num
     }
     
