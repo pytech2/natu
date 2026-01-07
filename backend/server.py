@@ -1513,24 +1513,27 @@ async def get_property_detail(property_id: str, current_user: dict = Depends(get
 @api_router.post("/employee/submit/{property_id}")
 async def submit_survey(
     property_id: str,
-    # Survey fields
-    new_owner_name: str = Form(...),
-    new_mobile: str = Form(...),
+    # Survey fields - Simplified as per requirements
     receiver_name: str = Form(...),
+    receiver_mobile: str = Form(...),  # NEW: 10-digit mobile validation
     relation: str = Form(...),
-    old_property_id: str = Form(None),
-    family_id: str = Form(None),
-    aadhar_number: str = Form(None),
-    ward_number: str = Form(None),
+    correct_colony_name: str = Form(None),  # NEW: Correct colony name
     remarks: str = Form(None),
-    self_satisfied: str = Form(None),  # New field: 'yes' or 'no'
+    self_satisfied: str = Form(...),
     latitude: float = Form(...),
     longitude: float = Form(...),
     house_photo: UploadFile = File(...),
-    gate_photo: UploadFile = File(...),
+    gate_photo: UploadFile = File(...),  # Keep for backward compat but optional
     signature: UploadFile = File(...),
     extra_photos: List[UploadFile] = File(default=[]),
-    authorization: str = Form(...)
+    authorization: str = Form(...),
+    # Legacy fields - keep for backward compatibility
+    new_owner_name: str = Form(None),
+    new_mobile: str = Form(None),
+    old_property_id: str = Form(None),
+    family_id: str = Form(None),
+    aadhar_number: str = Form(None),
+    ward_number: str = Form(None)
 ):
     current_user = await get_current_user(authorization)
     
