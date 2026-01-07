@@ -564,6 +564,68 @@ export default function Survey() {
           </CardContent>
         </Card>
 
+        {/* Property Location Map */}
+        {property?.latitude && property?.longitude && (
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                  <Map className="w-4 h-4" />
+                  Property Location Map
+                </CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDownloadMapPdf}
+                  disabled={downloadingPdf}
+                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                >
+                  {downloadingPdf ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-1" />
+                      Download PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div ref={mapContainerRef} className="rounded-lg overflow-hidden border border-slate-200">
+                <MapContainer
+                  center={[property.latitude, property.longitude]}
+                  zoom={17}
+                  style={{ height: '250px', width: '100%' }}
+                  scrollWheelZoom={false}
+                  dragging={true}
+                  touchZoom={true}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <Marker position={[property.latitude, property.longitude]}>
+                    <Popup>
+                      <div className="text-xs">
+                        <p className="font-bold">{property.property_id}</p>
+                        <p>{property.owner_name}</p>
+                        <p className="text-slate-500">{property.colony || property.ward}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                </MapContainer>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 text-center">
+                Tap the marker for property details • Pinch to zoom
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* GPS Status */}
         <Card>
           <CardContent className="py-3">
