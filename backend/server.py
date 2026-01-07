@@ -282,10 +282,10 @@ async def reset_user_password(user_id: str, data: ResetPasswordRequest, current_
     # Hash the new password
     hashed_password = bcrypt.hashpw(data.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     
-    # Update password
+    # Update password_hash (the field used by login verification)
     await db.users.update_one(
         {"id": user_id},
-        {"$set": {"password": hashed_password}}
+        {"$set": {"password_hash": hashed_password}}
     )
     
     return {"message": f"Password reset successfully for {user['name']}"}
