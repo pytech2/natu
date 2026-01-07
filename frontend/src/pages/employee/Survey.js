@@ -34,19 +34,14 @@ import {
   RotateCcw,
   Upload,
   Image as ImageIcon,
-  Users,
-  Hash,
-  CreditCard,
   Building
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 // Function to add watermark to image with GPS, Date, Time
-// Fixed for mobile browser compatibility
 const addWatermarkToImage = (file, latitude, longitude) => {
   return new Promise((resolve, reject) => {
-    // Create a FileReader to properly load the image on mobile
     const reader = new FileReader();
     
     reader.onload = (e) => {
@@ -57,14 +52,11 @@ const addWatermarkToImage = (file, latitude, longitude) => {
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           
-          // Set canvas size to match image
           canvas.width = img.width;
           canvas.height = img.height;
           
-          // Draw original image
           ctx.drawImage(img, 0, 0, img.width, img.height);
           
-          // Watermark settings
           const now = new Date();
           const dateStr = now.toLocaleDateString('en-IN', {
             day: '2-digit',
@@ -78,128 +70,57 @@ const addWatermarkToImage = (file, latitude, longitude) => {
             hour12: true
           });
           
-          // Format GPS coordinates
-          const latStr = latitude ? latitude.toFixed(6) : 'N/A';
-          const longStr = longitude ? longitude.toFixed(6) : 'N/A';
+          const watermarkText = `GPS: ${latitude?.toFixed(6)}, ${longitude?.toFixed(6)} | ${dateStr} ${timeStr}`;
           
-          const watermarkLines = [
-            `Date: ${dateStr}`,
-            `Time: ${timeStr}`,
-            `Lat: ${latStr}`,
-            `Long: ${longStr}`,
-            `maps.google.com`
-          ];
+          const fontSize = Math.max(20, Math.min(img.width, img.height) * 0.025);
+          ctx.font = `bold ${fontSize}px Arial`;
           
-          // Calculate font size based on image dimensions (responsive)
-          const minDimension = Math.min(img.width, img.height);
-          const fontSize = Math.max(24, Math.floor(minDimension * 0.04));
-          const padding = Math.floor(fontSize * 0.8);
-          const lineHeight = Math.floor(fontSize * 1.5);
+          const textWidth = ctx.measureText(watermarkText).width;
+          const padding = 15;
+          const x = img.width - textWidth - padding;
+          const y = img.height - padding;
           
-          // Set font for measuring text
-          ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+          ctx.fillRect(x - 10, y - fontSize - 5, textWidth + 20, fontSize + 15);
           
-          // Calculate max text width
-          let maxTextWidth = 0;
-          watermarkLines.forEach(line => {
-            const metrics = ctx.measureText(line);
-            if (metrics.width > maxTextWidth) {
-              maxTextWidth = metrics.width;
-            }
-          });
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(watermarkText, x, y);
           
-          // Background rectangle dimensions
-          const boxWidth = maxTextWidth + padding * 2;
-          const boxHeight = lineHeight * watermarkLines.length + padding * 2;
-          
-          // Position at bottom-left with margin
-          const boxX = padding;
-          const boxY = img.height - boxHeight - padding;
-          
-          // Draw semi-transparent black background
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-          ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
-          
-          // Draw yellow border
-          ctx.strokeStyle = '#FFD700';
-          ctx.lineWidth = 4;
-          ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
-          
-          // Draw text
-          ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-          ctx.textBaseline = 'top';
-          
-          watermarkLines.forEach((line, index) => {
-            // Highlight GPS coordinates in yellow
-            if (line.startsWith('Lat:') || line.startsWith('Long:')) {
-              ctx.fillStyle = '#FFD700';
-            } else if (line.includes('google')) {
-              ctx.fillStyle = '#00FF00';
-            } else {
-              ctx.fillStyle = '#FFFFFF';
-            }
-            ctx.fillText(line, boxX + padding, boxY + padding + (index * lineHeight));
-          });
-          
-          // Add location pin icon at top-right
-          const iconSize = Math.floor(fontSize * 3);
-          const iconX = img.width - iconSize - padding;
-          const iconY = padding;
-          
-          // Draw red circle background
-          ctx.beginPath();
-          ctx.arc(iconX + iconSize/2, iconY + iconSize/2, iconSize/2, 0, Math.PI * 2);
-          ctx.fillStyle = '#DC2626';
-          ctx.fill();
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.lineWidth = 3;
-          ctx.stroke();
-          
-          // Draw GPS text in circle
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = `bold ${iconSize * 0.35}px Arial`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('GPS', iconX + iconSize/2, iconY + iconSize/2);
-          
-          // Reset text align
-          ctx.textAlign = 'left';
-          
-          // Convert canvas to blob with high quality
           canvas.toBlob((blob) => {
             if (blob) {
-              const watermarkedFile = new File(
-                [blob], 
-                'photo_' + Date.now() + '.jpg', 
-                { type: 'image/jpeg' }
-              );
+              const watermarkedFile = new File([blob], file.name, { type: 'image/jpeg' });
               resolve(watermarkedFile);
             } else {
-              reject(new Error('Failed to create blob'));
+              resolve(file);
             }
-          }, 'image/jpeg', 0.95);
-          
-        } catch (error) {
-          console.error('Canvas error:', error);
-          reject(error);
+          }, 'image/jpeg', 0.9);
+        } catch (err) {
+          resolve(file);
         }
       };
       
-      img.onerror = () => reject(new Error('Failed to load image'));
-      
-      // Use the FileReader result (base64 data URL) instead of object URL
-      // This is more reliable on mobile browsers
+      img.onerror = () => resolve(file);
       img.src = e.target.result;
     };
     
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    
-    // Read file as data URL for better mobile compatibility
+    reader.onerror = () => resolve(file);
     reader.readAsDataURL(file);
   });
 };
 
-// Relation options - Updated as per requirements
+// Convert dataURL to Blob
+const dataURLtoBlob = (dataURL) => {
+  const arr = dataURL.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+};
+
 const RELATION_OPTIONS = [
   'Self',
   'Family Member',
@@ -208,9 +129,9 @@ const RELATION_OPTIONS = [
   'Other'
 ];
 
-// Calculate distance between two GPS coordinates in meters (Haversine formula)
+// Calculate distance between two GPS coordinates
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371000; // Earth's radius in meters
+  const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -229,51 +150,43 @@ export default function Survey() {
   const [submission, setSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [processingPhoto, setProcessingPhoto] = useState(null); // 'house' or 'gate'
+  const [processingPhoto, setProcessingPhoto] = useState(null);
 
   // GPS State
   const [gpsStatus, setGpsStatus] = useState('idle');
   const [location, setLocation] = useState({ latitude: null, longitude: null });
 
-  // Form State - NEW FIELDS as per user requirements
+  // Form State - Simplified as per requirements
   const [formData, setFormData] = useState({
-    new_owner_name: '',
-    new_mobile: '',
     receiver_name: '',
+    receiver_mobile: '',  // NEW: Receiver mobile with 10-digit validation
     relation: '',
-    family_id: '',
-    aadhar_number: '',
-    ward_number: '',
+    correct_colony_name: '', // NEW: Correct colony name field
     remarks: '',
-    self_satisfied: '' // New field: 'yes' or 'no'
+    self_satisfied: ''
   });
   
-  // 50m radius check state
-  const [withinRange, setWithinRange] = useState(null); // null = checking, true = in range, false = out of range
+  // 50m radius check
+  const [withinRange, setWithinRange] = useState(null);
   const [distanceFromProperty, setDistanceFromProperty] = useState(null);
 
-  // Photo State
+  // Photo State - Only house photo now
   const [housePhoto, setHousePhoto] = useState(null);
-  const [gatePhoto, setGatePhoto] = useState(null);
   const [housePhotoPreview, setHousePhotoPreview] = useState(null);
-  const [gatePhotoPreview, setGatePhotoPreview] = useState(null);
 
   // Signature State
   const signatureRef = useRef(null);
   const [signatureData, setSignatureData] = useState(null);
 
-  // File input refs - separate for camera and gallery
+  // File input refs
   const houseCameraRef = useRef(null);
   const houseGalleryRef = useRef(null);
-  const gateCameraRef = useRef(null);
-  const gateGalleryRef = useRef(null);
 
   useEffect(() => {
     fetchProperty();
     getLocation();
   }, [propertyId]);
 
-  // Check distance when location and property are both available
   useEffect(() => {
     if (location.latitude && location.longitude && property?.latitude && property?.longitude) {
       const distance = calculateDistance(
@@ -283,7 +196,7 @@ export default function Survey() {
         property.longitude
       );
       setDistanceFromProperty(Math.round(distance));
-      setWithinRange(distance <= 50); // 50 meters radius
+      setWithinRange(distance <= 50);
     }
   }, [location, property]);
 
@@ -295,28 +208,16 @@ export default function Survey() {
       setProperty(response.data.property);
       setSubmission(response.data.submission);
 
-      // Pre-fill form with existing data if available (for re-submission after rejection)
       if (response.data.submission) {
         const sub = response.data.submission;
         setFormData({
-          new_owner_name: sub.new_owner_name || response.data.property.owner_name || '',
-          new_mobile: sub.new_mobile || response.data.property.mobile || '',
           receiver_name: sub.receiver_name || '',
+          receiver_mobile: sub.receiver_mobile || '',
           relation: sub.relation || '',
-          family_id: sub.family_id || '',
-          aadhar_number: sub.aadhar_number || '',
-          ward_number: sub.ward_number || '', // Now editable, blank
+          correct_colony_name: sub.correct_colony_name || '',
           remarks: sub.remarks || '',
           self_satisfied: sub.self_satisfied || ''
         });
-      } else {
-        // Pre-fill with property data for new submissions
-        setFormData(prev => ({
-          ...prev,
-          new_owner_name: response.data.property.owner_name || '',
-          new_mobile: response.data.property.mobile || '',
-          ward_number: '' // Blank and editable
-        }));
       }
     } catch (error) {
       toast.error('Failed to load property');
@@ -351,133 +252,78 @@ export default function Survey() {
     );
   };
 
-  const processAndSetPhoto = async (file, type) => {
+  const handlePhotoCapture = async (e, type) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-
-    // Check if GPS is captured
-    if (!location.latitude || !location.longitude) {
-      toast.error('Please capture GPS location first!');
-      return;
-    }
 
     setProcessingPhoto(type);
 
     try {
-      // Add watermark to photo
-      const watermarkedFile = await addWatermarkToImage(
-        file, 
-        location.latitude, 
-        location.longitude
-      );
-      
-      // Create preview URL from watermarked file
-      const previewUrl = URL.createObjectURL(watermarkedFile);
-      
-      if (type === 'house') {
-        setHousePhoto(watermarkedFile);
-        setHousePhotoPreview(previewUrl);
+      if (location.latitude && location.longitude) {
+        const watermarkedFile = await addWatermarkToImage(file, location.latitude, location.longitude);
+        if (type === 'house') {
+          setHousePhoto(watermarkedFile);
+          const previewUrl = URL.createObjectURL(watermarkedFile);
+          setHousePhotoPreview(previewUrl);
+        }
+        toast.success('Photo captured with GPS & timestamp watermark!');
       } else {
-        setGatePhoto(watermarkedFile);
-        setGatePhotoPreview(previewUrl);
+        if (type === 'house') {
+          setHousePhoto(file);
+          setHousePhotoPreview(URL.createObjectURL(file));
+        }
+        toast.warning('Photo captured (no GPS watermark - location not available)');
       }
-      
-      toast.success('Photo captured with GPS & timestamp watermark!');
-      
     } catch (error) {
-      console.error('Photo processing error:', error);
-      toast.error('Failed to process photo. Please try again.');
+      toast.error('Error processing photo');
     } finally {
       setProcessingPhoto(null);
     }
   };
 
-  const handlePhotoChange = (e, type) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      processAndSetPhoto(file, type);
-    }
-    // Reset input value so same file can be selected again
-    e.target.value = '';
-  };
-
-  const openCamera = (type) => {
-    if (!location.latitude) {
-      toast.error('Please capture GPS location first!');
-      return;
-    }
-    if (type === 'house') {
-      houseCameraRef.current?.click();
-    } else {
-      gateCameraRef.current?.click();
-    }
-  };
-
-  const openGallery = (type) => {
-    if (!location.latitude) {
-      toast.error('Please capture GPS location first!');
-      return;
-    }
-    if (type === 'house') {
-      houseGalleryRef.current?.click();
-    } else {
-      gateGalleryRef.current?.click();
-    }
-  };
-
   const clearSignature = () => {
-    if (signatureRef.current) {
-      signatureRef.current.clear();
-      setSignatureData(null);
-    }
+    signatureRef.current?.clear();
+    setSignatureData(null);
   };
 
   const saveSignature = () => {
-    if (signatureRef.current && !signatureRef.current.isEmpty()) {
-      const dataUrl = signatureRef.current.toDataURL('image/png');
-      setSignatureData(dataUrl);
-      toast.success('Signature captured');
-    } else {
+    if (signatureRef.current?.isEmpty()) {
       toast.error('Please provide a signature');
+      return;
     }
+    const data = signatureRef.current.toDataURL('image/png');
+    setSignatureData(data);
+    toast.success('Signature saved!');
   };
 
-  const dataURLtoBlob = (dataURL) => {
-    const arr = dataURL.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], { type: mime });
+  const validateMobile = (mobile) => {
+    return /^\d{10}$/.test(mobile);
   };
 
   const handleSubmit = async () => {
-    // Validate required fields
+    // Validations
+    if (withinRange === false) {
+      toast.error('You must be within 50 meters of the property to submit');
+      return;
+    }
+
     if (!formData.receiver_name || !formData.relation) {
-      toast.error('Please fill in receiver name and relation');
+      toast.error('Receiver name and relation are required');
+      return;
+    }
+
+    if (!formData.receiver_mobile || !validateMobile(formData.receiver_mobile)) {
+      toast.error('Please enter a valid 10-digit receiver mobile number');
       return;
     }
 
     if (!formData.self_satisfied) {
-      toast.error('Please select Self Satisfied option');
+      toast.error('Please select if notice receiver is satisfied');
       return;
     }
 
-    if (!location.latitude || !location.longitude) {
-      toast.error('GPS location is required');
-      return;
-    }
-
-    if (!housePhoto || !gatePhoto) {
-      toast.error('Both house photo and gate photo are required');
+    if (!housePhoto) {
+      toast.error('Property photo is required');
       return;
     }
 
@@ -490,21 +336,18 @@ export default function Survey() {
 
     try {
       const formDataObj = new FormData();
-      // Survey fields - using property data for locked fields
-      formDataObj.append('new_owner_name', property?.owner_name || '');
-      formDataObj.append('new_mobile', property?.mobile || '');
       formDataObj.append('receiver_name', formData.receiver_name);
+      formDataObj.append('receiver_mobile', formData.receiver_mobile);
       formDataObj.append('relation', formData.relation);
-      formDataObj.append('old_property_id', ''); // Removed field
-      formDataObj.append('family_id', formData.family_id || '');
-      formDataObj.append('aadhar_number', formData.aadhar_number || '');
-      formDataObj.append('ward_number', formData.ward_number || '');
+      formDataObj.append('correct_colony_name', formData.correct_colony_name || '');
       formDataObj.append('remarks', formData.remarks || '');
-      formDataObj.append('self_satisfied', formData.self_satisfied || '');
+      formDataObj.append('self_satisfied', formData.self_satisfied);
       formDataObj.append('latitude', location.latitude);
       formDataObj.append('longitude', location.longitude);
       formDataObj.append('house_photo', housePhoto);
-      formDataObj.append('gate_photo', gatePhoto);
+      
+      // Create a dummy gate photo from house photo (backend still expects it)
+      formDataObj.append('gate_photo', housePhoto);
       
       const signatureBlob = dataURLtoBlob(signatureData);
       const signatureFile = new File([signatureBlob], 'signature.png', { type: 'image/png' });
@@ -582,682 +425,394 @@ export default function Survey() {
       </header>
 
       <main className="p-4 space-y-4" data-testid="survey-form">
-        {/* Property Info */}
+        {/* Property Info Card - Shows all required fields */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-              Property Details
+              Property Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-slate-500">Property ID</span>
-              <span className="font-mono font-medium">{property?.property_id}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Owner</span>
-              <span className="font-medium">{property?.owner_name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Mobile</span>
-              <span className="font-mono">{property?.mobile || '-'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Address</span>
-              <span className="text-right max-w-[60%]">{property?.address || '-'}</span>
-            </div>
-            {property?.amount && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Amount</span>
-                <span className="font-mono text-emerald-700 font-semibold">₹{property?.amount}</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="text-slate-500 text-xs">Property ID</span>
+                <p className="font-mono font-medium">{property?.property_id}</p>
               </div>
-            )}
-            {property?.ward && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Ward</span>
-                <span>{property?.ward}</span>
+              <div>
+                <span className="text-slate-500 text-xs">Owner</span>
+                <p className="font-medium">{property?.owner_name || '-'}</p>
+              </div>
+              <div>
+                <span className="text-slate-500 text-xs">Mobile</span>
+                <p className="font-mono">{property?.mobile || '-'}</p>
+              </div>
+              <div>
+                <span className="text-slate-500 text-xs">Colony</span>
+                <p className="font-medium">{property?.colony || property?.ward || '-'}</p>
+              </div>
+              <div>
+                <span className="text-slate-500 text-xs">Category</span>
+                <p className="font-medium">{property?.category || '-'}</p>
+              </div>
+              <div>
+                <span className="text-slate-500 text-xs">Total Area</span>
+                <p className="font-medium">{property?.total_area || '-'}</p>
+              </div>
+              <div>
+                <span className="text-slate-500 text-xs">Total Amount</span>
+                <p className="font-medium text-red-600">₹{property?.amount || '0'}</p>
+              </div>
+              <div>
+                <span className="text-slate-500 text-xs">Address</span>
+                <p className="font-medium text-xs">{property?.address || '-'}</p>
+              </div>
+            </div>
+            {property?.latitude && property?.longitude && (
+              <div className="pt-2 border-t">
+                <span className="text-slate-500 text-xs">GPS Coordinates</span>
+                <p className="font-mono text-xs">{property?.latitude?.toFixed(6)}, {property?.longitude?.toFixed(6)}</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* GPS Status */}
-        <Card className={`${
-          gpsStatus === 'success' ? 'border-emerald-300 bg-emerald-50' :
-          gpsStatus === 'error' ? 'border-red-300 bg-red-50' :
-          'border-amber-300 bg-amber-50'
-        }`}>
-          <CardContent className="py-4">
+        <Card>
+          <CardContent className="py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {gpsStatus === 'loading' ? (
-                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-                ) : gpsStatus === 'success' ? (
-                  <CheckCircle className="w-6 h-6 text-emerald-600" />
-                ) : (
-                  <AlertTriangle className="w-6 h-6 text-amber-600" />
-                )}
+                <div className={`p-2 rounded-lg ${
+                  gpsStatus === 'success' ? 'bg-emerald-100' :
+                  gpsStatus === 'error' ? 'bg-red-100' : 'bg-slate-100'
+                }`}>
+                  <MapPin className={`w-5 h-5 ${
+                    gpsStatus === 'success' ? 'text-emerald-600' :
+                    gpsStatus === 'error' ? 'text-red-600' : 'text-slate-500'
+                  }`} />
+                </div>
                 <div>
-                  <p className="font-semibold text-slate-900">
-                    {gpsStatus === 'success' ? '✓ GPS Captured' : 'Step 1: Capture GPS'}
+                  <p className="text-sm font-medium">
+                    {gpsStatus === 'loading' ? 'Getting location...' :
+                     gpsStatus === 'success' ? 'Location captured' :
+                     gpsStatus === 'error' ? 'Location failed' : 'GPS Status'}
                   </p>
-                  {location.latitude ? (
-                    <p className="text-xs font-mono text-slate-600">
-                      {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                  {gpsStatus === 'success' && (
+                    <p className="text-xs text-slate-500 font-mono">
+                      {location.latitude?.toFixed(6)}, {location.longitude?.toFixed(6)}
                     </p>
-                  ) : (
-                    <p className="text-xs text-amber-700">Required before taking photos</p>
                   )}
                 </div>
               </div>
-              <Button
-                size="sm"
-                onClick={getLocation}
-                className={gpsStatus === 'success' ? 'bg-emerald-600' : 'bg-amber-600 hover:bg-amber-700'}
-                data-testid="capture-gps-btn"
-              >
-                <MapPin className="w-4 h-4 mr-1" />
-                {gpsStatus === 'success' ? 'Recapture' : 'Capture'}
+              <Button size="sm" variant="outline" onClick={getLocation} disabled={gpsStatus === 'loading'}>
+                <Navigation className="w-4 h-4 mr-1" />
+                Refresh
               </Button>
             </div>
-            {location.latitude && (
-              <a
-                href={`https://www.google.com/maps?q=${location.latitude},${location.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-emerald-700 hover:underline mt-2 inline-block"
-              >
-                📍 View on Google Maps
-              </a>
+
+            {/* Distance Check */}
+            {property?.latitude && property?.longitude && distanceFromProperty !== null && (
+              <div className={`mt-3 p-3 rounded-lg ${withinRange ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                <div className="flex items-center gap-2">
+                  {withinRange ? (
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  ) : (
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                  )}
+                  <div>
+                    <p className={`text-sm font-medium ${withinRange ? 'text-emerald-700' : 'text-red-700'}`}>
+                      {withinRange ? 'Within range' : 'Out of range'} - {distanceFromProperty}m from property
+                    </p>
+                    <p className="text-xs text-slate-600">
+                      {withinRange ? 'You can submit the survey' : 'Move closer to the property (within 50m)'}
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* 50m Radius Check - Only show when GPS is available */}
-        {!isCompleted && gpsStatus === 'success' && property?.latitude && property?.longitude && (
-          <Card className={`${
-            withinRange === true ? 'border-emerald-300 bg-emerald-50' :
-            withinRange === false ? 'border-red-300 bg-red-50' :
-            'border-amber-300 bg-amber-50'
-          }`}>
-            <CardContent className="py-4">
-              <div className="flex items-center gap-3">
-                {withinRange === null ? (
-                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-                ) : withinRange ? (
-                  <CheckCircle className="w-6 h-6 text-emerald-600" />
-                ) : (
-                  <AlertTriangle className="w-6 h-6 text-red-600" />
-                )}
-                <div className="flex-1">
-                  <p className="font-semibold text-slate-900">
-                    {withinRange === null ? 'Checking distance...' :
-                     withinRange ? '✓ Within Survey Range' : '⚠️ Too Far from Property'}
-                  </p>
-                  <p className={`text-sm ${withinRange ? 'text-emerald-700' : 'text-red-700'}`}>
-                    Distance: <span className="font-mono font-bold">{distanceFromProperty}m</span>
-                    {withinRange ? ' (within 50m limit)' : ' - Must be within 50m to submit survey'}
-                  </p>
-                </div>
-              </div>
-              {!withinRange && withinRange !== null && (
-                <div className="mt-3 p-3 bg-red-100 rounded-lg">
-                  <p className="text-sm text-red-800">
-                    <strong>Please move closer to the property.</strong> You must be within 50 meters of the property location to submit the survey.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
         {!isCompleted && (
           <>
-            {/* Survey Form Fields - Updated with locked fields */}
+            {/* Notice Receiver Details */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                  Survey Information
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Notice Receiver Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Locked Property Fields (Read-only from uploaded data) */}
-                <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
-                  <p className="text-xs font-semibold text-slate-500 mb-3">PROPERTY DATA (READ ONLY)</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <p className="text-xs text-slate-500">Property ID</p>
-                      <p className="font-mono font-medium text-slate-900">{property?.property_id || '-'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-slate-500">Owner</p>
-                      <p className="font-medium text-slate-900">{property?.owner_name || '-'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-slate-500">Mobile</p>
-                      <p className="font-mono text-slate-900">{property?.mobile || '-'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-slate-500">Colony</p>
-                      <p className="text-slate-900">{property?.colony || property?.ward || '-'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-slate-500">Total Area</p>
-                      <p className="text-slate-900">{property?.total_area || '-'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-slate-500">Amount</p>
-                      <p className="font-medium text-emerald-700">₹{property?.amount || '0'}</p>
-                    </div>
-                    {property?.latitude && property?.longitude && (
-                      <>
-                        <div className="space-y-1">
-                          <p className="text-xs text-slate-500">Latitude</p>
-                          <p className="font-mono text-xs text-slate-900">{property?.latitude?.toFixed(6)}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-slate-500">Longitude</p>
-                          <p className="font-mono text-xs text-slate-900">{property?.longitude?.toFixed(6)}</p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Receiver Details */}
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-xs font-semibold text-blue-700 mb-3">NOTICE RECEIVER DETAILS</p>
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-sm">
-                        <Users className="w-4 h-4 text-slate-400" />
-                        Receiver Name *
-                      </Label>
-                      <Input
-                        data-testid="receiver-name-input"
-                        value={formData.receiver_name}
-                        onChange={(e) => setFormData({ ...formData, receiver_name: e.target.value })}
-                        className="h-12"
-                        placeholder="Name of person receiving notice"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm">Relation with Owner *</Label>
-                      <Select
-                        value={formData.relation}
-                        onValueChange={(value) => setFormData({ ...formData, relation: value })}
-                      >
-                        <SelectTrigger className="h-12" data-testid="relation-select">
-                          <SelectValue placeholder="Select relation" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {RELATION_OPTIONS.map((rel) => (
-                            <SelectItem key={rel} value={rel}>{rel}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Family ID and Ward Number */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm">
-                      <Users className="w-4 h-4 text-slate-400" />
-                      Family ID
-                    </Label>
-                    <Input
-                      data-testid="family-id-input"
-                      value={formData.family_id}
-                      onChange={(e) => setFormData({ ...formData, family_id: e.target.value })}
-                      className="h-12"
-                      placeholder="Family ID"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm">
-                      <Building className="w-4 h-4 text-slate-400" />
-                      Ward Number
-                    </Label>
-                    <Input
-                      data-testid="ward-number-input"
-                      value={formData.ward_number}
-                      onChange={(e) => setFormData({ ...formData, ward_number: e.target.value })}
-                      className="h-12"
-                      placeholder="Enter Ward #"
-                    />
-                  </div>
-                </div>
-
-                {/* Aadhar Number */}
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-sm">
-                    <CreditCard className="w-4 h-4 text-slate-400" />
-                    Aadhar Number
-                  </Label>
+                  <Label>Receiver Name *</Label>
                   <Input
-                    data-testid="aadhar-number-input"
-                    value={formData.aadhar_number}
-                    onChange={(e) => setFormData({ ...formData, aadhar_number: e.target.value })}
-                    className="h-12"
-                    placeholder="12-digit Aadhar Number"
-                    maxLength={12}
+                    value={formData.receiver_name}
+                    onChange={(e) => setFormData({ ...formData, receiver_name: e.target.value })}
+                    placeholder="Name of person receiving notice"
+                    data-testid="receiver-name-input"
                   />
                 </div>
 
-                {/* Self Satisfied - New field */}
-                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <Label className="text-sm font-semibold text-amber-700 mb-3 block">Self Satisfied? *</Label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="self_satisfied"
-                        value="yes"
-                        checked={formData.self_satisfied === 'yes'}
-                        onChange={(e) => setFormData({ ...formData, self_satisfied: e.target.value })}
-                        className="w-5 h-5 text-emerald-600"
-                        data-testid="self-satisfied-yes"
-                      />
-                      <span className="text-base font-medium text-emerald-700">Yes</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="self_satisfied"
-                        value="no"
-                        checked={formData.self_satisfied === 'no'}
-                        onChange={(e) => setFormData({ ...formData, self_satisfied: e.target.value })}
-                        className="w-5 h-5 text-red-600"
-                        data-testid="self-satisfied-no"
-                      />
-                      <span className="text-base font-medium text-red-700">No</span>
-                    </label>
+                <div className="space-y-2">
+                  <Label>Receiver Mobile Number *</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      value={formData.receiver_mobile}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setFormData({ ...formData, receiver_mobile: value });
+                      }}
+                      placeholder="10-digit mobile number"
+                      className="pl-10"
+                      maxLength={10}
+                      data-testid="receiver-mobile-input"
+                    />
                   </div>
+                  {formData.receiver_mobile && !validateMobile(formData.receiver_mobile) && (
+                    <p className="text-xs text-red-500">Please enter a valid 10-digit mobile number</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Remarks (Optional)</Label>
+                  <Label>Relation with Owner *</Label>
+                  <Select
+                    value={formData.relation}
+                    onValueChange={(value) => setFormData({ ...formData, relation: value })}
+                  >
+                    <SelectTrigger data-testid="relation-select">
+                      <SelectValue placeholder="Select relation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RELATION_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Correct Colony Name (if different)</Label>
+                  <Input
+                    value={formData.correct_colony_name}
+                    onChange={(e) => setFormData({ ...formData, correct_colony_name: e.target.value })}
+                    placeholder="Enter correct colony name if different from records"
+                    data-testid="correct-colony-input"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Self Satisfied? *</Label>
+                  <Select
+                    value={formData.self_satisfied}
+                    onValueChange={(value) => setFormData({ ...formData, self_satisfied: value })}
+                  >
+                    <SelectTrigger data-testid="self-satisfied-select">
+                      <SelectValue placeholder="Is the notice receiver satisfied?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes - Satisfied</SelectItem>
+                      <SelectItem value="no">No - Not Satisfied</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Remarks</Label>
                   <Textarea
-                    data-testid="remarks-input"
                     value={formData.remarks}
                     onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                    placeholder="Any additional notes..."
+                    placeholder="Any additional comments..."
                     rows={2}
+                    data-testid="remarks-input"
                   />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Photo Upload - HOUSE */}
+            {/* Property Photo */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                  Step 2: House/Property Photo *
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Camera className="w-4 h-4" />
+                  Property Photo *
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Hidden file inputs */}
                 <input
                   ref={houseCameraRef}
                   type="file"
                   accept="image/*"
                   capture="environment"
-                  onChange={(e) => handlePhotoChange(e, 'house')}
                   className="hidden"
+                  onChange={(e) => handlePhotoCapture(e, 'house')}
                 />
                 <input
                   ref={houseGalleryRef}
                   type="file"
                   accept="image/*"
-                  onChange={(e) => handlePhotoChange(e, 'house')}
                   className="hidden"
+                  onChange={(e) => handlePhotoCapture(e, 'house')}
                 />
 
-                {processingPhoto === 'house' ? (
-                  <div className="h-48 flex flex-col items-center justify-center bg-blue-50 rounded-lg border-2 border-blue-200">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
-                    <p className="text-blue-700 font-medium">Adding GPS & timestamp...</p>
-                  </div>
-                ) : housePhotoPreview ? (
+                {housePhotoPreview ? (
                   <div className="relative">
-                    <img src={housePhotoPreview} alt="House" className="w-full h-48 object-cover rounded-lg" />
-                    <div className="absolute bottom-2 left-2 right-2 flex gap-2">
-                      <Button size="sm" variant="secondary" className="flex-1" onClick={() => openCamera('house')}>
-                        <Camera className="w-4 h-4 mr-1" /> Retake
-                      </Button>
-                      <Button size="sm" variant="secondary" className="flex-1" onClick={() => openGallery('house')}>
-                        <ImageIcon className="w-4 h-4 mr-1" /> Gallery
-                      </Button>
-                    </div>
+                    <img
+                      src={housePhotoPreview}
+                      alt="Property"
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="absolute top-2 right-2"
+                      onClick={() => {
+                        setHousePhoto(null);
+                        setHousePhotoPreview(null);
+                      }}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1" />
+                      Retake
+                    </Button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-                      <p className="text-sm text-blue-800">📸 GPS, Date & Time will be printed on photo</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        onClick={() => openCamera('house')}
-                        className="h-20 flex-col gap-2 bg-blue-600 hover:bg-blue-700"
-                        disabled={!location.latitude}
-                      >
-                        <Camera className="w-8 h-8" />
-                        <span>Take Photo</span>
-                      </Button>
-                      <Button
-                        onClick={() => openGallery('house')}
-                        variant="outline"
-                        className="h-20 flex-col gap-2"
-                        disabled={!location.latitude}
-                      >
-                        <Upload className="w-8 h-8" />
-                        <span>Upload</span>
-                      </Button>
-                    </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-24"
+                      onClick={() => houseCameraRef.current?.click()}
+                      disabled={processingPhoto === 'house'}
+                    >
+                      {processingPhoto === 'house' ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <Camera className="w-5 h-5 mr-2" />
+                          Take Photo
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-24"
+                      onClick={() => houseGalleryRef.current?.click()}
+                      disabled={processingPhoto === 'house'}
+                    >
+                      <Upload className="w-5 h-5 mr-2" />
+                      Gallery
+                    </Button>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Photo Upload - GATE */}
+            {/* Signature */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                  Step 3: Gate/Entrance Photo *
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Hidden file inputs */}
-                <input
-                  ref={gateCameraRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(e) => handlePhotoChange(e, 'gate')}
-                  className="hidden"
-                />
-                <input
-                  ref={gateGalleryRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handlePhotoChange(e, 'gate')}
-                  className="hidden"
-                />
-
-                {processingPhoto === 'gate' ? (
-                  <div className="h-48 flex flex-col items-center justify-center bg-blue-50 rounded-lg border-2 border-blue-200">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
-                    <p className="text-blue-700 font-medium">Adding GPS & timestamp...</p>
-                  </div>
-                ) : gatePhotoPreview ? (
-                  <div className="relative">
-                    <img src={gatePhotoPreview} alt="Gate" className="w-full h-48 object-cover rounded-lg" />
-                    <div className="absolute bottom-2 left-2 right-2 flex gap-2">
-                      <Button size="sm" variant="secondary" className="flex-1" onClick={() => openCamera('gate')}>
-                        <Camera className="w-4 h-4 mr-1" /> Retake
-                      </Button>
-                      <Button size="sm" variant="secondary" className="flex-1" onClick={() => openGallery('gate')}>
-                        <ImageIcon className="w-4 h-4 mr-1" /> Gallery
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-                      <p className="text-sm text-blue-800">📸 GPS, Date & Time will be printed on photo</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        onClick={() => openCamera('gate')}
-                        className="h-20 flex-col gap-2 bg-blue-600 hover:bg-blue-700"
-                        disabled={!location.latitude}
-                      >
-                        <Camera className="w-8 h-8" />
-                        <span>Take Photo</span>
-                      </Button>
-                      <Button
-                        onClick={() => openGallery('gate')}
-                        variant="outline"
-                        className="h-20 flex-col gap-2"
-                        disabled={!location.latitude}
-                      >
-                        <Upload className="w-8 h-8" />
-                        <span>Upload</span>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Digital Signature - FULL WIDTH */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                <CardTitle className="text-sm flex items-center gap-2">
                   <Pen className="w-4 h-4" />
-                  Step 4: Property Holder Signature *
+                  Signature of Notice Receiver *
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {!signatureData ? (
-                  <div className="space-y-3">
-                    <p className="text-sm text-slate-600 text-center">
-                      Ask property holder to sign in the box below
-                    </p>
-                    <div className="border-2 border-slate-300 rounded-lg bg-white touch-none" style={{ height: '200px' }}>
+                {signatureData ? (
+                  <div className="relative">
+                    <img src={signatureData} alt="Signature" className="w-full h-32 border rounded-lg bg-white" />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="absolute top-2 right-2"
+                      onClick={clearSignature}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1" />
+                      Clear
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="border-2 border-dashed border-slate-300 rounded-lg overflow-hidden bg-white">
                       <SignatureCanvas
                         ref={signatureRef}
                         canvasProps={{
-                          style: { 
-                            width: '100%', 
-                            height: '200px',
-                            touchAction: 'none'
-                          }
+                          className: 'w-full h-32',
+                          style: { width: '100%', height: '128px' }
                         }}
                         backgroundColor="white"
-                        penColor="black"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        variant="outline"
-                        onClick={clearSignature}
-                        className="h-12"
-                        data-testid="clear-signature-btn"
-                      >
-                        <RotateCcw className="w-4 h-4 mr-2" />
+                    <div className="flex gap-2 mt-2">
+                      <Button variant="outline" size="sm" onClick={clearSignature}>
+                        <RotateCcw className="w-4 h-4 mr-1" />
                         Clear
                       </Button>
-                      <Button
-                        onClick={saveSignature}
-                        className="h-12 bg-emerald-600 hover:bg-emerald-700"
-                        data-testid="save-signature-btn"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Confirm
+                      <Button size="sm" onClick={saveSignature} className="bg-slate-900">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Save Signature
                       </Button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="border-2 border-emerald-300 rounded-lg bg-emerald-50 p-2">
-                      <img src={signatureData} alt="Signature" className="w-full h-32 object-contain" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-emerald-600 flex items-center gap-1">
-                        <CheckCircle className="w-4 h-4" />
-                        Signature captured
-                      </span>
-                      <Button variant="outline" size="sm" onClick={() => setSignatureData(null)}>
-                        Re-sign
-                      </Button>
-                    </div>
-                  </div>
+                  </>
                 )}
               </CardContent>
             </Card>
           </>
         )}
 
-        {/* Existing Submission View */}
+        {/* Completed Submission View */}
         {isCompleted && submission && (
-          <>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                  Submitted Survey
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">New Owner Name</span>
-                  <span className="font-medium">{submission.new_owner_name}</span>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2 text-emerald-600">
+                <CheckCircle className="w-4 h-4" />
+                Survey Completed
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-slate-500 text-xs">Receiver</p>
+                  <p className="font-medium">{submission.receiver_name}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">New Mobile</span>
-                  <span className="font-mono">{submission.new_mobile}</span>
+                <div>
+                  <p className="text-slate-500 text-xs">Receiver Mobile</p>
+                  <p className="font-mono">{submission.receiver_mobile || '-'}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Receiver Name</span>
-                  <span className="font-medium">{submission.receiver_name}</span>
+                <div>
+                  <p className="text-slate-500 text-xs">Relation</p>
+                  <p className="font-medium">{submission.relation}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Relation</span>
-                  <span>{submission.relation}</span>
+                <div>
+                  <p className="text-slate-500 text-xs">Satisfied</p>
+                  <p className="font-medium">{submission.self_satisfied === 'yes' ? 'Yes' : 'No'}</p>
                 </div>
-                {submission.old_property_id && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Old Property ID</span>
-                    <span className="font-mono">{submission.old_property_id}</span>
-                  </div>
-                )}
-                {submission.family_id && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Family ID</span>
-                    <span className="font-mono">{submission.family_id}</span>
-                  </div>
-                )}
-                {submission.aadhar_number && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Aadhar Number</span>
-                    <span className="font-mono">{submission.aadhar_number}</span>
-                  </div>
-                )}
-                {submission.ward_number && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Ward Number</span>
-                    <span>{submission.ward_number}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-slate-500">GPS</span>
-                  <span className="font-mono text-xs">{submission.latitude?.toFixed(6)}, {submission.longitude?.toFixed(6)}</span>
+              </div>
+              {submission.correct_colony_name && (
+                <div>
+                  <p className="text-slate-500 text-xs">Corrected Colony</p>
+                  <p className="font-medium">{submission.correct_colony_name}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Submitted</span>
-                  <span>{new Date(submission.submitted_at).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Status</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    submission.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
-                    submission.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                    'bg-amber-100 text-amber-700'
-                  }`}>
-                    {submission.status || 'Pending'}
-                  </span>
-                </div>
-                {submission.remarks && (
-                  <div>
-                    <span className="text-slate-500 block mb-1">Remarks</span>
-                    <p className="bg-slate-50 p-2 rounded">{submission.remarks}</p>
-                  </div>
-                )}
-                {submission.review_remarks && (
-                  <div className="p-3 bg-red-50 rounded-lg">
-                    <span className="text-red-600 text-xs font-semibold block mb-1">REJECTION REASON</span>
-                    <p className="text-red-800">{submission.review_remarks}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                  Photos (with GPS & Timestamp)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {submission.photos?.map((photo, idx) => (
-                  <div key={idx} className="relative">
-                    <img
-                      src={`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`}
-                      alt={photo.photo_type}
-                      className="w-full h-auto rounded-lg"
-                    />
-                    <span className="absolute top-2 left-2 px-2 py-1 bg-black/70 text-white text-xs font-bold rounded">
-                      {photo.photo_type}
-                    </span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {submission.signature_url && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                    Property Holder Signature
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="border rounded-lg bg-white p-2">
-                    <img
-                      src={`${process.env.REACT_APP_BACKEND_URL}${submission.signature_url}`}
-                      alt="Signature"
-                      className="w-full h-auto object-contain"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
+              )}
+              <div>
+                <p className="text-slate-500 text-xs">Submitted At</p>
+                <p className="font-medium">{new Date(submission.submitted_at).toLocaleString('en-IN')}</p>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </main>
 
       {/* Submit Button */}
       {!isCompleted && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-lg">
-          {/* Show warning if outside 50m range */}
-          {property?.latitude && property?.longitude && withinRange === false && (
-            <div className="mb-3 p-2 bg-red-100 border border-red-300 rounded-lg text-center">
-              <p className="text-sm text-red-700 font-medium">
-                ⚠️ You are {distanceFromProperty}m away. Move within 50m to submit.
-              </p>
-            </div>
-          )}
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg">
           <Button
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12"
             onClick={handleSubmit}
-            disabled={submitting || (property?.latitude && property?.longitude && !withinRange)}
-            className={`w-full h-14 text-lg font-bold ${
-              property?.latitude && property?.longitude && !withinRange 
-                ? 'bg-slate-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
+            disabled={submitting || withinRange === false}
             data-testid="submit-survey-btn"
           >
             {submitting ? (
               <>
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                 Submitting...
-              </>
-            ) : property?.latitude && property?.longitude && !withinRange ? (
-              <>
-                <AlertTriangle className="w-5 h-5 mr-2" />
-                Move Closer to Submit
               </>
             ) : (
               <>
