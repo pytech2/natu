@@ -262,6 +262,34 @@ async def delete_user(user_id: str, current_user: dict = Depends(get_current_use
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User deleted"}
 
+class ResetPasswordRequest(BaseModel):
+    new_password: str
+
+@api_router.post("/admin/users/{user_id}/reset-password")
+async def reset_user_password(user_id: str, data: ResetPasswordRequest, current_user: dict = Depends(get_current_user)):
+    """Reset password for a user (Admin only)"""
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Check if user exists
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Hash the new password
+    hashed_password = bcrypt.hashpw(data.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    # Update password
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"password": hashed_password}}
+    )
+    
+    return {"message": f"Password reset successfully for {user['name']}"}
+
 # ============== BATCH UPLOAD ROUTES ==============
 
 @api_router.post("/admin/batch/upload")
