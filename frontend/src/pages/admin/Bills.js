@@ -331,6 +331,54 @@ export default function BillsPage() {
     }
   };
 
+  const handleDeleteByColony = async () => {
+    if (!selectedColonyToDelete) {
+      toast.error('Please select a colony to delete');
+      return;
+    }
+    
+    setDeleting(true);
+    try {
+      const formData = new FormData();
+      formData.append('colony', selectedColonyToDelete);
+
+      const response = await axios.post(`${API_URL}/admin/bills/delete-all`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      toast.success(response.data.message);
+      setDeleteColonyDialog(false);
+      setSelectedColonyToDelete('');
+      setColonyBillCount(0);
+      fetchBills();
+      fetchBatches();
+      fetchColonies();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete colony bills');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const fetchColonyBillCount = async (colonyName) => {
+    try {
+      const params = new URLSearchParams();
+      params.append('colony', colonyName);
+      params.append('page', 1);
+      params.append('limit', 1);
+      
+      const response = await axios.get(`${API_URL}/admin/bills?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setColonyBillCount(response.data.total || 0);
+    } catch (error) {
+      setColonyBillCount(0);
+    }
+  };
+
   const handleCopyToProperties = async () => {
     setCopying(true);
     try {
