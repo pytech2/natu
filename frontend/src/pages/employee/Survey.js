@@ -407,6 +407,75 @@ export default function Survey() {
     }
   };
 
+  // Download property map as PDF
+  const handleDownloadMapPdf = async () => {
+    if (!mapContainerRef.current) {
+      toast.error('Map not ready');
+      return;
+    }
+
+    setDownloadingPdf(true);
+    try {
+      // Wait a moment for map to fully render
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const canvas = await html2canvas(mapContainerRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 2,
+        logging: false
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      // Add title
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Property Location Map', 105, 15, { align: 'center' });
+      
+      // Add property details
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      let yPos = 25;
+      
+      pdf.text(`Property ID: ${property?.property_id || '-'}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`Owner: ${property?.owner_name || '-'}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`Mobile: ${property?.mobile || '-'}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`Colony: ${property?.colony || property?.ward || '-'}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`Address: ${property?.address || '-'}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`GPS: ${property?.latitude?.toFixed(6)}, ${property?.longitude?.toFixed(6)}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`Amount: ₹${property?.amount || '0'}`, 15, yPos);
+      yPos += 10;
+
+      // Add map image
+      const imgWidth = 180;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 15, yPos, imgWidth, imgHeight);
+
+      // Add footer with date
+      const now = new Date();
+      pdf.setFontSize(8);
+      pdf.text(`Generated on: ${now.toLocaleString('en-IN')}`, 15, 285);
+      pdf.text('NSTU INDIA PRIVATE LIMITED', 195, 285, { align: 'right' });
+
+      // Save PDF
+      pdf.save(`property_map_${property?.property_id || 'unknown'}.pdf`);
+      toast.success('Map PDF downloaded!');
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error('Failed to generate PDF');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
