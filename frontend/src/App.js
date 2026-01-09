@@ -136,6 +136,11 @@ function AppRoutes() {
           <EmployeeAttendance />
         </ProtectedRoute>
       } />
+      <Route path="/employee/property-map" element={
+        <ProtectedRoute allowedRoles={SURVEYOR_ROLES}>
+          <EmployeePropertyMap />
+        </ProtectedRoute>
+      } />
       
       {/* Default redirect */}
       <Route path="/" element={
