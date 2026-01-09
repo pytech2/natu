@@ -331,7 +331,7 @@ export default function PropertyMap() {
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           attribution='&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP'
-          maxZoom={19}
+          maxZoom={18}
         />
       );
     }
@@ -339,7 +339,7 @@ export default function PropertyMap() {
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        maxZoom={19}
+        maxZoom={18}
       />
     );
   };
@@ -555,7 +555,7 @@ export default function PropertyMap() {
                   center={defaultCenter}
                   zoom={15}
                   minZoom={5}
-                  maxZoom={19}
+                  maxZoom={18}
                   maxBounds={[[-85, -180], [85, 180]]}
                   maxBoundsViscosity={1.0}
                   style={{ height: '100%', width: '100%' }}

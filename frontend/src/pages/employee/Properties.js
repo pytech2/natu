@@ -326,7 +326,7 @@ export default function EmployeeProperties() {
                       center={[selectedProperty.latitude, selectedProperty.longitude]}
                       zoom={18}
                       minZoom={5}
-                      maxZoom={19}
+                      maxZoom={18}
                       maxBounds={[[-85, -180], [85, 180]]}
                       maxBoundsViscosity={1.0}
                       style={{ height: '100%', width: '100%' }}
@@ -336,7 +336,7 @@ export default function EmployeeProperties() {
                       <TileLayer
                         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                         attribution='&copy; Esri'
-                        maxZoom={19}
+                        maxZoom={18}
                       />
                       <Marker 
                         position={[selectedProperty.latitude, selectedProperty.longitude]}

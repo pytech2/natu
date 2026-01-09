@@ -306,7 +306,7 @@ export default function BillsMapPage() {
                   center={defaultCenter}
                   zoom={14}
                   minZoom={5}
-                  maxZoom={19}
+                  maxZoom={18}
                   maxBounds={[[-85, -180], [85, 180]]}
                   maxBoundsViscosity={1.0}
                   style={{ height: '100%', width: '100%' }}
