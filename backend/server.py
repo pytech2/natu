@@ -2669,16 +2669,27 @@ async def split_bills_by_specific_employees(
             rect = new_page.rect
             rotation = new_page.rotation
             
-            # Add serial number based on rotation
-            if rotation == 90:
-                sn_x = rect.width - 40
-                sn_y = 50
-            elif rotation == 270:
-                sn_x = 40
-                sn_y = rect.height - 50
+            # Search for BillSrNo to place serial number nearby
+            bill_sr_positions = new_page.search_for("BillSrNo")
+            
+            if bill_sr_positions:
+                pos = bill_sr_positions[0]
+                if rotation == 90:
+                    sn_x = pos.x0
+                    sn_y = pos.y1 + 10
+                else:
+                    sn_x = pos.x1 + 50
+                    sn_y = pos.y0 + 15
             else:
-                sn_x = rect.width - 50
-                sn_y = 40
+                if rotation == 90:
+                    sn_x = rect.width - 60
+                    sn_y = 80
+                elif rotation == 270:
+                    sn_x = 60
+                    sn_y = rect.height - 80
+                else:
+                    sn_x = rect.width - 80
+                    sn_y = 60
             
             new_page.insert_text((sn_x, sn_y), f"{bill['serial_number']}", fontsize=sn_font_size, color=sn_rgb, fontname="helv", rotate=rotation)
         
