@@ -317,18 +317,18 @@ export default function Properties() {
 
   return (
     <EmployeeLayout>
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Header with GPS status */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-800">Assigned Properties</h1>
-            <p className="text-sm text-slate-500">{filteredProperties.length} of {stats.total} properties</p>
+            <h1 className="text-lg font-bold text-slate-800">Assigned Properties</h1>
+            <p className="text-xs text-slate-500">{filteredProperties.length} of {stats.total} properties</p>
           </div>
           <div className="flex items-center gap-2">
             {gpsTracking && (
               <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                GPS Active
+                GPS
               </div>
             )}
             <Button size="sm" variant="outline" onClick={refreshLocation}>
@@ -339,223 +339,186 @@ export default function Properties() {
 
         {/* Search & Filters */}
         <Card>
-          <CardContent className="p-3 space-y-3">
+          <CardContent className="p-3 space-y-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Search ID, owner name, mobile..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9"
               />
             </div>
-            <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Approved">Approved</SelectItem>
-                  <SelectItem value="Rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="icon"
-                onClick={() => setViewMode('list')}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Approved">Approved</SelectItem>
+                <SelectItem value="Rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
+        {/* MAP - Always Visible */}
+        <Card>
+          <CardHeader className="py-2 px-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs font-mono uppercase tracking-wider text-slate-500">
+                <MapPin className="w-3 h-3 inline mr-1" />
+                Map ({filteredProperties.length} pins)
+              </CardTitle>
+              <div className="flex items-center gap-1">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setFitKey(k => k + 1)}
+                  className="h-7 text-xs text-blue-600 border-blue-300"
+                >
+                  <Locate className="w-3 h-3 mr-1" />
+                  Fit All
+                </Button>
+                <Button size="sm" onClick={handlePrintMap} disabled={downloading} className="h-7 text-xs">
+                  {downloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                  Print
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div ref={mapContainerRef} style={{ height: '280px' }} className="rounded-b-lg overflow-hidden">
+              <MapContainer
+                center={getDefaultCenter()}
+                zoom={14}
+                minZoom={10}
+                maxZoom={18}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={true}
               >
-                <List className="w-4 h-4" />
-              </Button>
-              <button
-                onClick={() => { setViewMode('map'); setTimeout(() => setFitKey(k => k + 1), 100); }}
-                className={`inline-flex items-center justify-center h-9 w-9 rounded-md border font-medium transition-all
-                  ${viewMode === 'map' 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30 animate-bounce'
-                  }`}
-                style={viewMode !== 'map' ? {
-                  animation: 'pulse-glow 1.5s ease-in-out infinite'
-                } : {}}
-              >
-                <MapIcon className="w-4 h-4" />
-              </button>
-              <style>{`
-                @keyframes pulse-glow {
-                  0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5), 0 4px 6px rgba(59, 130, 246, 0.3); transform: scale(1); }
-                  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 4px 15px rgba(59, 130, 246, 0.5); transform: scale(1.05); }
-                }
-              `}</style>
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <MapController properties={filteredProperties} userLocation={userLocation} fitKey={fitKey} />
+                
+                {/* User location marker */}
+                {userLocation && (
+                  <Marker position={[userLocation.latitude, userLocation.longitude]} icon={currentLocationIcon}>
+                    <Popup>
+                      <div className="text-center">
+                        <p className="font-bold text-blue-600">Your Location</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                )}
+                
+                {/* Property markers - nearest one highlighted */}
+                {filteredProperties.filter(p => p.latitude && p.longitude).map((property, index) => (
+                  <Marker
+                    key={property.id}
+                    position={[property.latitude, property.longitude]}
+                    icon={createNumberedIcon(property.serial_number || index + 1, property.status, index === 0 && userLocation)}
+                  >
+                    <Popup maxWidth={220}>
+                      <div className="p-1 min-w-[160px]">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-blue-600">#{property.serial_number || index + 1}</span>
+                          {index === 0 && userLocation && <span className="text-xs bg-amber-500 text-white px-1 rounded">Nearest</span>}
+                        </div>
+                        <p className="font-semibold text-sm">{property.owner_name}</p>
+                        <p className="text-xs text-slate-500">{property.colony}</p>
+                        {property.distance !== Infinity && (
+                          <p className="text-xs text-blue-600">📍 {formatDistance(property.distance)}</p>
+                        )}
+                        <div className="flex gap-1 mt-2">
+                          <Button size="sm" className="flex-1 h-6 text-xs bg-blue-600" onClick={() => navigate(`/employee/survey/${property.id}`)}>
+                            Survey
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-6 px-2" onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${property.latitude},${property.longitude}`, '_blank')}>
+                            <Navigation className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
             </div>
           </CardContent>
         </Card>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-white rounded-lg p-3 text-center border">
-            <p className="text-xl font-bold text-slate-800">{stats.total}</p>
+          <div className="bg-white rounded-lg p-2 text-center border">
+            <p className="text-lg font-bold text-slate-800">{stats.total}</p>
             <p className="text-xs text-slate-500">Total</p>
           </div>
-          <div className="bg-orange-50 rounded-lg p-3 text-center border border-orange-200">
-            <p className="text-xl font-bold text-orange-600">{stats.pending}</p>
+          <div className="bg-orange-50 rounded-lg p-2 text-center border border-orange-200">
+            <p className="text-lg font-bold text-orange-600">{stats.pending}</p>
             <p className="text-xs text-orange-600">Pending</p>
           </div>
-          <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-200">
-            <p className="text-xl font-bold text-emerald-600">{stats.completed}</p>
+          <div className="bg-emerald-50 rounded-lg p-2 text-center border border-emerald-200">
+            <p className="text-lg font-bold text-emerald-600">{stats.completed}</p>
             <p className="text-xs text-emerald-600">Done</p>
           </div>
         </div>
 
-        {viewMode === 'list' ? (
-          /* Property List - Sorted by nearest */
-          <div className="space-y-2">
-            {filteredProperties.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-slate-500">
-                  <MapPin className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                  <p>No properties found</p>
+        {/* Property List */}
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-slate-700">Property List (Nearest First)</h2>
+          {filteredProperties.length === 0 ? (
+            <Card>
+              <CardContent className="py-6 text-center text-slate-500">
+                <MapPin className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No properties found</p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredProperties.map((property, index) => (
+              <Card 
+                key={property.id} 
+                className={`cursor-pointer hover:shadow-md transition-shadow ${index === 0 && userLocation ? 'border-amber-400 border-2 bg-amber-50' : ''}`}
+                onClick={() => navigate(`/employee/survey/${property.id}`)}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
+                      index === 0 && userLocation ? 'bg-amber-500 ring-2 ring-amber-300 ring-offset-1' :
+                      property.status === 'Pending' ? 'bg-orange-500' :
+                      property.status === 'Completed' || property.status === 'Approved' ? 'bg-emerald-500' : 'bg-slate-500'
+                    }`}>
+                      {property.serial_number || index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-blue-600">{property.property_id}</span>
+                        {index === 0 && userLocation && (
+                          <span className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">Nearest</span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-slate-800 truncate">{property.owner_name}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500 truncate">{property.colony}</span>
+                        {property.distance !== undefined && property.distance !== Infinity && (
+                          <span className="text-xs font-medium text-blue-600 flex-shrink-0 ml-2">
+                            📍 {formatDistance(property.distance)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                  </div>
                 </CardContent>
               </Card>
-            ) : (
-              filteredProperties.map((property, index) => (
-                <Card 
-                  key={property.id} 
-                  className={`cursor-pointer hover:shadow-md transition-shadow ${index === 0 && userLocation ? 'border-amber-400 border-2 bg-amber-50' : ''}`}
-                  onClick={() => navigate(`/employee/survey/${property.id}`)}
-                >
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                        property.status === 'Pending' ? 'bg-orange-500' :
-                        property.status === 'Completed' || property.status === 'Approved' ? 'bg-emerald-500' : 'bg-slate-500'
-                      }`}>
-                        {property.serial_number || index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-xs text-blue-600">{property.property_id}</span>
-                          {index === 0 && userLocation && (
-                            <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full">Nearest</span>
-                          )}
-                        </div>
-                        <p className="font-semibold text-slate-800 truncate">{property.owner_name}</p>
-                        <p className="text-xs text-slate-500 truncate">{property.address || property.colony}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          {property.mobile && (
-                            <span className="text-xs text-slate-600">📱 {property.mobile}</span>
-                          )}
-                          {property.distance !== undefined && property.distance !== Infinity && (
-                            <span className="text-xs font-medium text-blue-600">
-                              📍 {formatDistance(property.distance)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        ) : (
-          /* Map View */
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                  <MapPin className="w-4 h-4 inline mr-1" />
-                  Properties Map ({filteredProperties.length})
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => setFitKey(k => k + 1)}
-                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                  >
-                    <Locate className="w-4 h-4 mr-1" />
-                    Full View
-                  </Button>
-                  <Button size="sm" onClick={handlePrintMap} disabled={downloading}>
-                    {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
-                    Print
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setViewMode('list')} className="text-slate-600">
-                    ✕
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div ref={mapContainerRef} style={{ height: '500px' }} className="rounded-b-lg overflow-hidden">
-                <MapContainer
-                  center={getDefaultCenter()}
-                  zoom={14}
-                  minZoom={10}
-                  maxZoom={18}
-                  style={{ height: '100%', width: '100%' }}
-                  scrollWheelZoom={true}
-                >
-                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  <MapController properties={filteredProperties} userLocation={userLocation} fitKey={fitKey} />
-                  
-                  {/* User location marker */}
-                  {userLocation && (
-                    <Marker position={[userLocation.latitude, userLocation.longitude]} icon={currentLocationIcon}>
-                      <Popup>
-                        <div className="text-center">
-                          <p className="font-bold text-blue-600">Your Location</p>
-                          <p className="text-xs">{userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}</p>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  )}
-                  
-                  {/* Property markers */}
-                  {filteredProperties.filter(p => p.latitude && p.longitude).map((property, index) => (
-                    <Marker
-                      key={property.id}
-                      position={[property.latitude, property.longitude]}
-                      icon={createNumberedIcon(property.serial_number || index + 1, property.status, index === 0 && userLocation)}
-                    >
-                      <Popup maxWidth={250}>
-                        <div className="p-1 min-w-[180px]">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-blue-600">#{property.serial_number || index + 1}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-xs ${
-                              property.status === 'Pending' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
-                            }`}>{property.status}</span>
-                          </div>
-                          <p className="font-semibold text-sm">{property.owner_name}</p>
-                          <p className="text-xs text-slate-500">{property.address || property.colony}</p>
-                          {property.distance !== Infinity && (
-                            <p className="text-xs text-blue-600 mt-1">📍 {formatDistance(property.distance)} away</p>
-                          )}
-                          <div className="flex gap-1 mt-2">
-                            <Button size="sm" className="flex-1 h-7 text-xs bg-blue-600" onClick={() => navigate(`/employee/survey/${property.id}`)}>
-                              <FileText className="w-3 h-3 mr-1" /> Survey
-                            </Button>
-                            <Button size="sm" variant="outline" className="h-7" onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${property.latitude},${property.longitude}`, '_blank')}>
-                              <Navigation className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  ))}
-                </MapContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            ))
+          )}
+        </div>
 
         {/* GPS Info */}
         {userLocation && lastUpdate && (
-          <p className="text-xs text-center text-slate-400">
-            📍 GPS updated: {lastUpdate.toLocaleTimeString()} • Nearest property shown first
+          <p className="text-xs text-center text-slate-400 pb-4">
+            📍 GPS: {lastUpdate.toLocaleTimeString()} • Nearest property highlighted
           </p>
         )}
       </div>
