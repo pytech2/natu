@@ -2682,6 +2682,11 @@ async def split_bills_by_specific_employees(
         output_filename = f"{emp_name_safe}_{colony or 'all'}_{timestamp}.pdf"
         output_path = UPLOAD_DIR / output_filename
         
+        # A4 dimensions in points
+        A4_WIDTH = 595.276
+        A4_HEIGHT = 841.890
+        HEIGHT_SCALE = 1.25  # 25% height increase
+        
         output_pdf = fitz.open()
         
         for bill in employee_bills:
@@ -2689,27 +2694,40 @@ async def split_bills_by_specific_employees(
             if page_num < 0 or page_num >= len(src_pdf):
                 continue
             
-            output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
-            new_page = output_pdf[-1]
+            src_page = src_pdf[page_num]
+            src_rect = src_page.rect
             
-            # Find BillSrNo position and place serial number after it
+            # Create new A4 page
+            new_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
+            
+            # Scale to fit A4 with 25% height increase
+            width_scale = A4_WIDTH / src_rect.width
+            new_width = A4_WIDTH
+            new_height = src_rect.height * width_scale * HEIGHT_SCALE
+            
+            if new_height > A4_HEIGHT:
+                adjust_scale = A4_HEIGHT / new_height
+                new_width = new_width * adjust_scale
+                new_height = A4_HEIGHT
+            
+            x_offset = (A4_WIDTH - new_width) / 2
+            y_offset = (A4_HEIGHT - new_height) / 2
+            dest_rect = fitz.Rect(x_offset, y_offset, x_offset + new_width, y_offset + new_height)
+            
+            new_page.show_pdf_page(dest_rect, src_pdf, page_num)
+            
+            # Find BillSrNo position and place serial number
             bill_sr_positions = new_page.search_for("BillSrNo")
-            rect = new_page.rect
-            rotation = new_page.rotation
             
             if bill_sr_positions:
                 bill_sr_rect = bill_sr_positions[0]
-                if rotation == 90:
-                    x = bill_sr_rect.x0
-                    y = bill_sr_rect.y1 + 5
-                else:
-                    x = bill_sr_rect.x1 + 35
-                    y = bill_sr_rect.y0
+                x = bill_sr_rect.x1 + 35
+                y = bill_sr_rect.y0
             else:
-                x, y = rect.width - 100, 50
+                x, y = x_offset + new_width - 80, y_offset + 40
             
             sn_text = f"{bill['serial_number']}"
-            new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv", rotate=rotation)
+            new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv")
         
         output_pdf.save(str(output_path))
         output_pdf.close()
