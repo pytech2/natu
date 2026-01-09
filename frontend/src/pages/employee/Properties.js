@@ -213,6 +213,7 @@ export default function Properties() {
   const [downloading, setDownloading] = useState(false);
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
   const [fitKey, setFitKey] = useState(0); // Key to trigger map fit
+  const [fullscreenMap, setFullscreenMap] = useState(false); // Fullscreen map mode
 
   useEffect(() => {
     fetchProperties();
