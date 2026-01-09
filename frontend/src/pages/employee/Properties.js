@@ -754,7 +754,7 @@ export default function Properties() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-lg font-bold text-blue-600">#{property.serial_number || index + 1}</span>
                         {index === 0 && userLocation && (
-                          <span className="text-xs bg-amber-500 text-white px-2 py-1 rounded-full animate-pulse">
+                          <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full animate-pulse">
                             ⭐ NEAREST
                           </span>
                         )}
