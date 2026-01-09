@@ -78,7 +78,7 @@ export default function AttendancePage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setAttendance(response.data.records || []);
+      setAttendance(response.data.attendance || []);
       setPagination(prev => ({
         ...prev,
         total: response.data.total || 0,
@@ -86,7 +86,7 @@ export default function AttendancePage() {
       }));
       
       // Calculate stats
-      const present = response.data.records?.length || 0;
+      const present = response.data.attendance?.length || 0;
       const total = employees.length;
       setStats({
         present,
