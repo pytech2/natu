@@ -158,7 +158,8 @@ export default function Attendance() {
       });
 
       toast.success('Attendance marked successfully!');
-      checkTodayAttendance();
+      // Redirect to property map after attendance
+      navigate('/employee/property-map');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to mark attendance');
     } finally {
