@@ -450,7 +450,10 @@ export default function Submissions() {
                 <div>
                   <label className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3 block">Photos (with GPS & Timestamp)</label>
                   <div className="grid grid-cols-2 gap-4">
-                    {selectedSubmission.photos?.map((photo, idx) => (
+                    {/* Filter out duplicate photos (same file_url) and show only unique photos */}
+                    {selectedSubmission.photos?.filter((photo, index, self) => 
+                      index === self.findIndex(p => p.file_url === photo.file_url)
+                    ).map((photo, idx) => (
                       <div key={idx} className="relative group">
                         <img
                           src={`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`}
@@ -463,7 +466,7 @@ export default function Submissions() {
                           photo.photo_type === 'GATE' ? 'bg-amber-100 text-amber-700' :
                           'bg-slate-100 text-slate-700'
                         }`}>
-                          {photo.photo_type}
+                          {photo.photo_type === 'HOUSE' ? 'PROPERTY' : photo.photo_type}
                         </span>
                       </div>
                     ))}
