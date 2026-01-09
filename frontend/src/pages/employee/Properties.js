@@ -447,10 +447,10 @@ export default function Properties() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div ref={mapContainerRef} style={{ height: '450px' }} className="rounded-b-lg overflow-hidden">
+              <div ref={mapContainerRef} style={{ height: '500px' }} className="rounded-b-lg overflow-hidden">
                 <MapContainer
                   center={getDefaultCenter()}
-                  zoom={14}
+                  zoom={15}
                   minZoom={5}
                   maxZoom={18}
                   style={{ height: '100%', width: '100%' }}
