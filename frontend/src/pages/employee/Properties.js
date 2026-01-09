@@ -325,6 +325,10 @@ export default function EmployeeProperties() {
                     <MapContainer
                       center={[selectedProperty.latitude, selectedProperty.longitude]}
                       zoom={18}
+                      minZoom={5}
+                      maxZoom={18}
+                      maxBounds={[[-85, -180], [85, 180]]}
+                      maxBoundsViscosity={1.0}
                       style={{ height: '100%', width: '100%' }}
                       scrollWheelZoom={true}
                       zoomControl={false}

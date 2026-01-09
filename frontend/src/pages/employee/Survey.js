@@ -599,6 +599,10 @@ export default function Survey() {
                 <MapContainer
                   center={[property.latitude, property.longitude]}
                   zoom={17}
+                  minZoom={5}
+                  maxZoom={18}
+                  maxBounds={[[-85, -180], [85, 180]]}
+                  maxBoundsViscosity={1.0}
                   style={{ height: '250px', width: '100%' }}
                   scrollWheelZoom={false}
                   dragging={true}
