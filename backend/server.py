@@ -1313,21 +1313,40 @@ def add_watermark_to_photo(photo_path, latitude, longitude, submitted_at):
 async def export_pdf(
     batch_id: Optional[str] = None,
     employee_id: Optional[str] = None,
-    status: Optional[str] = None,
+    status: Optional[str] = "Approved",  # Default to Approved
     current_user: dict = Depends(get_current_user)
 ):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    query = {"status": "Completed"}
-    if batch_id and batch_id.strip():
-        query["batch_id"] = batch_id
-    if employee_id and employee_id.strip():
-        query["assigned_employee_id"] = employee_id
-    if status and status.strip():
-        query["status"] = status
+    # Get submissions with the specified status (default: Approved)
+    submission_query = {"status": status if status and status.strip() else "Approved"}
+    submissions = await db.submissions.find(submission_query, {"_id": 0}).to_list(10000)
     
-    properties = await db.properties.find(query, {"_id": 0}).to_list(10000)
+    if not submissions:
+        # Return empty PDF with message
+        pdf_path = UPLOAD_DIR / f"survey_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        doc = SimpleDocTemplate(str(pdf_path), pagesize=A4)
+        styles = getSampleStyleSheet()
+        story = [Paragraph("No approved submissions found", styles['Heading1'])]
+        doc.build(story)
+        return FileResponse(
+            path=str(pdf_path),
+            filename=f"approved_survey_report_{datetime.now().strftime('%Y%m%d')}.pdf",
+            media_type="application/pdf"
+        )
+    
+    # Get property IDs from approved submissions
+    property_ids = [s["property_record_id"] for s in submissions]
+    
+    # Build property query
+    prop_query = {"id": {"$in": property_ids}}
+    if batch_id and batch_id.strip():
+        prop_query["batch_id"] = batch_id
+    if employee_id and employee_id.strip():
+        prop_query["assigned_employee_id"] = employee_id
+    
+    properties = await db.properties.find(prop_query, {"_id": 0}).to_list(10000)
     
     pdf_path = UPLOAD_DIR / f"survey_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     doc = SimpleDocTemplate(
