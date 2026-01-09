@@ -433,12 +433,17 @@ export default function Properties() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
                   <MapPin className="w-4 h-4 inline mr-1" />
-                  Properties Map
+                  Properties Map ({filteredProperties.length})
                 </CardTitle>
-                <Button size="sm" onClick={handlePrintMap} disabled={downloading}>
-                  {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
-                  Print PDF
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={handlePrintMap} disabled={downloading}>
+                    {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
+                    Print PDF
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setViewMode('list')} className="text-slate-600">
+                    ✕ Close
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
