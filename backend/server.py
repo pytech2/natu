@@ -2640,9 +2640,7 @@ async def split_bills_by_specific_employees(
     # A4 dimensions
     A4_WIDTH = 595.276
     A4_HEIGHT = 841.890
-    GAP = 15
-    BILL_HEIGHT = (A4_HEIGHT - GAP * 3) / 2
-    MARGIN = GAP
+    MARGIN = 20
     
     src_pdf = fitz.open(str(original_pdf_path))
     
