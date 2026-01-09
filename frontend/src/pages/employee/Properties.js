@@ -459,8 +459,8 @@ export default function Properties() {
               <div ref={mapContainerRef} style={{ height: '500px' }} className="rounded-b-lg overflow-hidden">
                 <MapContainer
                   center={getDefaultCenter()}
-                  zoom={15}
-                  minZoom={5}
+                  zoom={16}
+                  minZoom={15}
                   maxZoom={18}
                   style={{ height: '100%', width: '100%' }}
                   scrollWheelZoom={true}
