@@ -2315,15 +2315,6 @@ async def generate_arranged_pdf(
                 x2 = x_offset2 + new_width2 - 50
                 y2 = y_offset2 + 35
                 new_page.insert_text((x2, y2), f"{bill2['serial_number']}", fontsize=sn_font_size, color=sn_rgb, fontname="helv")
-                            x2 = pos.x1 + 25
-                            y2 = pos.y0
-                            break
-                    else:
-                        x2, y2 = x_offset2 + new_width2 - 60, y_offset2 + 30
-                else:
-                    x2, y2 = x_offset2 + new_width2 - 60, y_offset2 + 30
-                
-                new_page.insert_text((x2, y2), f"{bill2['serial_number']}", fontsize=sn_font_size, color=sn_rgb, fontname="helv")
         
         # Draw a light separator line between bills
         line_y = MARGIN + BILL_HEIGHT + GAP / 2
