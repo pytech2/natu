@@ -707,13 +707,15 @@ export default function Survey() {
                 </div>
               </CardContent>
             </Card>
+            )}
 
-            {/* Property Photo */}
-            <Card>
+            {/* Property Photo - Optional if special condition */}
+            <Card className={canSkipRequiredFields ? 'opacity-60' : ''}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Camera className="w-4 h-4" />
-                  Property Photo *
+                  Property Photo {!canSkipRequiredFields && '*'}
+                  {canSkipRequiredFields && <span className="text-xs text-amber-600 font-normal">(Optional)</span>}
                 </CardTitle>
               </CardHeader>
               <CardContent>
