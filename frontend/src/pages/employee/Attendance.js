@@ -356,64 +356,136 @@ export default function Attendance() {
 
       <main className="p-4 space-y-4" data-testid="attendance-page">
         {hasAttendance ? (
-          // Already marked attendance
+          // Already marked attendance - Show map below
           <div className="space-y-4">
             <Card className="border-emerald-300 bg-emerald-50">
-              <CardContent className="py-8 text-center">
-                <div className="w-20 h-20 mx-auto mb-4 bg-emerald-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-10 h-10 text-emerald-600" />
+              <CardContent className="py-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-3 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-emerald-600" />
                 </div>
-                <h2 className="text-xl font-bold text-emerald-800 mb-2">Attendance Marked!</h2>
-                <p className="text-emerald-600">You have already marked your attendance for today.</p>
+                <h2 className="text-lg font-bold text-emerald-800 mb-1">Attendance Marked!</h2>
+                {attendanceData && (
+                  <p className="text-sm text-emerald-600">
+                    {new Date(attendanceData.marked_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                  </p>
+                )}
               </CardContent>
             </Card>
 
-            {attendanceData && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-                    Today&apos;s Attendance Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    {attendanceData.selfie_url && (
-                      <img
-                        src={`${process.env.REACT_APP_BACKEND_URL}${attendanceData.selfie_url}`}
-                        alt="Attendance Selfie"
-                        className="w-24 h-24 rounded-lg object-cover border-2 border-emerald-200"
-                      />
-                    )}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-600">Marked at:</span>
-                        <span className="font-medium">
-                          {new Date(attendanceData.marked_at).toLocaleTimeString('en-IN', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <MapPin className="w-4 h-4 text-slate-400" />
-                        <span className="font-mono text-xs text-slate-600">
-                          {attendanceData.latitude?.toFixed(6)}, {attendanceData.longitude?.toFixed(6)}
-                        </span>
+            {/* Stats Bar */}
+            <div className="bg-white rounded-lg border p-3">
+              <div className="flex items-center justify-around text-center">
+                <div>
+                  <p className="text-xl font-bold text-slate-800">{stats.total}</p>
+                  <p className="text-xs text-slate-500">Total</p>
+                </div>
+                <div className="h-8 w-px bg-slate-200" />
+                <div>
+                  <p className="text-xl font-bold text-orange-600">{stats.pending}</p>
+                  <p className="text-xs text-slate-500">Pending</p>
+                </div>
+                <div className="h-8 w-px bg-slate-200" />
+                <div>
+                  <p className="text-xl font-bold text-emerald-600">{stats.completed}</p>
+                  <p className="text-xs text-slate-500">Done</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                onClick={handlePrintMap}
+                disabled={downloading || properties.length === 0}
+              >
+                {downloading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
+                Print Map PDF
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/employee/properties')}
+              >
+                <List className="w-4 h-4 mr-1" />
+                List View
+              </Button>
+            </div>
+
+            {/* Property Map */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Survey Properties Map
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div ref={mapContainerRef} style={{ height: '400px' }} className="rounded-b-lg overflow-hidden">
+                  {loadingProps ? (
+                    <div className="h-full flex items-center justify-center bg-slate-100">
+                      <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    </div>
+                  ) : properties.length === 0 ? (
+                    <div className="h-full flex items-center justify-center bg-slate-100">
+                      <div className="text-center text-slate-500">
+                        <MapPin className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                        <p>No properties assigned</p>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  ) : (
+                    <MapContainer
+                      center={getDefaultCenter()}
+                      zoom={14}
+                      minZoom={5}
+                      maxZoom={18}
+                      maxBounds={[[-85, -180], [85, 180]]}
+                      maxBoundsViscosity={1.0}
+                      style={{ height: '100%', width: '100%' }}
+                      scrollWheelZoom={true}
+                    >
+                      <TileLayer
+                        attribution='&copy; OpenStreetMap'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <FitBounds properties={properties} />
+                      
+                      {properties.filter(p => p.latitude && p.longitude).map((property, index) => (
+                        <Marker
+                          key={property.id}
+                          position={[property.latitude, property.longitude]}
+                          icon={createNumberedIcon(property.serial_number || index + 1, property.status)}
+                        >
+                          <Popup maxWidth={250}>
+                            <div className="p-1 min-w-[180px]">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-blue-600">#{property.serial_number || index + 1}</span>
+                                <span className={`px-1.5 py-0.5 rounded text-xs ${
+                                  property.status === 'Pending' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+                                }`}>{property.status}</span>
+                              </div>
+                              <p className="font-semibold text-sm">{property.owner_name}</p>
+                              <p className="text-xs text-slate-500 mb-2">{property.address || property.colony}</p>
+                              <div className="flex gap-1">
+                                <Button size="sm" className="flex-1 h-7 text-xs bg-blue-600" onClick={() => navigate(`/employee/survey/${property.id}`)}>
+                                  <FileText className="w-3 h-3 mr-1" /> Survey
+                                </Button>
+                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${property.latitude},${property.longitude}`, '_blank')}>
+                                  <Navigation className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MapContainer>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-            <Button
-              className="w-full h-14 text-lg bg-blue-600 hover:bg-blue-700"
-              onClick={() => navigate('/employee/property-map')}
-            >
-              View Properties Map
-            </Button>
+            <p className="text-xs text-center text-slate-400">
+              Tap marker for details • Click "Print Map PDF" for hard copy
+            </p>
           </div>
         ) : (
           // Mark attendance
