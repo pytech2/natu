@@ -570,6 +570,124 @@ export default function Properties() {
           </p>
         )}
       </div>
+
+      {/* Fullscreen Map Modal */}
+      {fullscreenMap && (
+        <div className="fixed inset-0 z-[9999] bg-white">
+          {/* Header */}
+          <div className="absolute top-0 left-0 right-0 z-[10000] bg-white/95 backdrop-blur-sm border-b px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-slate-800">Survey Map</h2>
+                <p className="text-xs text-slate-500">{filteredProperties.length} properties • Nearest highlighted</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handlePrintMap} disabled={downloading} className="h-8">
+                  {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
+                  Print
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => setFullscreenMap(false)}
+                  className="h-8"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Fullscreen Map */}
+          <div className="absolute inset-0 pt-16">
+            <MapContainer
+              center={getDefaultCenter()}
+              zoom={14}
+              minZoom={5}
+              maxZoom={18}
+              style={{ height: '100%', width: '100%' }}
+              scrollWheelZoom={true}
+              zoomControl={true}
+            >
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <MapController properties={filteredProperties} userLocation={userLocation} fitKey={fitKey} />
+              
+              {/* User location */}
+              {userLocation && (
+                <Marker position={[userLocation.latitude, userLocation.longitude]} icon={currentLocationIcon}>
+                  <Popup><p className="font-bold text-blue-600">📍 Your Location</p></Popup>
+                </Marker>
+              )}
+              
+              {/* Property markers with nearest highlighted */}
+              {filteredProperties.filter(p => p.latitude && p.longitude).map((property, index) => (
+                <Marker
+                  key={property.id}
+                  position={[property.latitude, property.longitude]}
+                  icon={createNumberedIcon(property.serial_number || index + 1, property.status, index === 0 && userLocation)}
+                >
+                  <Popup maxWidth={280}>
+                    <div className="p-2 min-w-[200px]">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-lg font-bold text-blue-600">#{property.serial_number || index + 1}</span>
+                        {index === 0 && userLocation && (
+                          <span className="text-xs bg-amber-500 text-white px-2 py-1 rounded-full animate-pulse">
+                            ⭐ NEAREST
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-base">{property.owner_name}</p>
+                      <p className="text-sm text-slate-500 mb-1">{property.colony}</p>
+                      {property.mobile && <p className="text-sm text-slate-600">📱 {property.mobile}</p>}
+                      {property.distance !== Infinity && (
+                        <p className="text-sm font-medium text-blue-600 mt-1">📍 {formatDistance(property.distance)} away</p>
+                      )}
+                      <div className="flex gap-2 mt-3">
+                        <Button 
+                          size="sm" 
+                          className="flex-1 h-9 bg-blue-600" 
+                          onClick={() => { setFullscreenMap(false); navigate(`/employee/survey/${property.id}`); }}
+                        >
+                          <FileText className="w-4 h-4 mr-1" /> Start Survey
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-9 px-3"
+                          onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${property.latitude},${property.longitude}`, '_blank')}
+                        >
+                          <Navigation className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+
+          {/* Bottom Info Bar */}
+          <div className="absolute bottom-0 left-0 right-0 z-[10000] bg-white/95 backdrop-blur-sm border-t px-4 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1 text-xs">
+                  <span className="w-3 h-3 rounded-full bg-orange-500"></span> Pending
+                </span>
+                <span className="flex items-center gap-1 text-xs">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Done
+                </span>
+                <span className="flex items-center gap-1 text-xs">
+                  <span className="w-3 h-3 rounded-full bg-amber-500 animate-pulse"></span> Nearest
+                </span>
+              </div>
+              {userLocation && (
+                <span className="text-xs text-slate-500">GPS Active</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </EmployeeLayout>
   );
 }
