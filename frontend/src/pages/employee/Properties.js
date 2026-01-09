@@ -103,15 +103,19 @@ const formatDistance = (meters) => {
   return `${(meters / 1000).toFixed(1)}km`;
 };
 
-// Component to fit map bounds
+// Component to fit map bounds - zoom to show all properties
 function FitBounds({ properties, userLocation }) {
   const map = useMap();
   useEffect(() => {
-    const points = properties.filter(p => p.latitude && p.longitude).map(p => [p.latitude, p.longitude]);
-    if (userLocation) points.push([userLocation.latitude, userLocation.longitude]);
-    if (points.length > 0) {
-      const bounds = L.latLngBounds(points);
-      map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+    const validProps = properties.filter(p => p.latitude && p.longitude);
+    if (validProps.length > 0) {
+      const bounds = L.latLngBounds(validProps.map(p => [p.latitude, p.longitude]));
+      // Add user location to bounds if available
+      if (userLocation) {
+        bounds.extend([userLocation.latitude, userLocation.longitude]);
+      }
+      // Fit bounds with padding and appropriate zoom
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, minZoom: 12 });
     }
   }, [properties, userLocation, map]);
   return null;
