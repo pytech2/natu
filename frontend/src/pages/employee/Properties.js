@@ -220,14 +220,14 @@ export default function Properties() {
       { enableHighAccuracy: true }
     );
     
-    // Watch position for continuous updates
+    // Watch position for continuous updates (every 25m movement or 5 seconds)
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
         setLastUpdate(new Date());
       },
       (err) => console.error('GPS watch error:', err),
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000, distanceFilter: 25 }
     );
   };
 
