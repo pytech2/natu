@@ -102,6 +102,13 @@ export default function Attendance() {
   const [selfiePreview, setSelfiePreview] = useState(null);
   const [capturing, setCapturing] = useState(false);
   
+  // Properties/Map State
+  const [properties, setProperties] = useState([]);
+  const [loadingProps, setLoadingProps] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
+  const mapContainerRef = useRef(null);
+  
   const cameraRef = useRef(null);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -109,6 +116,81 @@ export default function Attendance() {
   useEffect(() => {
     checkTodayAttendance();
   }, []);
+
+  // Fetch properties when attendance is marked
+  useEffect(() => {
+    if (hasAttendance) {
+      fetchProperties();
+    }
+  }, [hasAttendance]);
+
+  const fetchProperties = async () => {
+    setLoadingProps(true);
+    try {
+      const response = await axios.get(`${API_URL}/employee/properties?limit=1000`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const props = response.data.properties || [];
+      setProperties(props);
+      
+      const pending = props.filter(p => p.status === 'Pending').length;
+      const completed = props.filter(p => ['Completed', 'Approved'].includes(p.status)).length;
+      setStats({ total: props.length, pending, completed });
+    } catch (error) {
+      console.error('Failed to load properties:', error);
+    } finally {
+      setLoadingProps(false);
+    }
+  };
+
+  const getDefaultCenter = () => {
+    const validProps = properties.filter(p => p.latitude && p.longitude);
+    if (validProps.length > 0) {
+      return [validProps[0].latitude, validProps[0].longitude];
+    }
+    return [29.9695, 76.8783];
+  };
+
+  // Download map as PDF
+  const handlePrintMap = async () => {
+    if (!mapContainerRef.current) {
+      toast.error('Map not ready');
+      return;
+    }
+    setDownloading(true);
+    toast.info('Generating PDF...');
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const canvas = await html2canvas(mapContainerRef.current, {
+        useCORS: true, allowTaint: true, scale: 2, logging: false, backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('NSTU INDIA PRIVATE LIMITED', 105, 12, { align: 'center' });
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Property Survey Map', 105, 18, { align: 'center' });
+      pdf.text(`Surveyor: ${user?.name || '-'}  |  Date: ${new Date().toLocaleDateString('en-IN')}`, 105, 24, { align: 'center' });
+      pdf.text(`Total: ${stats.total}  |  Pending: ${stats.pending}  |  Done: ${stats.completed}`, 105, 30, { align: 'center' });
+      
+      const imgWidth = 190;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, Math.min(imgHeight, 240));
+      
+      pdf.setFontSize(8);
+      pdf.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 10, 287);
+      
+      pdf.save(`survey_map_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('Map PDF downloaded!');
+    } catch (error) {
+      toast.error('Failed to generate PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const checkTodayAttendance = async () => {
     try {
