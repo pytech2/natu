@@ -2625,11 +2625,6 @@ async def split_bills_by_specific_employees(
     }
     sn_rgb = color_map.get(sn_color.lower(), (1, 0, 0))
     
-    # A4 dimensions
-    A4_WIDTH = 595.276
-    A4_HEIGHT = 841.890
-    MARGIN = 20
-    
     src_pdf = fitz.open(str(original_pdf_path))
     
     for emp_idx, emp in enumerate(employees):
