@@ -1514,17 +1514,18 @@ async def get_property_detail(property_id: str, current_user: dict = Depends(get
 async def submit_survey(
     property_id: str,
     # Survey fields - Simplified as per requirements
-    receiver_name: str = Form(...),
-    receiver_mobile: str = Form(...),  # NEW: 10-digit mobile validation
-    relation: str = Form(...),
-    correct_colony_name: str = Form(None),  # NEW: Correct colony name
+    receiver_name: str = Form(""),
+    receiver_mobile: str = Form(""),
+    relation: str = Form(""),
+    correct_colony_name: str = Form(None),
     remarks: str = Form(None),
-    self_satisfied: str = Form(...),
+    self_satisfied: str = Form(""),
+    special_condition: str = Form(None),  # NEW: 'house_locked' or 'owner_denied'
     latitude: float = Form(...),
     longitude: float = Form(...),
-    house_photo: UploadFile = File(...),
-    gate_photo: UploadFile = File(...),  # Keep for backward compat but optional
-    signature: UploadFile = File(...),
+    house_photo: UploadFile = File(None),  # Now optional
+    gate_photo: UploadFile = File(None),   # Now optional
+    signature: UploadFile = File(None),    # Now optional
     extra_photos: List[UploadFile] = File(default=[]),
     authorization: str = Form(...),
     # Legacy fields - keep for backward compatibility
@@ -1549,32 +1550,46 @@ async def submit_survey(
     if current_user["role"] != "ADMIN" and not is_assigned:
         raise HTTPException(status_code=403, detail="Access denied")
     
+    # Check if special condition allows skipping required fields
+    is_special_condition = special_condition in ['house_locked', 'owner_denied']
+    
+    # Validate required fields only if not special condition
+    if not is_special_condition:
+        if not receiver_name or not relation or not receiver_mobile or not self_satisfied:
+            raise HTTPException(status_code=400, detail="Receiver name, mobile, relation and satisfaction status are required")
+        if not house_photo:
+            raise HTTPException(status_code=400, detail="Property photo is required")
+    
     photos = []
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    signature_url = None
     
-    # House photo
-    house_filename = f"{property_id}_house_{timestamp}{Path(house_photo.filename).suffix}"
-    house_path = UPLOAD_DIR / house_filename
-    async with aiofiles.open(house_path, 'wb') as f:
-        content = await house_photo.read()
-        await f.write(content)
-    photos.append({"photo_type": "HOUSE", "file_url": f"/api/uploads/{house_filename}"})
+    # House photo - only process if provided
+    if house_photo and house_photo.filename:
+        house_filename = f"{property_id}_house_{timestamp}{Path(house_photo.filename).suffix}"
+        house_path = UPLOAD_DIR / house_filename
+        async with aiofiles.open(house_path, 'wb') as f:
+            content = await house_photo.read()
+            await f.write(content)
+        photos.append({"photo_type": "HOUSE", "file_url": f"/api/uploads/{house_filename}"})
     
-    # Gate photo
-    gate_filename = f"{property_id}_gate_{timestamp}{Path(gate_photo.filename).suffix}"
-    gate_path = UPLOAD_DIR / gate_filename
-    async with aiofiles.open(gate_path, 'wb') as f:
-        content = await gate_photo.read()
-        await f.write(content)
-    photos.append({"photo_type": "GATE", "file_url": f"/api/uploads/{gate_filename}"})
+    # Gate photo - only process if provided
+    if gate_photo and gate_photo.filename:
+        gate_filename = f"{property_id}_gate_{timestamp}{Path(gate_photo.filename).suffix}"
+        gate_path = UPLOAD_DIR / gate_filename
+        async with aiofiles.open(gate_path, 'wb') as f:
+            content = await gate_photo.read()
+            await f.write(content)
+        photos.append({"photo_type": "GATE", "file_url": f"/api/uploads/{gate_filename}"})
     
-    # Signature
-    signature_filename = f"{property_id}_signature_{timestamp}.png"
-    signature_path = UPLOAD_DIR / signature_filename
-    async with aiofiles.open(signature_path, 'wb') as f:
-        content = await signature.read()
-        await f.write(content)
-    signature_url = f"/api/uploads/{signature_filename}"
+    # Signature - only process if provided
+    if signature and signature.filename:
+        signature_filename = f"{property_id}_signature_{timestamp}.png"
+        signature_path = UPLOAD_DIR / signature_filename
+        async with aiofiles.open(signature_path, 'wb') as f:
+            content = await signature.read()
+            await f.write(content)
+        signature_url = f"/api/uploads/{signature_filename}"
     
     # Extra photos
     for idx, photo in enumerate(extra_photos):
@@ -1586,6 +1601,11 @@ async def submit_survey(
                 await f.write(content)
             photos.append({"photo_type": "EXTRA", "file_url": f"/api/uploads/{extra_filename}"})
     
+    # Set receiver name based on special condition if empty
+    final_receiver_name = receiver_name
+    if is_special_condition and not receiver_name:
+        final_receiver_name = "House Locked" if special_condition == 'house_locked' else "Owner Denied"
+    
     # Create submission with new fields
     submission_doc = {
         "id": str(uuid.uuid4()),
@@ -1595,12 +1615,13 @@ async def submit_survey(
         "employee_id": current_user["id"],
         "employee_name": current_user["name"],
         # Survey fields - NEW simplified structure
-        "receiver_name": receiver_name,
+        "receiver_name": final_receiver_name,
         "receiver_mobile": receiver_mobile,
-        "relation": relation,
+        "relation": relation or ("N/A" if is_special_condition else ""),
         "correct_colony_name": correct_colony_name,
         "remarks": remarks,
-        "self_satisfied": self_satisfied,
+        "self_satisfied": self_satisfied or ("N/A" if is_special_condition else ""),
+        "special_condition": special_condition,  # NEW field
         "latitude": latitude,
         "longitude": longitude,
         "submitted_at": datetime.now(timezone.utc).isoformat(),
