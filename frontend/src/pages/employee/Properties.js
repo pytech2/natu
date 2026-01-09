@@ -45,34 +45,83 @@ const createNumberedIcon = (number, status, isNearest = false) => {
     'default': '#6b7280'
   };
   const color = colors[status] || colors['default'];
-  const size = isNearest ? 32 : 22;
-  const animation = isNearest ? 'animation: pulse-marker 1.5s ease-in-out infinite;' : '';
-  const glow = isNearest ? 'box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.4), 0 0 15px rgba(251, 191, 36, 0.6);' : 'box-shadow: 0 2px 4px rgba(0,0,0,0.3);';
+  const size = isNearest ? 36 : 22;
   
+  if (isNearest) {
+    // Nearest property - large blinking marker
+    return L.divIcon({
+      className: 'nearest-marker-animated',
+      html: `
+        <style>
+          @keyframes blink-marker {
+            0%, 100% { 
+              transform: scale(1); 
+              box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+              background-color: #f59e0b;
+            }
+            50% { 
+              transform: scale(1.3); 
+              box-shadow: 0 0 0 15px rgba(251, 191, 36, 0);
+              background-color: #fbbf24;
+            }
+          }
+          @keyframes ping {
+            0% { transform: scale(1); opacity: 1; }
+            75%, 100% { transform: scale(2.5); opacity: 0; }
+          }
+        </style>
+        <div style="position: relative;">
+          <div style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: ${size}px;
+            height: ${size}px;
+            background-color: rgba(251, 191, 36, 0.4);
+            border-radius: 50%;
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+          "></div>
+          <div style="
+            position: relative;
+            background-color: #f59e0b;
+            width: ${size}px;
+            height: ${size}px;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 800;
+            color: white;
+            animation: blink-marker 1s ease-in-out infinite;
+          ">${number}</div>
+        </div>`,
+      iconSize: [size + 20, size + 20],
+      iconAnchor: [(size + 20)/2, (size + 20)/2],
+      popupAnchor: [0, -(size + 20)/2]
+    });
+  }
+  
+  // Regular marker
   return L.divIcon({
     className: 'custom-numbered-marker',
-    html: `
-      <style>
-        @keyframes pulse-marker {
-          0%, 100% { transform: scale(1); box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.4), 0 0 15px rgba(251, 191, 36, 0.6); }
-          50% { transform: scale(1.15); box-shadow: 0 0 0 8px rgba(251, 191, 36, 0.2), 0 0 25px rgba(251, 191, 36, 0.8); }
-        }
-      </style>
-      <div style="
-        background-color: ${color};
-        width: ${size}px;
-        height: ${size}px;
-        border-radius: 50%;
-        border: ${isNearest ? '3px solid #fbbf24' : '2px solid white'};
-        ${glow}
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: ${isNearest ? '14px' : '10px'};
-        font-weight: 700;
-        color: white;
-        ${animation}
-      ">${number}</div>`,
+    html: `<div style="
+      background-color: ${color};
+      width: ${size}px;
+      height: ${size}px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+    ">${number}</div>`,
     iconSize: [size, size],
     iconAnchor: [size/2, size/2],
     popupAnchor: [0, -size/2]
