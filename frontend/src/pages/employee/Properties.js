@@ -369,14 +369,25 @@ export default function Properties() {
               >
                 <List className="w-4 h-4" />
               </Button>
-              <Button
-                variant={viewMode === 'map' ? 'default' : 'outline'}
-                size="icon"
-                onClick={() => { setViewMode('map'); setTriggerFit(t => t + 1); }}
-                className={viewMode !== 'map' ? 'animate-pulse bg-blue-100 border-blue-400 text-blue-600 hover:bg-blue-200' : ''}
+              <button
+                onClick={() => { setViewMode('map'); setTimeout(() => setFitKey(k => k + 1), 100); }}
+                className={`inline-flex items-center justify-center h-9 w-9 rounded-md border font-medium transition-all
+                  ${viewMode === 'map' 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30 animate-bounce'
+                  }`}
+                style={viewMode !== 'map' ? {
+                  animation: 'pulse-glow 1.5s ease-in-out infinite'
+                } : {}}
               >
                 <MapIcon className="w-4 h-4" />
-              </Button>
+              </button>
+              <style>{`
+                @keyframes pulse-glow {
+                  0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5), 0 4px 6px rgba(59, 130, 246, 0.3); transform: scale(1); }
+                  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 4px 15px rgba(59, 130, 246, 0.5); transform: scale(1.05); }
+                }
+              `}</style>
             </div>
           </CardContent>
         </Card>
