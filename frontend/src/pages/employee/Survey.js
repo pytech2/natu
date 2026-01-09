@@ -309,57 +309,70 @@ export default function Survey() {
   };
 
   const handleSubmit = async () => {
-    // Validations
+    // Validations - GPS check still required
     if (withinRange === false) {
       toast.error('You must be within 50 meters of the property to submit');
       return;
     }
 
-    if (!formData.receiver_name || !formData.relation) {
-      toast.error('Receiver name and relation are required');
-      return;
-    }
+    // If special condition is selected (House Locked or Owner Denied), skip other validations
+    if (canSkipRequiredFields) {
+      // Only GPS location is required for special conditions
+      if (!location.latitude || !location.longitude) {
+        toast.error('GPS location is required');
+        return;
+      }
+    } else {
+      // Normal validation for regular submissions
+      if (!formData.receiver_name || !formData.relation) {
+        toast.error('Receiver name and relation are required');
+        return;
+      }
 
-    if (!formData.receiver_mobile || !validateMobile(formData.receiver_mobile)) {
-      toast.error('Please enter a valid 10-digit receiver mobile number');
-      return;
-    }
+      if (!formData.receiver_mobile || !validateMobile(formData.receiver_mobile)) {
+        toast.error('Please enter a valid 10-digit receiver mobile number');
+        return;
+      }
 
-    if (!formData.self_satisfied) {
-      toast.error('Please select if notice receiver is satisfied');
-      return;
-    }
+      if (!formData.self_satisfied) {
+        toast.error('Please select if notice receiver is satisfied');
+        return;
+      }
 
-    if (!housePhoto) {
-      toast.error('Property photo is required');
-      return;
-    }
-
-    if (!signatureData) {
-      toast.error('Property holder signature is required');
-      return;
+      if (!housePhoto) {
+        toast.error('Property photo is required');
+        return;
+      }
+      
+      // Signature is now optional - removed validation
     }
 
     setSubmitting(true);
 
     try {
       const formDataObj = new FormData();
-      formDataObj.append('receiver_name', formData.receiver_name);
-      formDataObj.append('receiver_mobile', formData.receiver_mobile);
-      formDataObj.append('relation', formData.relation);
+      formDataObj.append('receiver_name', formData.receiver_name || (specialCondition === 'house_locked' ? 'House Locked' : specialCondition === 'owner_denied' ? 'Owner Denied' : ''));
+      formDataObj.append('receiver_mobile', formData.receiver_mobile || '');
+      formDataObj.append('relation', formData.relation || (canSkipRequiredFields ? 'N/A' : ''));
       formDataObj.append('correct_colony_name', formData.correct_colony_name || '');
-      formDataObj.append('remarks', formData.remarks || '');
-      formDataObj.append('self_satisfied', formData.self_satisfied);
+      formDataObj.append('remarks', formData.remarks || (specialCondition ? `Special Condition: ${specialCondition === 'house_locked' ? 'House Locked' : 'Owner Denied'}` : ''));
+      formDataObj.append('self_satisfied', formData.self_satisfied || (canSkipRequiredFields ? 'N/A' : ''));
+      formDataObj.append('special_condition', specialCondition || '');
       formDataObj.append('latitude', location.latitude);
       formDataObj.append('longitude', location.longitude);
-      formDataObj.append('house_photo', housePhoto);
       
-      // Create a dummy gate photo from house photo (backend still expects it)
-      formDataObj.append('gate_photo', housePhoto);
+      // Only append photo if available
+      if (housePhoto) {
+        formDataObj.append('house_photo', housePhoto);
+        formDataObj.append('gate_photo', housePhoto);
+      }
       
-      const signatureBlob = dataURLtoBlob(signatureData);
-      const signatureFile = new File([signatureBlob], 'signature.png', { type: 'image/png' });
-      formDataObj.append('signature', signatureFile);
+      // Only append signature if available (now optional)
+      if (signatureData) {
+        const signatureBlob = dataURLtoBlob(signatureData);
+        const signatureFile = new File([signatureBlob], 'signature.png', { type: 'image/png' });
+        formDataObj.append('signature', signatureFile);
+      }
       
       formDataObj.append('authorization', `Bearer ${token}`);
 
