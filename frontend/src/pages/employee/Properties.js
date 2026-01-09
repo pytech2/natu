@@ -473,8 +473,8 @@ export default function Properties() {
                   <Button 
                     size="sm" 
                     variant="outline"
-                    onClick={() => setTriggerFit(t => t + 1)}
-                    className="text-blue-600 border-blue-300"
+                    onClick={() => setFitKey(k => k + 1)}
+                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
                   >
                     <Locate className="w-4 h-4 mr-1" />
                     Full View
