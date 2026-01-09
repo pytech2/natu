@@ -541,7 +541,7 @@ export default function Properties() {
                       <div className="p-1 min-w-[160px]">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-bold text-blue-600">#{property.serial_number || index + 1}</span>
-                          {index === 0 && userLocation && <span className="text-xs bg-amber-500 text-white px-1 rounded">Nearest</span>}
+                          {index === 0 && userLocation && <span className="text-xs bg-green-500 text-white px-1 rounded animate-pulse">Nearest</span>}
                         </div>
                         <p className="font-semibold text-sm">{property.owner_name}</p>
                         <p className="text-xs text-slate-500">{property.colony}</p>
