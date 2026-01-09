@@ -2695,6 +2695,13 @@ async def split_bills_by_specific_employees(
     }
     sn_rgb = color_map.get(sn_color.lower(), (1, 0, 0))
     
+    # A4 dimensions
+    A4_WIDTH = 595.276
+    A4_HEIGHT = 841.890
+    GAP = 15
+    BILL_HEIGHT = (A4_HEIGHT - GAP * 3) / 2
+    MARGIN = GAP
+    
     src_pdf = fitz.open(str(original_pdf_path))
     
     for emp_idx, emp in enumerate(employees):
@@ -2711,52 +2718,78 @@ async def split_bills_by_specific_employees(
         output_filename = f"{emp_name_safe}_{colony or 'all'}_{timestamp}.pdf"
         output_path = UPLOAD_DIR / output_filename
         
-        # A4 dimensions in points
-        A4_WIDTH = 595.276
-        A4_HEIGHT = 841.890
-        HEIGHT_SCALE = 1.25  # 25% height increase
-        
         output_pdf = fitz.open()
         
-        for bill in employee_bills:
-            page_num = bill.get("page_number", 1) - 1
-            if page_num < 0 or page_num >= len(src_pdf):
-                continue
-            
-            src_page = src_pdf[page_num]
-            src_rect = src_page.rect
-            
-            # Create new A4 page
+        # Process bills in pairs (2 per page)
+        for j in range(0, len(employee_bills), 2):
             new_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
             
-            # Scale to fit A4 with 25% height increase
-            width_scale = A4_WIDTH / src_rect.width
-            new_width = A4_WIDTH
-            new_height = src_rect.height * width_scale * HEIGHT_SCALE
+            # First bill (top half)
+            bill1 = employee_bills[j]
+            page_num1 = bill1.get("page_number", 1) - 1
             
-            if new_height > A4_HEIGHT:
-                adjust_scale = A4_HEIGHT / new_height
-                new_width = new_width * adjust_scale
-                new_height = A4_HEIGHT
+            if 0 <= page_num1 < len(src_pdf):
+                src_rect1 = src_pdf[page_num1].rect
+                width_scale1 = (A4_WIDTH - MARGIN * 2) / src_rect1.width
+                height_scale1 = BILL_HEIGHT / src_rect1.height
+                scale1 = min(width_scale1, height_scale1)
+                
+                new_width1 = src_rect1.width * scale1
+                new_height1 = src_rect1.height * scale1
+                x_offset1 = (A4_WIDTH - new_width1) / 2
+                y_offset1 = MARGIN
+                
+                dest_rect1 = fitz.Rect(x_offset1, y_offset1, x_offset1 + new_width1, y_offset1 + new_height1)
+                new_page.show_pdf_page(dest_rect1, src_pdf, page_num1)
+                
+                # Serial number for first bill
+                bill_sr_positions1 = new_page.search_for("BillSrNo")
+                if bill_sr_positions1:
+                    for pos in bill_sr_positions1:
+                        if pos.y0 < A4_HEIGHT / 2:
+                            x1, y1 = pos.x1 + 25, pos.y0
+                            break
+                    else:
+                        x1, y1 = x_offset1 + new_width1 - 60, y_offset1 + 30
+                else:
+                    x1, y1 = x_offset1 + new_width1 - 60, y_offset1 + 30
+                new_page.insert_text((x1, y1), f"{bill1['serial_number']}", fontsize=sn_font_size, color=sn_rgb, fontname="helv")
             
-            x_offset = (A4_WIDTH - new_width) / 2
-            y_offset = (A4_HEIGHT - new_height) / 2
-            dest_rect = fitz.Rect(x_offset, y_offset, x_offset + new_width, y_offset + new_height)
+            # Second bill (bottom half) if exists
+            if j + 1 < len(employee_bills):
+                bill2 = employee_bills[j + 1]
+                page_num2 = bill2.get("page_number", 1) - 1
+                
+                if 0 <= page_num2 < len(src_pdf):
+                    src_rect2 = src_pdf[page_num2].rect
+                    width_scale2 = (A4_WIDTH - MARGIN * 2) / src_rect2.width
+                    height_scale2 = BILL_HEIGHT / src_rect2.height
+                    scale2 = min(width_scale2, height_scale2)
+                    
+                    new_width2 = src_rect2.width * scale2
+                    new_height2 = src_rect2.height * scale2
+                    x_offset2 = (A4_WIDTH - new_width2) / 2
+                    y_offset2 = MARGIN + BILL_HEIGHT + GAP
+                    
+                    dest_rect2 = fitz.Rect(x_offset2, y_offset2, x_offset2 + new_width2, y_offset2 + new_height2)
+                    new_page.show_pdf_page(dest_rect2, src_pdf, page_num2)
+                    
+                    # Serial number for second bill
+                    bill_sr_positions2 = new_page.search_for("BillSrNo")
+                    if bill_sr_positions2:
+                        for pos in bill_sr_positions2:
+                            if pos.y0 > A4_HEIGHT / 2:
+                                x2, y2 = pos.x1 + 25, pos.y0
+                                break
+                        else:
+                            x2, y2 = x_offset2 + new_width2 - 60, y_offset2 + 30
+                    else:
+                        x2, y2 = x_offset2 + new_width2 - 60, y_offset2 + 30
+                    new_page.insert_text((x2, y2), f"{bill2['serial_number']}", fontsize=sn_font_size, color=sn_rgb, fontname="helv")
             
-            new_page.show_pdf_page(dest_rect, src_pdf, page_num)
-            
-            # Find BillSrNo position and place serial number
-            bill_sr_positions = new_page.search_for("BillSrNo")
-            
-            if bill_sr_positions:
-                bill_sr_rect = bill_sr_positions[0]
-                x = bill_sr_rect.x1 + 35
-                y = bill_sr_rect.y0
-            else:
-                x, y = x_offset + new_width - 80, y_offset + 40
-            
-            sn_text = f"{bill['serial_number']}"
-            new_page.insert_text((x, y), sn_text, fontsize=sn_font_size, color=sn_rgb, fontname="helv")
+            # Separator line
+            line_y = MARGIN + BILL_HEIGHT + GAP / 2
+            new_page.draw_line(fitz.Point(MARGIN, line_y), fitz.Point(A4_WIDTH - MARGIN, line_y), color=(0.8, 0.8, 0.8), width=0.5, dashes="[3 3]")
         
         output_pdf.save(str(output_path))
         output_pdf.close()
