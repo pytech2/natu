@@ -260,8 +260,8 @@ export default function AttendancePage() {
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="w-4 h-4 text-slate-400" />
                       <div>
-                        <p className="font-medium">{formatTime(record.timestamp)}</p>
-                        <p className="text-xs text-slate-500">{formatDate(record.timestamp)}</p>
+                        <p className="font-medium">{formatTime(record.marked_at)}</p>
+                        <p className="text-xs text-slate-500">{formatDate(record.marked_at)}</p>
                       </div>
                     </div>
 
