@@ -564,6 +564,34 @@ export default function Properties() {
         {/* Property List */}
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-slate-700">Property List (Nearest First)</h2>
+          
+          {/* CSS for blinking list item */}
+          <style>{`
+            @keyframes blink-card {
+              0%, 100% { 
+                background-color: rgb(255, 251, 235);
+                border-color: rgb(251, 191, 36);
+                box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+              }
+              50% { 
+                background-color: rgb(254, 243, 199);
+                border-color: rgb(245, 158, 11);
+                box-shadow: 0 0 15px 5px rgba(251, 191, 36, 0.3);
+              }
+            }
+            @keyframes blink-badge {
+              0%, 100% { transform: scale(1); opacity: 1; }
+              50% { transform: scale(1.1); opacity: 0.8; }
+            }
+            .nearest-card-blink {
+              animation: blink-card 1.5s ease-in-out infinite;
+              border-width: 3px !important;
+            }
+            .nearest-badge-blink {
+              animation: blink-badge 1s ease-in-out infinite;
+            }
+          `}</style>
+          
           {filteredProperties.length === 0 ? (
             <Card>
               <CardContent className="py-6 text-center text-slate-500">
@@ -575,13 +603,15 @@ export default function Properties() {
             filteredProperties.map((property, index) => (
               <Card 
                 key={property.id} 
-                className={`cursor-pointer hover:shadow-md transition-shadow ${index === 0 && userLocation ? 'border-amber-400 border-2 bg-amber-50' : ''}`}
+                className={`cursor-pointer hover:shadow-md transition-shadow ${
+                  index === 0 && userLocation ? 'nearest-card-blink border-amber-400 bg-amber-50' : ''
+                }`}
                 onClick={() => navigate(`/employee/survey/${property.id}`)}
               >
                 <CardContent className="p-3">
                   <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
-                      index === 0 && userLocation ? 'bg-amber-500 ring-2 ring-amber-300 ring-offset-1' :
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
+                      index === 0 && userLocation ? 'bg-amber-500 ring-4 ring-amber-300 ring-offset-2 animate-pulse' :
                       property.status === 'Pending' ? 'bg-orange-500' :
                       property.status === 'Completed' || property.status === 'Approved' ? 'bg-emerald-500' : 'bg-slate-500'
                     }`}>
@@ -591,7 +621,9 @@ export default function Properties() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-blue-600">{property.property_id}</span>
                         {index === 0 && userLocation && (
-                          <span className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">Nearest</span>
+                          <span className="nearest-badge-blink text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-bold shadow-lg">
+                            ⭐ NEAREST
+                          </span>
                         )}
                       </div>
                       <p className="font-semibold text-slate-800 truncate">{property.owner_name}</p>
