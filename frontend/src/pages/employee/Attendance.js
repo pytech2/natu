@@ -414,25 +414,14 @@ export default function Attendance() {
                       <Camera className="w-12 h-12 text-slate-300 mb-2" />
                       <p className="text-slate-500 text-sm">Take a selfie for attendance</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        className="h-14 bg-blue-600 hover:bg-blue-700"
-                        onClick={startCamera}
-                        disabled={!location.latitude}
-                      >
-                        <Camera className="w-5 h-5 mr-2" />
-                        Open Camera
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="h-14"
-                        onClick={() => cameraRef.current?.click()}
-                        disabled={!location.latitude}
-                      >
-                        <Camera className="w-5 h-5 mr-2" />
-                        Upload Photo
-                      </Button>
-                    </div>
+                    <Button
+                      className="w-full h-14 bg-blue-600 hover:bg-blue-700"
+                      onClick={startCamera}
+                      disabled={!location.latitude}
+                    >
+                      <Camera className="w-5 h-5 mr-2" />
+                      Take Selfie
+                    </Button>
                     {!location.latitude && (
                       <p className="text-center text-amber-600 text-sm">
                         Please capture GPS location first
