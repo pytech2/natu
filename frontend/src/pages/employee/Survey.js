@@ -281,10 +281,35 @@ export default function Survey() {
     if (!file) return;
 
     setProcessingPhoto(type);
+    console.log('Photo captured, file:', file.name, file.size, file.type);
 
     try {
-      if (location.latitude && location.longitude) {
-        const watermarkedFile = await addWatermarkToImage(file, location.latitude, location.longitude);
+      // For mobile: try to get fresh GPS location if not available
+      let lat = location.latitude;
+      let lng = location.longitude;
+      
+      if (!lat || !lng) {
+        console.log('GPS not available, attempting to fetch...');
+        // Try to get GPS one more time
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            });
+          });
+          lat = position.coords.latitude;
+          lng = position.coords.longitude;
+          console.log('GPS fetched for watermark:', lat, lng);
+        } catch (gpsErr) {
+          console.warn('Could not get GPS for watermark:', gpsErr);
+        }
+      }
+
+      if (lat && lng) {
+        console.log('Applying watermark with GPS:', lat, lng);
+        const watermarkedFile = await addWatermarkToImage(file, lat, lng);
         if (type === 'house') {
           setHousePhoto(watermarkedFile);
           const previewUrl = URL.createObjectURL(watermarkedFile);
@@ -292,6 +317,7 @@ export default function Survey() {
         }
         toast.success('Photo captured with GPS & timestamp watermark!');
       } else {
+        console.warn('No GPS available for watermark');
         if (type === 'house') {
           setHousePhoto(file);
           setHousePhotoPreview(URL.createObjectURL(file));
@@ -299,6 +325,7 @@ export default function Survey() {
         toast.warning('Photo captured (no GPS watermark - location not available)');
       }
     } catch (error) {
+      console.error('Error processing photo:', error);
       toast.error('Error processing photo');
     } finally {
       setProcessingPhoto(null);
