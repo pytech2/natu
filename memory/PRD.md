@@ -1,208 +1,134 @@
-# NSTU India Pvt Ltd - Property Tax Manager PRD
+# NSTU India Private Limited - Property Tax Survey Application
 
 ## Original Problem Statement
-Build a web application for **NSTU India Private Limited** to manage property tax notice/bill distribution + surveys for 50,000+ properties, handled by 1 Super Admin + ~15 field surveyors.
+Build a full-stack web application for NSTU India Private Limited to manage property tax notice distribution and surveys. The application requires:
+- Different user roles (Admin, Surveyor, Supervisor, MC Officer)
+- Bulk data upload via Excel and PDF
+- Property assignment to employees
+- Surveyor mobile interface for data collection (photos with GPS watermarks, signatures)
+- Admin dashboard for progress tracking, review/approval, and data export
 
-## User Personas
-1. **Super Admin**: Manages employees (Surveyors, Supervisors, MC Officers), uploads property datasets, assigns areas, views progress, reviews & approves/rejects submissions, exports data
-2. **Supervisor**: Full admin access - same as Super Admin for oversight
-3. **MC Officer**: Limited view-only access - can see stats, properties, map, submissions but cannot upload data or manage employees
-4. **Surveyor**: Views assigned properties, submits surveys with GPS-watermarked photos, digital signature, marks completion
+## Tech Stack
+- **Backend**: FastAPI, MongoDB (Motor), JWT Authentication
+- **Frontend**: React, React-Leaflet, Tailwind CSS, Shadcn UI
+- **Libraries**: PyMuPDF, pytesseract, pdf2image, reportlab, html2canvas, jspdf
 
-## Core Requirements
-- JWT-based authentication
-- Local file storage for photos
-- Light theme (professional corporate look)
-- Support 50,000+ property records
-- GPS coordinate capture at submission
-- Photo evidence with GPS/Date/Time watermark
-- Digital signature capture
-- Excel & PDF export with all submission data
-- Batch management (archive/delete)
+## User Roles & Permissions
+1. **Super Admin**: Full access to all features
+2. **Surveyor**: View assigned properties, submit surveys, mark attendance
+3. **Supervisor**: Manage surveyors in assigned area
+4. **MC Officer**: Review and approve submissions
 
-## What's Been Implemented (January 6, 2026)
+---
 
-### Latest Session Changes ✅
-- **PDF Bills Management - New Features:**
-  - **Delete All Button**: Bulk delete all bills (with filter support)
-  - **Add to Properties Button**: Copy bills to properties database for survey workflow
-  - **Split by Employee - Select by Name**: Now shows employee list with names, usernames, roles; select specific employees instead of just a count
-  - **Serial Number Format**: Plain numbers (1, 2, 3) in generated PDFs
-  
-- **Property Map Features - Complete:**
-  - "Arrange by GPS Route" - GPS-based nearest neighbor sorting
-  - "Save Arranged Data" - Save new serial order to database
-  - "Download Arranged PDF" - Generate PDF with properties sorted by GPS route
+## What's Been Implemented
 
-- **Backend Refactoring Started:**
-  - Created `/app/backend/routers/` directory structure
-  - Created `bills.py` router template for future modularization
-  - Server.py is 2570 lines - full refactoring pending
+### Authentication & Users
+- [x] JWT-based authentication using mobile numbers
+- [x] Password reset functionality (Fixed hash storage bug)
+- [x] Role-based access control
+- [x] Employee management (CRUD)
 
-### PDF Bill Processing System (Complete)
-- ✅ Upload multi-page PDFs
-- ✅ Extract bill data from each page using PyMuPDF
-- ✅ Store extracted data (owner, mobile, colony, GPS, amounts)
-- ✅ Filter by colony/batch
-- ✅ Arrange bills by GPS route (nearest neighbor algorithm)
-- ✅ Generate arranged PDFs with "SR : X" serial numbers
-- ✅ Split PDFs by specific employees (select by name)
-- ✅ Edit bill data
-- ✅ View bills on map
-- ✅ Delete all bills
-- ✅ Copy bills to properties database
+### Admin Features
+- [x] Dashboard with statistics (properties, completions, attendance)
+- [x] Employee performance charts
+- [x] Property upload via Excel
+- [x] PDF Bill upload and processing
+  - [x] Multi-page PDF extraction
+  - [x] Filter out "NA" owner names during import
+  - [x] GPS-based route sorting by colony
+  - [x] Serial number generation on bills
+- [x] Generate arranged PDFs per colony
+- [x] Split PDFs by assigned employee
+- [x] Delete by Colony feature
+- [x] Property Map view
+- [x] Submissions review/approval
 
-### Branding & UI
-- ✅ NSTU India Pvt Ltd logo integration
-- ✅ Modern admin dashboard with graphs first, then employee table
-- ✅ Mobile-friendly surveyor interface
-- ✅ Clean, professional design
+### Employee/Surveyor Features
+- [x] Mobile-optimized dashboard
+- [x] Daily attendance with selfie capture
+- [x] Assigned Properties page with:
+  - [x] Persistent map view
+  - [x] **Live GPS tracking** with real-time location
+  - [x] **Nearest-first sorting** based on surveyor location
+  - [x] **GREEN animated highlight** for nearest property:
+    - Rotating dashed green border on map marker
+    - Pulsing green glow effect
+    - Green badge "⭐ NEAREST" on list card
+    - Spinning border animation around card
+  - [x] Full Size Map modal
+  - [x] Smart zoom algorithm (adjusts based on distance)
+  - [x] Print map as PDF feature
+- [x] Survey submission with:
+  - [x] Photo capture (watermark issue on mobile - P1)
+  - [x] Signature pad
+  - [x] GPS coordinates
 
-### Backend (FastAPI + MongoDB)
-- ✅ JWT Authentication (login/logout)
-- ✅ User Management with roles: ADMIN, SURVEYOR, SUPERVISOR, MC_OFFICER
-- ✅ Role-based access control
-- ✅ Dataset Batch Upload (CSV/Excel)
-- ✅ PDF Bills Upload & Processing
-- ✅ Property Management with pagination
-- ✅ Survey Submission with 50m radius check
-- ✅ Approve/Reject workflow
-- ✅ Dashboard Statistics
-- ✅ Employee Progress Tracking
-- ✅ Attendance System (selfie + GPS)
-- ✅ Excel & PDF Export
-- ✅ GPS Route Sorting (Nearest Neighbor Algorithm)
+### Maps & Visualization
+- [x] Interactive maps using Leaflet
+- [x] Custom numbered markers
+- [x] Min/Max zoom limits to prevent blank tiles
+- [x] User location marker (blue dot)
+- [x] Property clustering
 
-### Frontend (React + Tailwind + Shadcn UI)
-- ✅ Login Page with NSTU logo
-- ✅ Admin Dashboard with stats and charts
-- ✅ Employee Management
-- ✅ Dataset Upload (CSV/Excel)
-- ✅ PDF Bills Management with all features
-- ✅ Property Map with GPS markers and action buttons
-- ✅ Bills Map visualization
-- ✅ Submissions review
-- ✅ Surveyor mobile interface
+---
 
-### Test Credentials
-- **Admin**: admin / nastu123
-- **Surveyors**: Created via admin panel
+## Known Issues
 
-## Prioritized Backlog
+### P0 (Critical)
+- None currently blocking
 
-### P0 (Critical - Done)
-- [x] Authentication system
-- [x] Property upload (CSV/Excel)
-- [x] PDF Bills upload & processing
-- [x] Employee management with roles
-- [x] Property assignment
-- [x] Survey submission with 50m radius check
-- [x] GPS route arrangement
-- [x] PDF generation with serial numbers
-- [x] Split by employee (select by name)
-- [x] Copy bills to properties
-- [x] Delete all bills
+### P1 (High Priority)
+1. **Mobile Photo Watermark Bug** (Recurring)
+   - Photos taken via mobile camera don't get GPS/timestamp watermark
+   - File: `frontend/src/pages/employee/Survey.js`
+   - Needs investigation of `applyWatermark` function
 
-### P1 (Important - Done)
-- [x] Excel export
-- [x] PDF export with watermarked photos
-- [x] Digital signature
-- [x] GPS watermarking
-- [x] Property Map with action buttons
+### P2 (Medium Priority)
+1. **E2E Testing Needed**
+   - Full regression test of all workflows
+   - Admin: PDF upload, generation, delete by colony
+   - Employee: Attendance, properties, survey submission
 
-### P2 (Nice to Have)
-- [ ] Offline support for mobile
-- [ ] Real-time notifications
-- [ ] Bulk reassignment
-- [ ] Advanced reporting
-- [ ] SMS notifications
+---
 
-## Technical Architecture
-- **Backend**: FastAPI + MongoDB (Motor async driver)
-- **Frontend**: React 19 + Tailwind CSS + Shadcn UI
-- **Maps**: Leaflet + React-Leaflet
-- **PDF Processing**: PyMuPDF (fitz)
-- **Auth**: JWT with bcrypt password hashing
-- **File Storage**: Local uploads directory
-- **Export**: openpyxl (Excel), reportlab (PDF)
+## Technical Debt
 
-## API Endpoints - Bills Management
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/admin/bills/upload-pdf` | POST | Upload PDF and extract bills |
-| `/api/admin/bills` | GET | List bills with filters |
-| `/api/admin/bills/colonies` | GET | Get unique colonies |
-| `/api/admin/bills/{id}` | PUT | Update bill data |
-| `/api/admin/bills/arrange-by-route` | POST | Arrange by GPS route |
-| `/api/admin/bills/generate-pdf` | POST | Generate arranged PDF |
-| `/api/admin/bills/split-by-employees` | POST | Split by specific employees |
-| `/api/admin/bills/delete-all` | POST | Delete all bills |
-| `/api/admin/bills/copy-to-properties` | POST | Copy to properties DB |
-| `/api/admin/bills/map-data` | GET | Get bills for map |
+### High Priority
+1. **Backend Refactoring** - `server.py` is 2700+ lines
+   - Split into modular FastAPI routers:
+     - `/routes/auth.py`
+     - `/routes/users.py`
+     - `/routes/properties.py`
+     - `/routes/bills.py`
+     - `/routes/submissions.py`
 
-## Code Architecture
-```
-/app/
-├── backend/
-│   ├── uploads/
-│   ├── .env
-│   ├── requirements.txt
-│   └── server.py
-└── frontend/
-    ├── src/
-    │   ├── components/
-    │   ├── context/
-    │   ├── pages/
-    │   │   ├── admin/
-    │   │   │   ├── Bills.js       # PDF Bills Management
-    │   │   │   ├── BillsMap.js    # Bills Map View
-    │   │   │   ├── Dashboard.js
-    │   │   │   ├── Map.js         # Property Map with actions
-    │   │   │   ├── Properties.js
-    │   │   │   └── ...
-    │   │   ├── employee/
-    │   │   └── Login.js
-    │   └── App.js
-    └── package.json
-```
+### Medium Priority
+1. Clean up unused `PropertyMap.js` file
+2. Add comprehensive test suite
 
-## Key Data Models
+---
 
-### Bills Collection
-```javascript
-{
-  id: string,
-  batch_id: string,
-  serial_number: number,
-  page_number: number,
-  property_id: string,
-  owner_name: string,
-  mobile: string,
-  colony: string,
-  latitude: number,
-  longitude: number,
-  category: string,
-  total_outstanding: string,
-  // ... other extracted fields
-}
-```
+## Future/Backlog Tasks
 
-### Properties Collection
-```javascript
-{
-  id: string,
-  batch_id: string,
-  serial_number: number,
-  property_id: string,
-  owner_name: string,
-  mobile: string,
-  colony: string,
-  latitude: number,
-  longitude: number,
-  category: string,
-  amount: string,
-  assigned_employee_id: string,
-  status: string,
-  source_bill_id: string  // Reference to original bill
-}
-```
+1. **Offline Support** - Enable surveyor mobile to work offline and sync later
+2. **Download ZIP** - All split-employee PDFs as single ZIP
+3. **Sound/Vibration Alert** - When surveyor is close to nearest property
+4. **Push Notifications** - For new assignments
+
+---
+
+## Test Credentials
+- **Admin**: `admin` / `nastu123`
+- **Employee**: Create via admin panel, reset password
+
+## Key Files
+- `/app/backend/server.py` - Main backend (monolithic)
+- `/app/frontend/src/pages/employee/Properties.js` - GPS-aware property list with green animation
+- `/app/frontend/src/pages/employee/Attendance.js` - Attendance with selfie
+- `/app/frontend/src/pages/employee/Survey.js` - Survey form with photo/signature
+- `/app/frontend/src/pages/admin/Bills.js` - PDF bill management
+
+---
+
+*Last Updated: January 2026*
