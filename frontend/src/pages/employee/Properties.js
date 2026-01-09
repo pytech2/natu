@@ -34,7 +34,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Custom numbered marker
+// Custom numbered marker with animation for nearest
 const createNumberedIcon = (number, status, isNearest = false) => {
   const colors = {
     'Pending': '#f97316',
@@ -45,25 +45,34 @@ const createNumberedIcon = (number, status, isNearest = false) => {
     'default': '#6b7280'
   };
   const color = colors[status] || colors['default'];
-  const size = isNearest ? 28 : 22;
-  const border = isNearest ? '3px solid #fbbf24' : '2px solid white';
+  const size = isNearest ? 32 : 22;
+  const animation = isNearest ? 'animation: pulse-marker 1.5s ease-in-out infinite;' : '';
+  const glow = isNearest ? 'box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.4), 0 0 15px rgba(251, 191, 36, 0.6);' : 'box-shadow: 0 2px 4px rgba(0,0,0,0.3);';
   
   return L.divIcon({
     className: 'custom-numbered-marker',
-    html: `<div style="
-      background-color: ${color};
-      width: ${size}px;
-      height: ${size}px;
-      border-radius: 50%;
-      border: ${border};
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: ${isNearest ? '12px' : '10px'};
-      font-weight: 700;
-      color: white;
-    ">${number}</div>`,
+    html: `
+      <style>
+        @keyframes pulse-marker {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.4), 0 0 15px rgba(251, 191, 36, 0.6); }
+          50% { transform: scale(1.15); box-shadow: 0 0 0 8px rgba(251, 191, 36, 0.2), 0 0 25px rgba(251, 191, 36, 0.8); }
+        }
+      </style>
+      <div style="
+        background-color: ${color};
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 50%;
+        border: ${isNearest ? '3px solid #fbbf24' : '2px solid white'};
+        ${glow}
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: ${isNearest ? '14px' : '10px'};
+        font-weight: 700;
+        color: white;
+        ${animation}
+      ">${number}</div>`,
     iconSize: [size, size],
     iconAnchor: [size/2, size/2],
     popupAnchor: [0, -size/2]
