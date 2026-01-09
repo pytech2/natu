@@ -446,12 +446,21 @@ export default function Properties() {
                   Properties Map ({filteredProperties.length})
                 </CardTitle>
                 <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setTriggerFit(t => t + 1)}
+                    className="text-blue-600 border-blue-300"
+                  >
+                    <Locate className="w-4 h-4 mr-1" />
+                    Full View
+                  </Button>
                   <Button size="sm" onClick={handlePrintMap} disabled={downloading}>
                     {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
-                    Print PDF
+                    Print
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setViewMode('list')} className="text-slate-600">
-                    ✕ Close
+                    ✕
                   </Button>
                 </div>
               </div>
