@@ -38,7 +38,7 @@ export default function Export() {
   const [filters, setFilters] = useState({
     batch_id: '',
     employee_id: '',
-    status: ''
+    status: 'Approved'  // Default to Approved only
   });
 
   useEffect(() => {
