@@ -500,7 +500,7 @@ export default function Properties() {
                   scrollWheelZoom={true}
                 >
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  <FitBounds properties={filteredProperties} userLocation={userLocation} triggerFit={triggerFit} />
+                  <MapController properties={filteredProperties} userLocation={userLocation} fitKey={fitKey} />
                   
                   {/* User location marker */}
                   {userLocation && (
