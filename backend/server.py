@@ -2246,37 +2246,36 @@ async def generate_arranged_pdf(
         page_num1 = bill1.get("page_number", 1) - 1
         
         if 0 <= page_num1 < len(src_pdf):
-            src_rect1 = src_pdf[page_num1].rect
+            src_page1 = src_pdf[page_num1]
+            rotation1 = src_page1.rotation
+            
+            # Get the actual content dimensions considering rotation
+            if rotation1 in [90, 270]:
+                content_width1 = src_page1.rect.height
+                content_height1 = src_page1.rect.width
+            else:
+                content_width1 = src_page1.rect.width
+                content_height1 = src_page1.rect.height
             
             # Calculate scaling to fit in top half
-            width_scale1 = (A4_WIDTH - MARGIN * 2) / src_rect1.width
-            height_scale1 = BILL_HEIGHT / src_rect1.height
+            width_scale1 = (A4_WIDTH - MARGIN * 2) / content_width1
+            height_scale1 = BILL_HEIGHT / content_height1
             scale1 = min(width_scale1, height_scale1)
             
-            new_width1 = src_rect1.width * scale1
-            new_height1 = src_rect1.height * scale1
+            new_width1 = content_width1 * scale1
+            new_height1 = content_height1 * scale1
             
             # Center horizontally, place at top with margin
             x_offset1 = (A4_WIDTH - new_width1) / 2
             y_offset1 = MARGIN
             
             dest_rect1 = fitz.Rect(x_offset1, y_offset1, x_offset1 + new_width1, y_offset1 + new_height1)
-            new_page.show_pdf_page(dest_rect1, src_pdf, page_num1)
+            # Use rotate=0 to display content in correct orientation
+            new_page.show_pdf_page(dest_rect1, src_pdf, page_num1, rotate=0)
             
-            # Add serial number for first bill
-            bill_sr_positions1 = new_page.search_for("BillSrNo")
-            if bill_sr_positions1:
-                # Find position in top half
-                for pos in bill_sr_positions1:
-                    if pos.y0 < A4_HEIGHT / 2:
-                        x1 = pos.x1 + 25
-                        y1 = pos.y0
-                        break
-                else:
-                    x1, y1 = x_offset1 + new_width1 - 60, y_offset1 + 30
-            else:
-                x1, y1 = x_offset1 + new_width1 - 60, y_offset1 + 30
-            
+            # Add serial number for first bill - top right corner
+            x1 = x_offset1 + new_width1 - 50
+            y1 = y_offset1 + 35
             new_page.insert_text((x1, y1), f"{bill1['serial_number']}", fontsize=sn_font_size, color=sn_rgb, fontname="helv")
         
         # Process second bill (bottom half) if exists
@@ -2285,29 +2284,37 @@ async def generate_arranged_pdf(
             page_num2 = bill2.get("page_number", 1) - 1
             
             if 0 <= page_num2 < len(src_pdf):
-                src_rect2 = src_pdf[page_num2].rect
+                src_page2 = src_pdf[page_num2]
+                rotation2 = src_page2.rotation
+                
+                # Get the actual content dimensions considering rotation
+                if rotation2 in [90, 270]:
+                    content_width2 = src_page2.rect.height
+                    content_height2 = src_page2.rect.width
+                else:
+                    content_width2 = src_page2.rect.width
+                    content_height2 = src_page2.rect.height
                 
                 # Calculate scaling to fit in bottom half
-                width_scale2 = (A4_WIDTH - MARGIN * 2) / src_rect2.width
-                height_scale2 = BILL_HEIGHT / src_rect2.height
+                width_scale2 = (A4_WIDTH - MARGIN * 2) / content_width2
+                height_scale2 = BILL_HEIGHT / content_height2
                 scale2 = min(width_scale2, height_scale2)
                 
-                new_width2 = src_rect2.width * scale2
-                new_height2 = src_rect2.height * scale2
+                new_width2 = content_width2 * scale2
+                new_height2 = content_height2 * scale2
                 
                 # Center horizontally, place in bottom half with gap
                 x_offset2 = (A4_WIDTH - new_width2) / 2
                 y_offset2 = MARGIN + BILL_HEIGHT + GAP
                 
                 dest_rect2 = fitz.Rect(x_offset2, y_offset2, x_offset2 + new_width2, y_offset2 + new_height2)
-                new_page.show_pdf_page(dest_rect2, src_pdf, page_num2)
+                # Use rotate=0 to display content in correct orientation
+                new_page.show_pdf_page(dest_rect2, src_pdf, page_num2, rotate=0)
                 
-                # Add serial number for second bill
-                bill_sr_positions2 = new_page.search_for("BillSrNo")
-                if bill_sr_positions2:
-                    # Find position in bottom half
-                    for pos in bill_sr_positions2:
-                        if pos.y0 > A4_HEIGHT / 2:
+                # Add serial number for second bill - top right corner
+                x2 = x_offset2 + new_width2 - 50
+                y2 = y_offset2 + 35
+                new_page.insert_text((x2, y2), f"{bill2['serial_number']}", fontsize=sn_font_size, color=sn_rgb, fontname="helv")
                             x2 = pos.x1 + 25
                             y2 = pos.y0
                             break
