@@ -112,8 +112,8 @@ const formatDistance = (meters) => {
   return `${(meters / 1000).toFixed(1)}km`;
 };
 
-// Component to fit map bounds - zoom to show all properties
-function FitBounds({ properties, userLocation }) {
+// Component to fit map bounds - auto-zoom to show all properties with boundary
+function FitBounds({ properties, userLocation, triggerFit }) {
   const map = useMap();
   useEffect(() => {
     const validProps = properties.filter(p => p.latitude && p.longitude);
@@ -122,10 +122,10 @@ function FitBounds({ properties, userLocation }) {
       if (userLocation) {
         bounds.extend([userLocation.latitude, userLocation.longitude]);
       }
-      // Fit bounds to show all properties at comfortable zoom
-      map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+      // Auto-fit to show ALL properties - zoom in enough to see pins
+      map.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [properties, userLocation, map]);
+  }, [properties, userLocation, map, triggerFit]);
   return null;
 }
 
