@@ -163,7 +163,6 @@ export default function Properties() {
   
   // UI state
   const [downloading, setDownloading] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
   const [fitKey, setFitKey] = useState(0); // Key to trigger map fit
 
