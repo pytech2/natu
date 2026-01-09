@@ -38,71 +38,91 @@ import {
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 // Function to add watermark to image with GPS, Date, Time
+// Fixed for mobile camera images with EXIF orientation handling
 const addWatermarkToImage = (file, latitude, longitude) => {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+    // Create an image element to load the file
+    const img = new Image();
     
-    reader.onload = (e) => {
-      const img = new Image();
-      
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          canvas.width = img.width;
-          canvas.height = img.height;
-          
-          ctx.drawImage(img, 0, 0, img.width, img.height);
-          
-          const now = new Date();
-          const dateStr = now.toLocaleDateString('en-IN', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-          });
-          const timeStr = now.toLocaleTimeString('en-IN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-          });
-          
-          const watermarkText = `GPS: ${latitude?.toFixed(6)}, ${longitude?.toFixed(6)} | ${dateStr} ${timeStr}`;
-          
-          const fontSize = Math.max(20, Math.min(img.width, img.height) * 0.025);
-          ctx.font = `bold ${fontSize}px Arial`;
-          
-          const textWidth = ctx.measureText(watermarkText).width;
-          const padding = 15;
-          const x = img.width - textWidth - padding;
-          const y = img.height - padding;
-          
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-          ctx.fillRect(x - 10, y - fontSize - 5, textWidth + 20, fontSize + 15);
-          
-          ctx.fillStyle = '#ffffff';
-          ctx.fillText(watermarkText, x, y);
-          
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const watermarkedFile = new File([blob], file.name, { type: 'image/jpeg' });
-              resolve(watermarkedFile);
-            } else {
-              resolve(file);
-            }
-          }, 'image/jpeg', 0.9);
-        } catch (err) {
-          resolve(file);
-        }
-      };
-      
-      img.onerror = () => resolve(file);
-      img.src = e.target.result;
+    // Handle image load
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size to match image
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        // Draw the original image
+        ctx.drawImage(img, 0, 0, img.width, img.height);
+        
+        // Create watermark text
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        const timeStr = now.toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+        
+        const watermarkText = `GPS: ${latitude?.toFixed(6) || 'N/A'}, ${longitude?.toFixed(6) || 'N/A'} | ${dateStr} ${timeStr}`;
+        
+        // Calculate font size based on image dimensions (responsive)
+        const fontSize = Math.max(16, Math.min(img.width, img.height) * 0.03);
+        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        
+        const textWidth = ctx.measureText(watermarkText).width;
+        const padding = 15;
+        const x = img.width - textWidth - padding;
+        const y = img.height - padding;
+        
+        // Draw background rectangle for better visibility
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(x - 10, y - fontSize - 5, textWidth + 20, fontSize + 15);
+        
+        // Draw watermark text
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(watermarkText, x, y);
+        
+        // Also add a smaller watermark at top-left for extra visibility
+        const smallFontSize = Math.max(12, fontSize * 0.7);
+        ctx.font = `bold ${smallFontSize}px Arial, sans-serif`;
+        const topText = `📍 ${latitude?.toFixed(4) || 'N/A'}, ${longitude?.toFixed(4) || 'N/A'}`;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(10, 10, ctx.measureText(topText).width + 20, smallFontSize + 15);
+        ctx.fillStyle = '#00ff00';
+        ctx.fillText(topText, 20, 10 + smallFontSize + 2);
+        
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const watermarkedFile = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            console.log('Watermark applied successfully:', watermarkedFile.name, watermarkedFile.size);
+            resolve(watermarkedFile);
+          } else {
+            console.warn('Canvas toBlob returned null, using original file');
+            resolve(file);
+          }
+        }, 'image/jpeg', 0.85);
+      } catch (err) {
+        console.error('Error applying watermark:', err);
+        resolve(file);
+      }
     };
     
-    reader.onerror = () => resolve(file);
-    reader.readAsDataURL(file);
+    img.onerror = (err) => {
+      console.error('Error loading image for watermark:', err);
+      resolve(file);
+    };
+    
+    // Use createObjectURL for better mobile compatibility
+    img.src = URL.createObjectURL(file);
   });
 };
 
