@@ -359,7 +359,8 @@ export default function Properties() {
               <Button
                 variant={viewMode === 'map' ? 'default' : 'outline'}
                 size="icon"
-                onClick={() => setViewMode('map')}
+                onClick={() => { setViewMode('map'); setTriggerFit(t => t + 1); }}
+                className={viewMode !== 'map' ? 'animate-pulse bg-blue-100 border-blue-400 text-blue-600 hover:bg-blue-200' : ''}
               >
                 <MapIcon className="w-4 h-4" />
               </Button>
