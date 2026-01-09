@@ -165,7 +165,7 @@ export default function Properties() {
   const [downloading, setDownloading] = useState(false);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
-  const [triggerFit, setTriggerFit] = useState(0); // To trigger map fit bounds
+  const [fitKey, setFitKey] = useState(0); // Key to trigger map fit
 
   useEffect(() => {
     fetchProperties();
