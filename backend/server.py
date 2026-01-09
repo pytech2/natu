@@ -2221,11 +2221,6 @@ async def generate_arranged_pdf(
     }
     sn_rgb = color_map.get(sn_color.lower(), (1, 0, 0))
     
-    # A4 dimensions in points
-    A4_WIDTH = 595.276  # 210mm
-    A4_HEIGHT = 841.890  # 297mm
-    MARGIN = 20
-    
     # Open original PDF and create new one
     src_pdf = fitz.open(str(original_pdf_path))
     output_pdf = fitz.open()
@@ -2235,49 +2230,42 @@ async def generate_arranged_pdf(
         if page_num < 0 or page_num >= len(src_pdf):
             continue
         
-        src_page = src_pdf[page_num]
+        # Simply copy the page as-is from source
+        output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
+        new_page = output_pdf[-1]
         
-        # Create a new A4 page
-        new_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
+        # Get page dimensions
+        rect = new_page.rect
+        rotation = new_page.rotation
         
-        # Get source page dimensions (considering rotation)
-        rotation = src_page.rotation
-        if rotation in [90, 270]:
-            src_width = src_page.rect.height
-            src_height = src_page.rect.width
+        # Add serial number based on page rotation
+        if rotation == 90:
+            # For 90° rotated pages, place at visual top-right
+            sn_x = rect.width - 40
+            sn_y = 50
+        elif rotation == 270:
+            sn_x = 40
+            sn_y = rect.height - 50
         else:
-            src_width = src_page.rect.width
-            src_height = src_page.rect.height
+            # Normal orientation - top right
+            sn_x = rect.width - 50
+            sn_y = 40
         
-        # Calculate scale to fit A4 with margins
-        available_width = A4_WIDTH - (MARGIN * 2)
-        available_height = A4_HEIGHT - (MARGIN * 2)
-        
-        scale_w = available_width / src_width
-        scale_h = available_height / src_height
-        scale = min(scale_w, scale_h)
-        
-        new_width = src_width * scale
-        new_height = src_height * scale
-        
-        # Center on page
-        x_offset = (A4_WIDTH - new_width) / 2
-        y_offset = (A4_HEIGHT - new_height) / 2
-        
-        dest_rect = fitz.Rect(x_offset, y_offset, x_offset + new_width, y_offset + new_height)
-        new_page.show_pdf_page(dest_rect, src_pdf, page_num, rotate=0)
-        
-        # Add serial number at top-right
-        sn_x = x_offset + new_width - 45
-        sn_y = y_offset + 30
-        new_page.insert_text((sn_x, sn_y), f"{bill['serial_number']}", fontsize=sn_font_size, color=sn_rgb, fontname="helv")
+        new_page.insert_text(
+            (sn_x, sn_y), 
+            f"{bill['serial_number']}", 
+            fontsize=sn_font_size, 
+            color=sn_rgb, 
+            fontname="helv",
+            rotate=rotation
+        )
     
     output_pdf.save(str(output_path))
     output_pdf.close()
     src_pdf.close()
     
     return {
-        "message": f"Generated PDF with {len(bills)} bills ({len(bills)} pages)",
+        "message": f"Generated PDF with {len(bills)} bills",
         "filename": output_filename,
         "download_url": f"/api/uploads/{output_filename}"
     }
