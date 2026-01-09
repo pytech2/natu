@@ -5,6 +5,11 @@ import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import 'leaflet/dist/leaflet.css';
 import {
   Camera,
   CheckCircle,
@@ -14,10 +19,71 @@ import {
   Clock,
   CalendarCheck,
   User,
-  AlertTriangle
+  AlertTriangle,
+  Download,
+  Navigation,
+  FileText,
+  List
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
+
+// Fix for default marker icons
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom numbered marker
+const createNumberedIcon = (number, status) => {
+  const colors = {
+    'Pending': '#f97316',
+    'Completed': '#22c55e',
+    'Approved': '#22c55e',
+    'In Progress': '#3b82f6',
+    'Rejected': '#ef4444',
+    'default': '#6b7280'
+  };
+  const color = colors[status] || colors['default'];
+  
+  return L.divIcon({
+    className: 'custom-numbered-marker',
+    html: `<div style="
+      background-color: ${color};
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+    ">${number}</div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -11]
+  });
+};
+
+// Component to fit map bounds
+function FitBounds({ properties }) {
+  const map = useMap();
+  useEffect(() => {
+    if (properties.length > 0) {
+      const validProps = properties.filter(p => p.latitude && p.longitude);
+      if (validProps.length > 0) {
+        const bounds = L.latLngBounds(validProps.map(p => [p.latitude, p.longitude]));
+        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+      }
+    }
+  }, [properties, map]);
+  return null;
+}
 
 export default function Attendance() {
   const navigate = useNavigate();
