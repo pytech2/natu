@@ -2181,7 +2181,7 @@ async def generate_arranged_pdf(
     sn_color: str = Form("red"),
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate arranged PDF with serial numbers (ADMIN only)"""
+    """Generate arranged PDF with serial numbers (ADMIN only) - A4 size with 25% increased height"""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2221,7 +2221,14 @@ async def generate_arranged_pdf(
     }
     sn_rgb = color_map.get(sn_color.lower(), (1, 0, 0))
     
-    # Open original PDF and create new one with SN overlay
+    # A4 dimensions in points (1 point = 1/72 inch)
+    A4_WIDTH = 595.276  # 210mm
+    A4_HEIGHT = 841.890  # 297mm
+    
+    # Height increase factor (25%)
+    HEIGHT_SCALE = 1.25
+    
+    # Open original PDF and create new one
     src_pdf = fitz.open(str(original_pdf_path))
     output_pdf = fitz.open()
     
@@ -2230,55 +2237,68 @@ async def generate_arranged_pdf(
         if page_num < 0 or page_num >= len(src_pdf):
             continue
         
-        # Copy page
-        output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
-        new_page = output_pdf[-1]
+        src_page = src_pdf[page_num]
+        src_rect = src_page.rect
         
-        # Calculate SN position - adjusted for BillSrNo field location
-        rect = new_page.rect
-        rotation = new_page.rotation
+        # Create a new A4 page
+        new_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
         
-        # Search for BillSrNo position on this page
+        # Calculate scaling to fit width and increase height by 25%
+        # Scale width to fit A4, then apply 25% height increase
+        width_scale = A4_WIDTH / src_rect.width
+        
+        # New dimensions with 25% height increase
+        new_width = A4_WIDTH
+        new_height = src_rect.height * width_scale * HEIGHT_SCALE
+        
+        # If new height exceeds A4, adjust to fit
+        if new_height > A4_HEIGHT:
+            # Scale down to fit A4 height
+            adjust_scale = A4_HEIGHT / new_height
+            new_width = new_width * adjust_scale
+            new_height = A4_HEIGHT
+        
+        # Center the content on the page
+        x_offset = (A4_WIDTH - new_width) / 2
+        y_offset = (A4_HEIGHT - new_height) / 2
+        
+        # Define destination rectangle
+        dest_rect = fitz.Rect(x_offset, y_offset, x_offset + new_width, y_offset + new_height)
+        
+        # Copy the source page content to the new page with scaling
+        new_page.show_pdf_page(dest_rect, src_pdf, page_num)
+        
+        # Calculate SN position on the new scaled page
+        rotation = src_page.rotation
+        
+        # Search for BillSrNo position on the new page
         bill_sr_positions = new_page.search_for("BillSrNo")
         
         if bill_sr_positions and sn_position == "top-right":
-            # Place serial number right after the BillSrNo.: text
             bill_sr_rect = bill_sr_positions[0]
-            
-            # For rotated pages (90 degrees), the text needs to be placed
-            # considering the visual layout
-            # BillSrNo is at the top-right visually when page is rotated
-            # We need to place our number after the ": " in BillSrNo.: 
             if rotation == 90:
-                # In a 90-degree rotated page:
-                # - Visual "right" = increasing Y in coordinate space
-                # - Visual "down" = increasing X in coordinate space
-                # Place number to visual right of "BillSrNo. :"
-                x = bill_sr_rect.x0   # Same vertical position visually
-                y = bill_sr_rect.y1 + 5  # To the right of the text visually
+                x = bill_sr_rect.x0
+                y = bill_sr_rect.y1 + 5
             else:
-                # Normal orientation
                 x = bill_sr_rect.x1 + 35
                 y = bill_sr_rect.y0
         elif sn_position == "top-left":
-            x, y = 50, 60
+            x, y = x_offset + 30, y_offset + 40
         elif sn_position == "top-right":
-            # Fallback position if BillSrNo not found
-            x, y = rect.width - 100, 50
+            x, y = x_offset + new_width - 80, y_offset + 40
         elif sn_position == "bottom-left":
-            x, y = 50, rect.height - 50
+            x, y = x_offset + 30, y_offset + new_height - 30
         else:  # bottom-right
-            x, y = rect.width - 100, rect.height - 50
+            x, y = x_offset + new_width - 80, y_offset + new_height - 30
         
-        # Add serial number text with rotation to match page
+        # Add serial number text
         sn_text = f"{bill['serial_number']}"
         new_page.insert_text(
             (x, y),
             sn_text,
             fontsize=sn_font_size,
             color=sn_rgb,
-            fontname="helv",
-            rotate=rotation  # Rotate text to match page orientation
+            fontname="helv"
         )
     
     output_pdf.save(str(output_path))
@@ -2286,7 +2306,7 @@ async def generate_arranged_pdf(
     src_pdf.close()
     
     return {
-        "message": f"Generated PDF with {len(bills)} bills",
+        "message": f"Generated PDF with {len(bills)} bills (A4 size, height +25%)",
         "filename": output_filename,
         "download_url": f"/api/uploads/{output_filename}"
     }
