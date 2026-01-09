@@ -112,7 +112,7 @@ const formatDistance = (meters) => {
   return `${(meters / 1000).toFixed(1)}km`;
 };
 
-// Component to fit map bounds - zoom to show all properties
+// Component to fit map bounds - zoom to show all properties (80-97% zoom)
 function FitBounds({ properties, userLocation }) {
   const map = useMap();
   useEffect(() => {
@@ -123,8 +123,8 @@ function FitBounds({ properties, userLocation }) {
       if (userLocation) {
         bounds.extend([userLocation.latitude, userLocation.longitude]);
       }
-      // Fit bounds with padding and appropriate zoom
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, minZoom: 12 });
+      // Fit bounds with zoom 80-97% (minZoom 15, maxZoom 18)
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18, minZoom: 15 });
     }
   }, [properties, userLocation, map]);
   return null;
