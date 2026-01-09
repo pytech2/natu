@@ -2238,19 +2238,33 @@ async def generate_arranged_pdf(
         rect = new_page.rect
         rotation = new_page.rotation
         
-        # Add serial number based on page rotation
-        if rotation == 90:
-            # For 90° rotated pages, place at visual top-right
-            sn_x = rect.width - 40
-            sn_y = 50
-        elif rotation == 270:
-            sn_x = 40
-            sn_y = rect.height - 50
-        else:
-            # Normal orientation - top right
-            sn_x = rect.width - 50
-            sn_y = 40
+        # Search for "BillSrNo" to place our serial number nearby
+        bill_sr_positions = new_page.search_for("BillSrNo")
         
+        if bill_sr_positions:
+            # Found BillSrNo - place serial number after it
+            pos = bill_sr_positions[0]
+            if rotation == 90:
+                # 90° rotation - visual right is coordinate Y+
+                sn_x = pos.x0
+                sn_y = pos.y1 + 10
+            else:
+                # Normal - place to the right
+                sn_x = pos.x1 + 50
+                sn_y = pos.y0 + 15
+        else:
+            # Fallback position - top right corner
+            if rotation == 90:
+                sn_x = rect.width - 60
+                sn_y = 80
+            elif rotation == 270:
+                sn_x = 60
+                sn_y = rect.height - 80
+            else:
+                sn_x = rect.width - 80
+                sn_y = 60
+        
+        # Add GPS serial number with red color
         new_page.insert_text(
             (sn_x, sn_y), 
             f"{bill['serial_number']}", 
@@ -2265,7 +2279,7 @@ async def generate_arranged_pdf(
     src_pdf.close()
     
     return {
-        "message": f"Generated PDF with {len(bills)} bills",
+        "message": f"Generated PDF with {len(bills)} bills (arranged by GPS)",
         "filename": output_filename,
         "download_url": f"/api/uploads/{output_filename}"
     }
