@@ -1970,8 +1970,17 @@ async def upload_pdf_bills(
         "total_records": 0
     }
     
+    # Helper function to check if owner name is valid (not NA or empty)
+    def is_valid_owner_name(name):
+        if not name:
+            return False
+        name_upper = name.strip().upper()
+        invalid_values = ['NA', 'N/A', 'N.A.', 'NOT AVAILABLE', 'NIL', 'NONE', '-', '--', '']
+        return name_upper not in invalid_values and len(name.strip()) > 0
+    
     # Extract text from each page using PyMuPDF
     bills = []
+    skipped_count = 0
     try:
         pdf_doc = fitz.open(str(pdf_path))
         
@@ -1981,9 +1990,15 @@ async def upload_pdf_bills(
             
             # Extract bill data
             bill_data = extract_bill_data(text, page_num + 1)
+            
+            # Skip if owner name is NA or empty
+            if not is_valid_owner_name(bill_data.get("owner_name")):
+                skipped_count += 1
+                continue  # Skip this record
+            
             bill_data["id"] = str(uuid.uuid4())
             bill_data["batch_id"] = batch_id
-            bill_data["serial_number"] = page_num + 1  # Initial serial number
+            bill_data["serial_number"] = len(bills) + 1  # Sequential serial for valid bills only
             bill_data["created_at"] = datetime.now(timezone.utc).isoformat()
             bill_data["status"] = "Pending"
             
@@ -2008,8 +2023,9 @@ async def upload_pdf_bills(
         "batch_id": batch_id,
         "name": batch_name,
         "total_bills": len(bills),
+        "skipped_bills": skipped_count,
         "colonies": colonies,
-        "message": f"Successfully extracted {len(bills)} bills from PDF"
+        "message": f"Successfully extracted {len(bills)} bills from PDF. Skipped {skipped_count} records with NA/empty owner names."
     }
 
 @api_router.get("/admin/bills")
