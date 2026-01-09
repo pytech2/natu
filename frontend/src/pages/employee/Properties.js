@@ -585,30 +585,51 @@ export default function Properties() {
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-slate-700">Property List (Nearest First)</h2>
           
-          {/* CSS for blinking list item */}
+          {/* CSS for GREEN rotating border animation on list card */}
           <style>{`
-            @keyframes blink-card {
+            @keyframes rotate-gradient {
+              0% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+              100% { background-position: 0% 50%; }
+            }
+            @keyframes pulse-card {
               0%, 100% { 
-                background-color: rgb(255, 251, 235);
-                border-color: rgb(251, 191, 36);
-                box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6), 0 4px 15px rgba(34, 197, 94, 0.3);
               }
               50% { 
-                background-color: rgb(254, 243, 199);
-                border-color: rgb(245, 158, 11);
-                box-shadow: 0 0 15px 5px rgba(251, 191, 36, 0.3);
+                box-shadow: 0 0 0 8px rgba(34, 197, 94, 0), 0 4px 25px rgba(34, 197, 94, 0.5);
               }
+            }
+            @keyframes spin-border {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
             }
             @keyframes blink-badge {
               0%, 100% { transform: scale(1); opacity: 1; }
-              50% { transform: scale(1.1); opacity: 0.8; }
+              50% { transform: scale(1.15); opacity: 0.9; }
             }
-            .nearest-card-blink {
-              animation: blink-card 1.5s ease-in-out infinite;
-              border-width: 3px !important;
+            .nearest-card-green {
+              position: relative;
+              background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+              border: 3px solid #22c55e !important;
+              animation: pulse-card 1.5s ease-in-out infinite;
+              overflow: visible;
             }
-            .nearest-badge-blink {
+            .nearest-card-green::before {
+              content: '';
+              position: absolute;
+              top: -6px;
+              left: -6px;
+              right: -6px;
+              bottom: -6px;
+              border: 3px dashed #22c55e;
+              border-radius: 14px;
+              animation: spin-border 4s linear infinite;
+              pointer-events: none;
+            }
+            .nearest-badge-green {
               animation: blink-badge 1s ease-in-out infinite;
+              background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
             }
           `}</style>
           
