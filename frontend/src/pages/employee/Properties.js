@@ -326,7 +326,7 @@ export default function EmployeeProperties() {
                       center={[selectedProperty.latitude, selectedProperty.longitude]}
                       zoom={18}
                       minZoom={5}
-                      maxZoom={18}
+                      maxZoom={19}
                       maxBounds={[[-85, -180], [85, 180]]}
                       maxBoundsViscosity={1.0}
                       style={{ height: '100%', width: '100%' }}
