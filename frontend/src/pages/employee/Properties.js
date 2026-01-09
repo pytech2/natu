@@ -112,32 +112,80 @@ const formatDistance = (meters) => {
   return `${(meters / 1000).toFixed(1)}km`;
 };
 
-// Map Controller - handles zoom and bounds
+// Map Controller - Dynamic zoom based on distance from user to properties
 function MapController({ properties, userLocation, fitKey }) {
   const map = useMap();
   
   useEffect(() => {
     const validProps = properties.filter(p => p.latitude && p.longitude);
-    console.log('MapController: Valid properties:', validProps.length);
     
-    if (validProps.length > 0) {
-      const coords = validProps.map(p => [p.latitude, p.longitude]);
-      console.log('MapController: First coord:', coords[0]);
-      
-      const bounds = L.latLngBounds(coords);
-      
-      if (userLocation && userLocation.latitude) {
-        bounds.extend([userLocation.latitude, userLocation.longitude]);
-      }
-      
-      // Fly to bounds with animation
-      map.flyToBounds(bounds, { 
-        padding: [50, 50],
-        duration: 0.5,
-        maxZoom: 16
-      });
+    if (validProps.length === 0) return;
+    
+    // If no user location, just fit to all properties
+    if (!userLocation || !userLocation.latitude) {
+      const bounds = L.latLngBounds(validProps.map(p => [p.latitude, p.longitude]));
+      map.flyToBounds(bounds, { padding: [50, 50], duration: 0.5 });
+      return;
     }
-  }, [map, fitKey]); // Only re-run when fitKey changes
+    
+    // Calculate distance to nearest property
+    let nearestDistance = Infinity;
+    let nearestProperty = null;
+    
+    validProps.forEach(p => {
+      const dist = calculateDistance(userLocation.latitude, userLocation.longitude, p.latitude, p.longitude);
+      if (dist < nearestDistance) {
+        nearestDistance = dist;
+        nearestProperty = p;
+      }
+    });
+    
+    // Dynamic zoom based on distance (in meters)
+    // Far away = zoom out, Close = zoom in
+    let zoomLevel;
+    if (nearestDistance > 200000) {        // > 200 km
+      zoomLevel = 6;
+    } else if (nearestDistance > 100000) { // 100-200 km
+      zoomLevel = 8;
+    } else if (nearestDistance > 50000) {  // 50-100 km
+      zoomLevel = 9;
+    } else if (nearestDistance > 20000) {  // 20-50 km
+      zoomLevel = 10;
+    } else if (nearestDistance > 10000) {  // 10-20 km
+      zoomLevel = 11;
+    } else if (nearestDistance > 5000) {   // 5-10 km
+      zoomLevel = 12;
+    } else if (nearestDistance > 2000) {   // 2-5 km
+      zoomLevel = 13;
+    } else if (nearestDistance > 1000) {   // 1-2 km
+      zoomLevel = 14;
+    } else if (nearestDistance > 500) {    // 500m - 1km
+      zoomLevel = 15;
+    } else if (nearestDistance > 200) {    // 200-500m
+      zoomLevel = 16;
+    } else if (nearestDistance > 50) {     // 50-200m
+      zoomLevel = 17;
+    } else {                                // < 50m (very close)
+      zoomLevel = 18;
+    }
+    
+    // Create bounds including user and all properties
+    const allPoints = [
+      [userLocation.latitude, userLocation.longitude],
+      ...validProps.map(p => [p.latitude, p.longitude])
+    ];
+    const bounds = L.latLngBounds(allPoints);
+    
+    // Calculate center between user and nearest property
+    const centerLat = (userLocation.latitude + nearestProperty.latitude) / 2;
+    const centerLng = (userLocation.longitude + nearestProperty.longitude) / 2;
+    
+    // Fly to calculated center with dynamic zoom
+    map.flyTo([centerLat, centerLng], zoomLevel, { duration: 0.8 });
+    
+    console.log(`Distance to nearest: ${(nearestDistance/1000).toFixed(1)}km, Zoom: ${zoomLevel}`);
+    
+  }, [map, fitKey, userLocation]);
   
   return null;
 }
