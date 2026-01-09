@@ -555,8 +555,65 @@ export default function Survey() {
 
         {!isCompleted && (
           <>
-            {/* Notice Receiver Details */}
-            <Card>
+            {/* Special Conditions - House Locked / Owner Denied */}
+            <Card className="border-2 border-amber-200 bg-amber-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2 text-amber-700">
+                  <AlertTriangle className="w-4 h-4" />
+                  Special Conditions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-amber-700">
+                  Select if you cannot complete normal survey due to one of these conditions:
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSpecialCondition(specialCondition === 'house_locked' ? '' : 'house_locked')}
+                    className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${
+                      specialCondition === 'house_locked'
+                        ? 'border-amber-500 bg-amber-100 text-amber-800'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-amber-300'
+                    }`}
+                    data-testid="house-locked-btn"
+                  >
+                    <Lock className={`w-6 h-6 ${specialCondition === 'house_locked' ? 'text-amber-600' : 'text-slate-400'}`} />
+                    <span className="text-sm font-medium">House Locked</span>
+                    {specialCondition === 'house_locked' && (
+                      <CheckCircle className="w-4 h-4 text-amber-600" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSpecialCondition(specialCondition === 'owner_denied' ? '' : 'owner_denied')}
+                    className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${
+                      specialCondition === 'owner_denied'
+                        ? 'border-red-500 bg-red-100 text-red-800'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-red-300'
+                    }`}
+                    data-testid="owner-denied-btn"
+                  >
+                    <XCircle className={`w-6 h-6 ${specialCondition === 'owner_denied' ? 'text-red-600' : 'text-slate-400'}`} />
+                    <span className="text-sm font-medium">Owner Denied</span>
+                    {specialCondition === 'owner_denied' && (
+                      <CheckCircle className="w-4 h-4 text-red-600" />
+                    )}
+                  </button>
+                </div>
+                {canSkipRequiredFields && (
+                  <div className="p-3 bg-white rounded-lg border border-amber-300">
+                    <p className="text-xs text-amber-800 font-medium">
+                      ✓ You can submit without photo, signature, and receiver details
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Notice Receiver Details - Only show if no special condition */}
+            {!canSkipRequiredFields && (
+              <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <User className="w-4 h-4" />
