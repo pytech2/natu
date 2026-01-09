@@ -844,10 +844,25 @@ export default function Survey() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
+              {submission.special_condition && (
+                <div className={`p-3 rounded-lg ${
+                  submission.special_condition === 'house_locked' ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'
+                }`}>
+                  <p className={`text-sm font-medium flex items-center gap-2 ${
+                    submission.special_condition === 'house_locked' ? 'text-amber-700' : 'text-red-700'
+                  }`}>
+                    {submission.special_condition === 'house_locked' ? (
+                      <><Lock className="w-4 h-4" /> House was Locked</>
+                    ) : (
+                      <><XCircle className="w-4 h-4" /> Owner Denied</>
+                    )}
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-slate-500 text-xs">Receiver</p>
-                  <p className="font-medium">{submission.receiver_name}</p>
+                  <p className="font-medium">{submission.receiver_name || '-'}</p>
                 </div>
                 <div>
                   <p className="text-slate-500 text-xs">Receiver Mobile</p>
@@ -855,11 +870,11 @@ export default function Survey() {
                 </div>
                 <div>
                   <p className="text-slate-500 text-xs">Relation</p>
-                  <p className="font-medium">{submission.relation}</p>
+                  <p className="font-medium">{submission.relation || '-'}</p>
                 </div>
                 <div>
                   <p className="text-slate-500 text-xs">Satisfied</p>
-                  <p className="font-medium">{submission.self_satisfied === 'yes' ? 'Yes' : 'No'}</p>
+                  <p className="font-medium">{submission.self_satisfied === 'yes' ? 'Yes' : submission.self_satisfied === 'no' ? 'No' : '-'}</p>
                 </div>
               </div>
               {submission.correct_colony_name && (
