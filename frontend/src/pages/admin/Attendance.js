@@ -13,6 +13,9 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   Calendar,
   User,
@@ -24,8 +27,42 @@ import {
   Loader2,
   Image,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Map,
+  Navigation
 } from 'lucide-react';
+
+// Fix for default marker icons
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom marker for employee location
+const createEmployeeIcon = (name) => {
+  return L.divIcon({
+    className: 'employee-marker',
+    html: `<div style="
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: white;
+    ">${name.charAt(0).toUpperCase()}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16]
+  });
+};
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
