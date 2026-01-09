@@ -81,6 +81,7 @@ export default function AttendancePage() {
     absent: 0,
     total: 0
   });
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
