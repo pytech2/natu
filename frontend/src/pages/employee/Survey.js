@@ -16,11 +16,6 @@ import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
 import SignatureCanvas from 'react-signature-canvas';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import 'leaflet/dist/leaflet.css';
 import {
   ArrowLeft,
   MapPin,
@@ -40,17 +35,9 @@ import {
   Upload,
   Image as ImageIcon,
   Building,
-  Download,
-  Map
+  Lock,
+  XCircle
 } from 'lucide-react';
-
-// Fix for default marker icon
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
