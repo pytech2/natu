@@ -159,10 +159,10 @@ export default function Export() {
           <CardHeader>
             <CardTitle className="font-heading flex items-center gap-2">
               <Download className="w-5 h-5" />
-              Export Survey Data
+              Export Approved Survey Data
             </CardTitle>
             <CardDescription>
-              Download property and survey data as Excel or PDF with photos
+              Download approved property survey submissions as Excel or PDF with photos
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -204,22 +204,32 @@ export default function Export() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Filter by Status</label>
+                <label className="text-sm font-medium">Submission Status</label>
                 <Select
                   value={filters.status}
                   onValueChange={(value) => setFilters({ ...filters, status: value })}
                 >
                   <SelectTrigger data-testid="export-status-filter">
-                    <SelectValue placeholder="All Status" />
+                    <SelectValue placeholder="Approved Only" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value=" ">All Status</SelectItem>
+                    <SelectItem value="Approved">Approved Only</SelectItem>
                     <SelectItem value="Pending">Pending Only</SelectItem>
                     <SelectItem value="Completed">Completed Only</SelectItem>
-                    <SelectItem value="Flagged">Flagged Only</SelectItem>
+                    <SelectItem value=" ">All Submissions</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Status Info */}
+            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+              <p className="text-sm text-emerald-800 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                <span>
+                  Currently exporting: <strong>{filters.status || 'Approved'}</strong> submissions only
+                </span>
+              </p>
             </div>
 
             {/* Export Buttons */}
