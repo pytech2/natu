@@ -399,6 +399,14 @@ export default function AttendancePage() {
                           <p className="font-mono text-xs">
                             {record.latitude?.toFixed(6)}, {record.longitude?.toFixed(6)}
                           </p>
+                          <Button
+                            size="sm"
+                            variant="link"
+                            className="h-auto p-0 text-xs text-blue-600"
+                            onClick={() => window.open(`https://www.google.com/maps?q=${record.latitude},${record.longitude}`, '_blank')}
+                          >
+                            View on Google Maps →
+                          </Button>
                         </div>
                       </div>
                     )}
