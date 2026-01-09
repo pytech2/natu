@@ -15,6 +15,7 @@ import EmployeeDashboard from "./pages/employee/Dashboard";
 import EmployeeProperties from "./pages/employee/Properties";
 import EmployeeSurvey from "./pages/employee/Survey";
 import EmployeeAttendance from "./pages/employee/Attendance";
+import EmployeePropertyMap from "./pages/employee/PropertyMap";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import "@/App.css";
 
