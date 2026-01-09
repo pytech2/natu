@@ -21,7 +21,7 @@ import jsPDF from 'jspdf';
 import 'leaflet/dist/leaflet.css';
 import { 
   Search, MapPin, Phone, User, ChevronRight, Navigation, 
-  FileText, Download, Loader2, Locate, RefreshCw
+  FileText, Download, Loader2, Locate, RefreshCw, Maximize2, X
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
