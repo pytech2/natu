@@ -424,11 +424,11 @@ export default function Properties() {
                 <Button 
                   size="sm" 
                   variant="outline"
-                  onClick={() => setFitKey(k => k + 1)}
-                  className="h-7 text-xs text-blue-600 border-blue-300"
+                  onClick={() => { setFullscreenMap(true); setTimeout(() => setFitKey(k => k + 1), 100); }}
+                  className="h-7 text-xs text-blue-600 border-blue-300 animate-pulse"
                 >
-                  <Locate className="w-3 h-3 mr-1" />
-                  Fit All
+                  <Maximize2 className="w-3 h-3 mr-1" />
+                  Full Size Map
                 </Button>
                 <Button size="sm" onClick={handlePrintMap} disabled={downloading} className="h-7 text-xs">
                   {downloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
