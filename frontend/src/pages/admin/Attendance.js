@@ -250,9 +250,97 @@ export default function AttendancePage() {
               >
                 Clear Filters
               </Button>
+
+              <Button
+                variant={showMap ? "default" : "outline"}
+                onClick={() => setShowMap(!showMap)}
+                className={showMap ? "bg-blue-600 hover:bg-blue-700" : ""}
+              >
+                <Map className="w-4 h-4 mr-2" />
+                {showMap ? 'Hide Map' : 'View GPS Locations'}
+              </Button>
             </div>
           </CardContent>
         </Card>
+
+        {/* GPS Tracker Map */}
+        {showMap && attendance.filter(r => r.latitude && r.longitude).length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                <Navigation className="w-4 h-4" />
+                Employee GPS Locations ({attendance.filter(r => r.latitude && r.longitude).length} tracked)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg overflow-hidden border border-slate-200" style={{ height: '400px' }}>
+                <MapContainer
+                  center={[
+                    attendance.filter(r => r.latitude)[0]?.latitude || 28.6139,
+                    attendance.filter(r => r.longitude)[0]?.longitude || 77.209
+                  ]}
+                  zoom={10}
+                  minZoom={5}
+                  maxZoom={18}
+                  style={{ height: '100%', width: '100%' }}
+                  scrollWheelZoom={true}
+                >
+                  <TileLayer
+                    attribution='&copy; OpenStreetMap'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {attendance.filter(r => r.latitude && r.longitude).map((record) => (
+                    <Marker
+                      key={record.id}
+                      position={[record.latitude, record.longitude]}
+                      icon={createEmployeeIcon(record.employee_name)}
+                    >
+                      <Popup>
+                        <div className="p-1 min-w-[180px]">
+                          <div className="flex items-center gap-2 mb-2">
+                            {record.selfie_url && (
+                              <img
+                                src={`${process.env.REACT_APP_BACKEND_URL}${record.selfie_url}`}
+                                alt="Selfie"
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            )}
+                            <div>
+                              <p className="font-bold text-slate-800">{record.employee_name}</p>
+                              <p className="text-xs text-slate-500">{record.date}</p>
+                            </div>
+                          </div>
+                          <div className="text-xs space-y-1">
+                            <p className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatTime(record.marked_at)}
+                            </p>
+                            <p className="flex items-center gap-1 font-mono text-slate-600">
+                              <MapPin className="w-3 h-3" />
+                              {record.latitude?.toFixed(6)}, {record.longitude?.toFixed(6)}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full mt-2 h-7 text-xs"
+                            onClick={() => window.open(`https://www.google.com/maps?q=${record.latitude},${record.longitude}`, '_blank')}
+                          >
+                            <Navigation className="w-3 h-3 mr-1" />
+                            Open in Google Maps
+                          </Button>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))}
+                </MapContainer>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 text-center">
+                Click on markers to view employee details • Green markers show attendance check-in locations
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Attendance List */}
         {loading ? (
