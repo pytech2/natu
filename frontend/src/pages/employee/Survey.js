@@ -360,7 +360,7 @@ export default function Survey() {
       // Only append photo if available
       if (housePhoto) {
         formDataObj.append('house_photo', housePhoto);
-        formDataObj.append('gate_photo', housePhoto);
+        // Don't send gate_photo separately - we only take one photo now
       }
       
       // Only append signature if available (now optional)
