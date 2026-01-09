@@ -25,16 +25,12 @@ import {
   AlertTriangle,
   User,
   Phone,
-  Home,
-  FileText,
   Send,
   Flag,
   Loader2,
   Pen,
   RotateCcw,
   Upload,
-  Image as ImageIcon,
-  Building,
   Lock,
   XCircle
 } from 'lucide-react';
