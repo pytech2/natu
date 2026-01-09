@@ -1124,21 +1124,43 @@ async def edit_property(
 async def export_data(
     batch_id: Optional[str] = None,
     employee_id: Optional[str] = None,
-    status: Optional[str] = None,
+    status: Optional[str] = "Approved",  # Default to Approved
     current_user: dict = Depends(get_current_user)
 ):
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    query = {}
+    # Build query for properties
+    prop_query = {}
     if batch_id and batch_id.strip():
-        query["batch_id"] = batch_id
+        prop_query["batch_id"] = batch_id
     if employee_id and employee_id.strip():
-        query["assigned_employee_id"] = employee_id
-    if status and status.strip():
-        query["status"] = status
+        prop_query["assigned_employee_id"] = employee_id
     
-    properties = await db.properties.find(query, {"_id": 0}).to_list(100000)
+    # If status filter is set, only get properties with submissions matching that status
+    if status and status.strip():
+        # Get submission IDs that match the status
+        submission_query = {"status": status}
+        submissions = await db.submissions.find(submission_query, {"property_record_id": 1, "_id": 0}).to_list(100000)
+        property_ids = [s["property_record_id"] for s in submissions]
+        
+        if not property_ids:
+            # No submissions match, return empty Excel
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Approved Survey Data"
+            ws.cell(row=1, column=1, value="No approved submissions found")
+            export_path = UPLOAD_DIR / f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            wb.save(export_path)
+            return FileResponse(
+                path=str(export_path),
+                filename=f"approved_survey_export_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        
+        prop_query["id"] = {"$in": property_ids}
+    
+    properties = await db.properties.find(prop_query, {"_id": 0}).to_list(100000)
     
     wb = Workbook()
     ws = wb.active
