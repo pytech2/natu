@@ -211,7 +211,16 @@ export default function BillsPage() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      toast.success(response.data.message);
+      // Show detailed success message
+      const { total_bills, skipped_bills } = response.data;
+      if (skipped_bills > 0) {
+        toast.success(`✅ Uploaded ${total_bills} bills. ⚠️ Skipped ${skipped_bills} records with NA/empty owner names.`, {
+          duration: 5000
+        });
+      } else {
+        toast.success(response.data.message);
+      }
+      
       setUploadDialog(false);
       setFile(null);
       setBatchName('');
