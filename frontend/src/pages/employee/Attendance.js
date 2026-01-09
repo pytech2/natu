@@ -262,9 +262,9 @@ export default function Attendance() {
 
             <Button
               className="w-full h-14 text-lg bg-blue-600 hover:bg-blue-700"
-              onClick={() => navigate('/employee/properties')}
+              onClick={() => navigate('/employee/property-map')}
             >
-              Go to Properties
+              View Properties Map
             </Button>
           </div>
         ) : (
