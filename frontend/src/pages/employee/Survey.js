@@ -786,12 +786,13 @@ export default function Survey() {
               </CardContent>
             </Card>
 
-            {/* Signature */}
-            <Card>
+            {/* Signature - Optional */}
+            <Card className={canSkipRequiredFields ? 'opacity-60' : ''}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Pen className="w-4 h-4" />
-                  Signature of Notice Receiver *
+                  Signature of Notice Receiver
+                  <span className="text-xs text-slate-500 font-normal">(Optional)</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
