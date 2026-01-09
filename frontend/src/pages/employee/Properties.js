@@ -185,7 +185,7 @@ function MapController({ properties, userLocation, fitKey }) {
     
     console.log(`Distance to nearest: ${(nearestDistance/1000).toFixed(1)}km, Zoom: ${zoomLevel}`);
     
-  }, [map, fitKey, userLocation]);
+  }, [map, fitKey, userLocation, properties]);
   
   return null;
 }
