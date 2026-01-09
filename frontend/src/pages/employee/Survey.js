@@ -167,6 +167,9 @@ export default function Survey() {
     remarks: '',
     self_satisfied: ''
   });
+
+  // Special submission conditions - allows bypassing required fields
+  const [specialCondition, setSpecialCondition] = useState(''); // 'house_locked' or 'owner_denied'
   
   // 50m radius check
   const [withinRange, setWithinRange] = useState(null);
