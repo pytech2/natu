@@ -538,31 +538,49 @@ async def assign_properties(data: AssignmentRequest, current_user: dict = Depend
         raise HTTPException(status_code=403, detail="Admin access required")
     
     # Support both single employee_id and multiple employee_ids
-    emp_ids = data.employee_ids if data.employee_ids else ([data.employee_id] if data.employee_id else [])
+    new_emp_ids = data.employee_ids if data.employee_ids else ([data.employee_id] if data.employee_id else [])
     
-    if not emp_ids:
+    if not new_emp_ids:
         raise HTTPException(status_code=400, detail="At least one employee must be selected")
     
     # Get all selected employees
-    employees = await db.users.find({"id": {"$in": emp_ids}}, {"_id": 0}).to_list(None)
-    if not employees:
+    new_employees = await db.users.find({"id": {"$in": new_emp_ids}}, {"_id": 0}).to_list(None)
+    if not new_employees:
         raise HTTPException(status_code=404, detail="No employees found")
     
-    # Create combined names for display
-    employee_names = [emp["name"] for emp in employees]
-    combined_names = ", ".join(employee_names)
+    # Process each property to ADD new employees to existing assignments
+    updated_count = 0
+    for prop_id in data.property_ids:
+        # Get existing property to check current assignments
+        prop = await db.properties.find_one({"id": prop_id}, {"_id": 0})
+        if not prop:
+            continue
+        
+        # Get existing assigned employee IDs (or empty list)
+        existing_emp_ids = prop.get("assigned_employee_ids") or []
+        if prop.get("assigned_employee_id") and prop["assigned_employee_id"] not in existing_emp_ids:
+            existing_emp_ids.append(prop["assigned_employee_id"])
+        
+        # Merge new employees with existing (avoid duplicates)
+        combined_emp_ids = list(set(existing_emp_ids + new_emp_ids))
+        
+        # Get all employee names for the combined list
+        all_employees = await db.users.find({"id": {"$in": combined_emp_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(None)
+        combined_names = ", ".join([emp["name"] for emp in all_employees])
+        
+        # Update the property with merged assignments
+        await db.properties.update_one(
+            {"id": prop_id},
+            {"$set": {
+                "assigned_employee_ids": combined_emp_ids,
+                "assigned_employee_id": combined_emp_ids[0] if combined_emp_ids else None,
+                "assigned_employee_name": combined_names
+            }}
+        )
+        updated_count += 1
     
-    # Store all assigned employee IDs
-    result = await db.properties.update_many(
-        {"id": {"$in": data.property_ids}},
-        {"$set": {
-            "assigned_employee_ids": emp_ids,  # Store array of all assigned employee IDs
-            "assigned_employee_id": emp_ids[0],  # Keep first one for backward compat
-            "assigned_employee_name": combined_names
-        }}
-    )
-    
-    return {"message": f"Assigned {result.modified_count} properties to {combined_names}"}
+    new_employee_names = ", ".join([emp["name"] for emp in new_employees])
+    return {"message": f"Added {new_employee_names} to {updated_count} properties"}
 
 @api_router.post("/admin/assign-bulk")
 async def bulk_assign_by_ward(data: BulkAssignmentRequest, current_user: dict = Depends(get_current_user)):
