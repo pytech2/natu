@@ -645,14 +645,14 @@ export default function Properties() {
               <Card 
                 key={property.id} 
                 className={`cursor-pointer hover:shadow-md transition-shadow ${
-                  index === 0 && userLocation ? 'nearest-card-blink border-amber-400 bg-amber-50' : ''
+                  index === 0 && userLocation ? 'nearest-card-green' : ''
                 }`}
                 onClick={() => navigate(`/employee/survey/${property.id}`)}
               >
                 <CardContent className="p-3">
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
-                      index === 0 && userLocation ? 'bg-amber-500 ring-4 ring-amber-300 ring-offset-2 animate-pulse' :
+                      index === 0 && userLocation ? 'bg-green-500 ring-4 ring-green-300 ring-offset-2 animate-pulse' :
                       property.status === 'Pending' ? 'bg-orange-500' :
                       property.status === 'Completed' || property.status === 'Approved' ? 'bg-emerald-500' : 'bg-slate-500'
                     }`}>
@@ -662,7 +662,7 @@ export default function Properties() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-blue-600">{property.property_id}</span>
                         {index === 0 && userLocation && (
-                          <span className="nearest-badge-blink text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-bold shadow-lg">
+                          <span className="nearest-badge-green text-xs text-white px-2 py-0.5 rounded-full font-bold shadow-lg">
                             ⭐ NEAREST
                           </span>
                         )}
@@ -671,7 +671,7 @@ export default function Properties() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-500 truncate">{property.colony}</span>
                         {property.distance !== undefined && property.distance !== Infinity && (
-                          <span className="text-xs font-medium text-blue-600 flex-shrink-0 ml-2">
+                          <span className="text-xs font-medium text-green-600 flex-shrink-0 ml-2">
                             📍 {formatDistance(property.distance)}
                           </span>
                         )}
