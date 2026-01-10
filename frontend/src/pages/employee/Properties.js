@@ -619,17 +619,16 @@ export default function Properties() {
             <div ref={mapContainerRef} style={{ height: '280px' }} className="rounded-b-lg overflow-hidden">
               <MapContainer
                 center={getDefaultCenter()}
-                zoom={17}
+                zoom={18}
                 minZoom={10}
-                maxZoom={20}
+                maxZoom={21}
                 style={{ height: '100%', width: '100%' }}
                 scrollWheelZoom={true}
               >
-                {/* Satellite imagery from ESRI */}
+                {/* Google Satellite - High quality */}
                 <TileLayer 
-                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                  attribution="ESRI Satellite"
-                  maxZoom={20}
+                  url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+                  maxZoom={21}
                 />
                 <MapController properties={filteredProperties} userLocation={userLocation} fitKey={fitKey} />
                 
