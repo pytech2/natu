@@ -396,7 +396,7 @@ export default function Properties() {
   const handlePrintMap = async () => {
     if (!mapContainerRef.current) return;
     setDownloading(true);
-    toast.info('Generating full map PDF for field use...');
+    toast.info('Generating full map PDF...');
     
     try {
       // Wait for map to fully render
@@ -410,102 +410,70 @@ export default function Properties() {
         logging: false
       });
       
-      // Create PDF in landscape for better map view
-      const pdf = new jsPDF('l', 'mm', 'a4');  // Landscape A4
+      // Create PDF in landscape for full map view
+      const pdf = new jsPDF('l', 'mm', 'a4');  // Landscape A4: 297mm x 210mm
       
-      // Header
-      pdf.setFontSize(16);
+      // Header - Company Name
+      pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('NSTU INDIA PRIVATE LIMITED - SURVEY MAP', 148.5, 12, { align: 'center' });
+      pdf.text('NSTU INDIA PRIVATE LIMITED', 148.5, 12, { align: 'center' });
       
+      // Sub-header - Survey Map
+      pdf.setFontSize(14);
+      pdf.text('SURVEY MAP', 148.5, 20, { align: 'center' });
+      
+      // Info line
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Surveyor: ${user?.name || 'N/A'} | Date: ${new Date().toLocaleDateString('en-IN')}`, 148.5, 20, { align: 'center' });
-      pdf.text(`Total: ${stats.total} | Pending: ${stats.pending} | Completed: ${stats.completed}`, 148.5, 26, { align: 'center' });
+      pdf.text(`Surveyor: ${user?.name || 'N/A'} | Date: ${new Date().toLocaleDateString('en-IN')} | ${stats.total} properties`, 148.5, 27, { align: 'center' });
       
-      // Legend
+      // Legend - horizontal, below info
+      pdf.setFontSize(9);
+      const legendY = 33;
+      
+      // Pending - Orange
+      pdf.setFillColor(249, 115, 22);
+      pdf.circle(100, legendY, 3, 'F');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Pending', 105, legendY + 1);
+      
+      // Done - Pink
+      pdf.setFillColor(236, 72, 153);
+      pdf.circle(135, legendY, 3, 'F');
+      pdf.text('Done', 140, legendY + 1);
+      
+      // Nearest - Green
+      pdf.setFillColor(34, 197, 94);
+      pdf.circle(165, legendY, 3, 'F');
+      pdf.text('Nearest', 170, legendY + 1);
+      
+      // Stats
       pdf.setFontSize(8);
-      pdf.setFillColor(249, 115, 22);  // Orange
-      pdf.circle(20, 32, 2, 'F');
-      pdf.text('Pending', 24, 33);
+      pdf.text(`Pending: ${stats.pending} | Done: ${stats.completed}`, 210, legendY + 1);
       
-      pdf.setFillColor(236, 72, 153);  // Pink
-      pdf.circle(50, 32, 2, 'F');
-      pdf.text('Completed', 54, 33);
-      
-      pdf.setFillColor(34, 197, 94);  // Green
-      pdf.circle(85, 32, 2, 'F');
-      pdf.text('Nearest', 89, 33);
-      
-      // Map image - full width in landscape
-      const imgWidth = 277;  // A4 landscape width minus margins
+      // Map image - FULL WIDTH, maximum height
+      const mapStartY = 40;
+      const imgWidth = 287;  // A4 landscape width minus small margins
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      const maxHeight = 165;  // Leave space for property list
+      const maxMapHeight = 160;  // Maximum height for map
       
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 38, imgWidth, Math.min(imgHeight, maxHeight));
-      
-      // Add property list on second page
-      pdf.addPage('a4', 'p');  // Portrait for list
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('PROPERTY LIST - SURVEY ORDER', 105, 15, { align: 'center' });
-      
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'normal');
-      
-      // Table header
-      let yPos = 25;
-      pdf.setFillColor(240, 240, 240);
-      pdf.rect(10, yPos - 4, 190, 8, 'F');
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('S.No', 12, yPos);
-      pdf.text('Property ID', 25, yPos);
-      pdf.text('Owner Name', 55, yPos);
-      pdf.text('Mobile', 110, yPos);
-      pdf.text('Colony/Ward', 140, yPos);
-      pdf.text('Status', 185, yPos);
-      
-      yPos += 8;
-      pdf.setFont('helvetica', 'normal');
-      
-      // Property rows
-      filteredProperties.slice(0, 50).forEach((prop, idx) => {
-        if (yPos > 280) {
-          pdf.addPage('a4', 'p');
-          yPos = 20;
-        }
-        
-        // Alternate row colors
-        if (idx % 2 === 0) {
-          pdf.setFillColor(250, 250, 250);
-          pdf.rect(10, yPos - 4, 190, 7, 'F');
-        }
-        
-        // Status color indicator
-        if (prop.status === 'Completed' || prop.status === 'Approved') {
-          pdf.setTextColor(236, 72, 153);  // Pink
-        } else {
-          pdf.setTextColor(0, 0, 0);
-        }
-        
-        pdf.text(String(idx + 1), 12, yPos);
-        pdf.text(String(prop.property_id || '-').substring(0, 12), 25, yPos);
-        pdf.text(String(prop.owner_name || '-').substring(0, 25), 55, yPos);
-        pdf.text(String(prop.mobile || '-'), 110, yPos);
-        pdf.text(String(prop.colony || prop.ward || '-').substring(0, 20), 140, yPos);
-        pdf.text(String(prop.status || 'Pending'), 185, yPos);
-        
-        pdf.setTextColor(0, 0, 0);
-        yPos += 7;
-      });
+      pdf.addImage(
+        canvas.toDataURL('image/png'), 
+        'PNG', 
+        5,  // Left margin
+        mapStartY, 
+        imgWidth, 
+        Math.min(imgHeight, maxMapHeight)
+      );
       
       // Footer
       pdf.setFontSize(7);
-      pdf.text(`Generated: ${new Date().toLocaleString('en-IN')} | Page 2`, 105, 290, { align: 'center' });
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(`Generated: ${new Date().toLocaleString('en-IN')} | Print at 100% zoom for field use`, 148.5, 205, { align: 'center' });
       
       // Save
       pdf.save(`survey_map_${user?.name || 'surveyor'}_${new Date().toISOString().split('T')[0]}.pdf`);
-      toast.success('Full map PDF downloaded! Print at 100% zoom for field use.');
+      toast.success('Map PDF downloaded! Print at 100% zoom.');
     } catch (e) {
       console.error('PDF generation error:', e);
       toast.error('Failed to generate PDF');
