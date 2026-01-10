@@ -591,9 +591,9 @@ export default function Properties() {
                   <Maximize2 className="w-3 h-3 mr-1" />
                   Full Size Map
                 </Button>
-                <Button size="sm" onClick={handlePrintMap} disabled={downloading} className="h-7 text-xs">
+                <Button size="sm" onClick={handlePrintMap} disabled={downloading} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white">
                   {downloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
-                  Print
+                  Download PDF
                 </Button>
               </div>
             </div>
