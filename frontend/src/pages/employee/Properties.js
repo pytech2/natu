@@ -724,7 +724,7 @@ export default function Properties() {
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
                       index === 0 && userLocation ? 'bg-green-500 ring-4 ring-green-300 ring-offset-2 animate-pulse' :
                       property.status === 'Pending' ? 'bg-orange-500' :
-                      property.status === 'Completed' || property.status === 'Approved' ? 'bg-emerald-500' : 'bg-slate-500'
+                      property.status === 'Completed' || property.status === 'Approved' ? 'bg-pink-500' : 'bg-slate-500'
                     }`}>
                       {property.serial_number || index + 1}
                     </div>
