@@ -813,18 +813,23 @@ export default function Properties() {
             </div>
           </div>
 
-          {/* Fullscreen Map */}
+          {/* Fullscreen Map with Satellite View */}
           <div className="absolute inset-0 pt-16">
             <MapContainer
               center={getDefaultCenter()}
-              zoom={14}
+              zoom={17}
               minZoom={5}
-              maxZoom={18}
+              maxZoom={20}
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom={true}
               zoomControl={true}
             >
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              {/* Satellite imagery from ESRI */}
+              <TileLayer 
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                attribution="ESRI Satellite"
+                maxZoom={20}
+              />
               <MapController properties={filteredProperties} userLocation={userLocation} fitKey={fitKey} />
               
               {/* User location */}
@@ -834,17 +839,17 @@ export default function Properties() {
                 </Marker>
               )}
               
-              {/* Property markers with nearest highlighted */}
+              {/* Property markers with PROPERTY ID labels */}
               {filteredProperties.filter(p => p.latitude && p.longitude).map((property, index) => (
                 <Marker
                   key={property.id}
                   position={[property.latitude, property.longitude]}
-                  icon={createNumberedIcon(property.serial_number || index + 1, property.status, index === 0 && userLocation)}
+                  icon={createPropertyIdIcon(property.property_id, property.status, index === 0 && userLocation)}
                 >
                   <Popup maxWidth={280}>
                     <div className="p-2 min-w-[200px]">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-lg font-bold text-blue-600">#{property.serial_number || index + 1}</span>
+                        <span className="text-lg font-bold text-blue-600">{property.property_id}</span>
                         {index === 0 && userLocation && (
                           <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full animate-pulse">
                             ⭐ NEAREST
