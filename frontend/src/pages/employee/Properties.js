@@ -667,9 +667,9 @@ export default function Properties() {
             <p className="text-lg font-bold text-orange-600">{stats.pending}</p>
             <p className="text-xs text-orange-600">Pending</p>
           </div>
-          <div className="bg-emerald-50 rounded-lg p-2 text-center border border-emerald-200">
-            <p className="text-lg font-bold text-emerald-600">{stats.completed}</p>
-            <p className="text-xs text-emerald-600">Done</p>
+          <div className="bg-pink-50 rounded-lg p-2 text-center border border-pink-200">
+            <p className="text-lg font-bold text-pink-600">{stats.completed}</p>
+            <p className="text-xs text-pink-600">Done</p>
           </div>
         </div>
 
