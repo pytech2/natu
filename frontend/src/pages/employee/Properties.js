@@ -59,11 +59,11 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
         ">
           <div style="
             background-color: ${color};
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: 2px solid white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            font-size: 11px;
+            padding: 2px 4px;
+            border-radius: 2px;
+            border: 1px solid white;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+            font-size: 10px;
             font-weight: 700;
             color: white;
             white-space: nowrap;
@@ -72,10 +72,10 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
           <div style="
             width: 0;
             height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
-            border-top: 8px solid ${color};
-            margin-top: -2px;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid ${color};
+            margin-top: -1px;
           "></div>
         </div>
         <style>
@@ -84,13 +84,13 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
             50% { transform: scale(1.1); }
           }
         </style>`,
-      iconSize: [80, 40],
-      iconAnchor: [40, 40],
-      popupAnchor: [0, -35]
+      iconSize: [70, 25],
+      iconAnchor: [35, 25],
+      popupAnchor: [0, -20]
     });
   }
   
-  // Regular marker with Property ID label
+  // Regular marker with Property ID label - compact 2px padding
   return L.divIcon({
     className: 'property-id-marker',
     html: `
@@ -101,10 +101,10 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
       ">
         <div style="
           background-color: ${color};
-          padding: 3px 6px;
-          border-radius: 3px;
+          padding: 2px 4px;
+          border-radius: 2px;
           border: 1px solid white;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
           font-size: 9px;
           font-weight: 600;
           color: white;
@@ -113,15 +113,15 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
         <div style="
           width: 0;
           height: 0;
-          border-left: 4px solid transparent;
-          border-right: 4px solid transparent;
-          border-top: 6px solid ${color};
+          border-left: 3px solid transparent;
+          border-right: 3px solid transparent;
+          border-top: 4px solid ${color};
           margin-top: -1px;
         "></div>
       </div>`,
-    iconSize: [70, 30],
-    iconAnchor: [35, 30],
-    popupAnchor: [0, -25]
+    iconSize: [60, 22],
+    iconAnchor: [30, 22],
+    popupAnchor: [0, -18]
   });
 };
 
