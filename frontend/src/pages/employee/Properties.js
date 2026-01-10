@@ -259,32 +259,32 @@ function MapController({ properties, userLocation, fitKey }) {
     });
     
     // Dynamic zoom based on distance (in meters)
-    // Far away = zoom out, Close = zoom in
+    // Higher zoom = closer view (max 21 for Google Satellite)
     let zoomLevel;
     if (nearestDistance > 200000) {        // > 200 km
-      zoomLevel = 6;
-    } else if (nearestDistance > 100000) { // 100-200 km
       zoomLevel = 8;
-    } else if (nearestDistance > 50000) {  // 50-100 km
-      zoomLevel = 9;
-    } else if (nearestDistance > 20000) {  // 20-50 km
+    } else if (nearestDistance > 100000) { // 100-200 km
       zoomLevel = 10;
-    } else if (nearestDistance > 10000) {  // 10-20 km
+    } else if (nearestDistance > 50000) {  // 50-100 km
       zoomLevel = 11;
-    } else if (nearestDistance > 5000) {   // 5-10 km
+    } else if (nearestDistance > 20000) {  // 20-50 km
       zoomLevel = 12;
-    } else if (nearestDistance > 2000) {   // 2-5 km
+    } else if (nearestDistance > 10000) {  // 10-20 km
       zoomLevel = 13;
-    } else if (nearestDistance > 1000) {   // 1-2 km
+    } else if (nearestDistance > 5000) {   // 5-10 km
       zoomLevel = 14;
-    } else if (nearestDistance > 500) {    // 500m - 1km
-      zoomLevel = 15;
-    } else if (nearestDistance > 200) {    // 200-500m
+    } else if (nearestDistance > 2000) {   // 2-5 km
       zoomLevel = 16;
-    } else if (nearestDistance > 50) {     // 50-200m
+    } else if (nearestDistance > 1000) {   // 1-2 km
       zoomLevel = 17;
-    } else {                                // < 50m (very close)
+    } else if (nearestDistance > 500) {    // 500m - 1km
       zoomLevel = 18;
+    } else if (nearestDistance > 200) {    // 200-500m
+      zoomLevel = 19;
+    } else if (nearestDistance > 50) {     // 50-200m
+      zoomLevel = 20;
+    } else {                                // < 50m (very close)
+      zoomLevel = 21;  // Max zoom for Google Satellite
     }
     
     // Create bounds including user and all properties
