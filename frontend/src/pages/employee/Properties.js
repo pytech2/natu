@@ -889,19 +889,17 @@ export default function Properties() {
           {/* Bottom Info Bar */}
           <div className="absolute bottom-0 left-0 right-0 z-[10000] bg-white/95 backdrop-blur-sm border-t px-4 py-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1 text-xs">
-                  <span className="w-3 h-3 rounded-full bg-orange-500"></span> Pending
+                  <span className="w-3 h-3 rounded bg-green-500"></span> Pending
                 </span>
                 <span className="flex items-center gap-1 text-xs">
-                  <span className="w-3 h-3 rounded-full bg-pink-500"></span> Done
+                  <span className="w-3 h-3 rounded bg-pink-500"></span> Done
                 </span>
-                <span className="flex items-center gap-1 text-xs">
-                  <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse ring-2 ring-green-300"></span> Nearest
-                </span>
+                <span className="text-xs text-slate-500">| Satellite View</span>
               </div>
               {userLocation && (
-                <span className="text-xs text-slate-500">GPS Active</span>
+                <span className="text-xs text-green-600 font-medium">📍 GPS Active</span>
               )}
             </div>
           </div>
