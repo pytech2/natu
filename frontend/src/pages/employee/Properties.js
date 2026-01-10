@@ -392,30 +392,122 @@ export default function Properties() {
     return [29.9695, 76.8783];
   };
 
-  // Download map as PDF
+  // Download map as PDF - Full zoom for field use
   const handlePrintMap = async () => {
     if (!mapContainerRef.current) return;
     setDownloading(true);
-    toast.info('Generating PDF...');
+    toast.info('Generating full map PDF for field use...');
+    
     try {
-      await new Promise(r => setTimeout(r, 1000));
-      const canvas = await html2canvas(mapContainerRef.current, { useCORS: true, scale: 2, backgroundColor: '#fff' });
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      // Wait for map to fully render
+      await new Promise(r => setTimeout(r, 1500));
       
-      pdf.setFontSize(14);
+      // Capture map at high quality
+      const canvas = await html2canvas(mapContainerRef.current, { 
+        useCORS: true, 
+        scale: 3,  // High quality for print
+        backgroundColor: '#fff',
+        logging: false
+      });
+      
+      // Create PDF in landscape for better map view
+      const pdf = new jsPDF('l', 'mm', 'a4');  // Landscape A4
+      
+      // Header
+      pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('NSTU INDIA PRIVATE LIMITED', 105, 12, { align: 'center' });
+      pdf.text('NSTU INDIA PRIVATE LIMITED - SURVEY MAP', 148.5, 12, { align: 'center' });
+      
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Surveyor: ${user?.name} | Date: ${new Date().toLocaleDateString('en-IN')}`, 105, 20, { align: 'center' });
-      pdf.text(`Total: ${stats.total} | Pending: ${stats.pending} | Done: ${stats.completed}`, 105, 26, { align: 'center' });
+      pdf.text(`Surveyor: ${user?.name || 'N/A'} | Date: ${new Date().toLocaleDateString('en-IN')}`, 148.5, 20, { align: 'center' });
+      pdf.text(`Total: ${stats.total} | Pending: ${stats.pending} | Completed: ${stats.completed}`, 148.5, 26, { align: 'center' });
       
-      const imgWidth = 190;
+      // Legend
+      pdf.setFontSize(8);
+      pdf.setFillColor(249, 115, 22);  // Orange
+      pdf.circle(20, 32, 2, 'F');
+      pdf.text('Pending', 24, 33);
+      
+      pdf.setFillColor(236, 72, 153);  // Pink
+      pdf.circle(50, 32, 2, 'F');
+      pdf.text('Completed', 54, 33);
+      
+      pdf.setFillColor(34, 197, 94);  // Green
+      pdf.circle(85, 32, 2, 'F');
+      pdf.text('Nearest', 89, 33);
+      
+      // Map image - full width in landscape
+      const imgWidth = 277;  // A4 landscape width minus margins
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 32, imgWidth, Math.min(imgHeight, 240));
-      pdf.save(`survey_map_${new Date().toISOString().split('T')[0]}.pdf`);
-      toast.success('PDF downloaded!');
+      const maxHeight = 165;  // Leave space for property list
+      
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 38, imgWidth, Math.min(imgHeight, maxHeight));
+      
+      // Add property list on second page
+      pdf.addPage('a4', 'p');  // Portrait for list
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('PROPERTY LIST - SURVEY ORDER', 105, 15, { align: 'center' });
+      
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      
+      // Table header
+      let yPos = 25;
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(10, yPos - 4, 190, 8, 'F');
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('S.No', 12, yPos);
+      pdf.text('Property ID', 25, yPos);
+      pdf.text('Owner Name', 55, yPos);
+      pdf.text('Mobile', 110, yPos);
+      pdf.text('Colony/Ward', 140, yPos);
+      pdf.text('Status', 185, yPos);
+      
+      yPos += 8;
+      pdf.setFont('helvetica', 'normal');
+      
+      // Property rows
+      filteredProperties.slice(0, 50).forEach((prop, idx) => {
+        if (yPos > 280) {
+          pdf.addPage('a4', 'p');
+          yPos = 20;
+        }
+        
+        // Alternate row colors
+        if (idx % 2 === 0) {
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(10, yPos - 4, 190, 7, 'F');
+        }
+        
+        // Status color indicator
+        if (prop.status === 'Completed' || prop.status === 'Approved') {
+          pdf.setTextColor(236, 72, 153);  // Pink
+        } else {
+          pdf.setTextColor(0, 0, 0);
+        }
+        
+        pdf.text(String(idx + 1), 12, yPos);
+        pdf.text(String(prop.property_id || '-').substring(0, 12), 25, yPos);
+        pdf.text(String(prop.owner_name || '-').substring(0, 25), 55, yPos);
+        pdf.text(String(prop.mobile || '-'), 110, yPos);
+        pdf.text(String(prop.colony || prop.ward || '-').substring(0, 20), 140, yPos);
+        pdf.text(String(prop.status || 'Pending'), 185, yPos);
+        
+        pdf.setTextColor(0, 0, 0);
+        yPos += 7;
+      });
+      
+      // Footer
+      pdf.setFontSize(7);
+      pdf.text(`Generated: ${new Date().toLocaleString('en-IN')} | Page 2`, 105, 290, { align: 'center' });
+      
+      // Save
+      pdf.save(`survey_map_${user?.name || 'surveyor'}_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('Full map PDF downloaded! Print at 100% zoom for field use.');
     } catch (e) {
+      console.error('PDF generation error:', e);
       toast.error('Failed to generate PDF');
     } finally {
       setDownloading(false);
