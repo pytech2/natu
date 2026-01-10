@@ -812,22 +812,21 @@ export default function Properties() {
             </div>
           </div>
 
-          {/* Fullscreen Map with Satellite View */}
+          {/* Fullscreen Map with Google Satellite View - Max Quality */}
           <div className="absolute inset-0 pt-16">
             <MapContainer
               center={getDefaultCenter()}
-              zoom={17}
+              zoom={19}
               minZoom={5}
-              maxZoom={20}
+              maxZoom={21}
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom={true}
               zoomControl={true}
             >
-              {/* Satellite imagery from ESRI */}
+              {/* Google Satellite - High quality max zoom */}
               <TileLayer 
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                attribution="ESRI Satellite"
-                maxZoom={20}
+                url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+                maxZoom={21}
               />
               <MapController properties={filteredProperties} userLocation={userLocation} fitKey={fitKey} />
               
