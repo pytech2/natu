@@ -37,12 +37,12 @@ L.Icon.Default.mergeOptions({
 // Custom numbered marker with animation for nearest
 const createNumberedIcon = (number, status, isNearest = false) => {
   const colors = {
-    'Pending': '#f97316',
-    'Completed': '#22c55e',
-    'Approved': '#22c55e',
-    'In Progress': '#3b82f6',
-    'Rejected': '#ef4444',
-    'default': '#6b7280'
+    'Pending': '#f97316',      // Orange - not done
+    'Completed': '#ec4899',    // PINK - survey completed
+    'Approved': '#ec4899',     // PINK - survey approved
+    'In Progress': '#3b82f6',  // Blue
+    'Rejected': '#ef4444',     // Red
+    'default': '#6b7280'       // Gray
   };
   const color = colors[status] || colors['default'];
   const size = isNearest ? 40 : 22;
