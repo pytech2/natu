@@ -867,7 +867,7 @@ export default function Properties() {
                   <span className="w-3 h-3 rounded-full bg-orange-500"></span> Pending
                 </span>
                 <span className="flex items-center gap-1 text-xs">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Done
+                  <span className="w-3 h-3 rounded-full bg-pink-500"></span> Done
                 </span>
                 <span className="flex items-center gap-1 text-xs">
                   <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse ring-2 ring-green-300"></span> Nearest
