@@ -34,98 +34,147 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Custom numbered marker with animation for nearest
-const createNumberedIcon = (number, status, isNearest = false) => {
+// Custom marker showing PROPERTY ID with label
+const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
   const colors = {
-    'Pending': '#f97316',      // Orange - not done
-    'Completed': '#ec4899',    // PINK - survey completed
-    'Approved': '#ec4899',     // PINK - survey approved
-    'In Progress': '#3b82f6',  // Blue
-    'Rejected': '#ef4444',     // Red
-    'default': '#6b7280'       // Gray
+    'Pending': '#22c55e',       // GREEN - pending (like in image)
+    'Completed': '#ec4899',     // PINK - survey completed
+    'Approved': '#ec4899',      // PINK - survey approved
+    'In Progress': '#3b82f6',   // Blue
+    'Rejected': '#ef4444',      // Red
+    'default': '#22c55e'        // Green default
+  };
+  const color = colors[status] || colors['default'];
+  
+  if (isNearest) {
+    // Nearest property - larger with animation
+    return L.divIcon({
+      className: 'property-id-marker-nearest',
+      html: `
+        <div style="
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        ">
+          <div style="
+            background-color: ${color};
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+            white-space: nowrap;
+            animation: pulse 1.5s ease-in-out infinite;
+          ">${propertyId}</div>
+          <div style="
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid ${color};
+            margin-top: -2px;
+          "></div>
+        </div>
+        <style>
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+          }
+        </style>`,
+      iconSize: [80, 40],
+      iconAnchor: [40, 40],
+      popupAnchor: [0, -35]
+    });
+  }
+  
+  // Regular marker with Property ID label
+  return L.divIcon({
+    className: 'property-id-marker',
+    html: `
+      <div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      ">
+        <div style="
+          background-color: ${color};
+          padding: 3px 6px;
+          border-radius: 3px;
+          border: 1px solid white;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+          font-size: 9px;
+          font-weight: 600;
+          color: white;
+          white-space: nowrap;
+        ">${propertyId}</div>
+        <div style="
+          width: 0;
+          height: 0;
+          border-left: 4px solid transparent;
+          border-right: 4px solid transparent;
+          border-top: 6px solid ${color};
+          margin-top: -1px;
+        "></div>
+      </div>`,
+    iconSize: [70, 30],
+    iconAnchor: [35, 30],
+    popupAnchor: [0, -25]
+  });
+};
+
+// Keep old function for backward compatibility but redirect to new one
+const createNumberedIcon = (number, status, isNearest = false, propertyId = null) => {
+  // If propertyId is provided, use the new Property ID marker
+  if (propertyId) {
+    return createPropertyIdIcon(propertyId, status, isNearest);
+  }
+  
+  // Fallback to numbered marker
+  const colors = {
+    'Pending': '#22c55e',       // GREEN
+    'Completed': '#ec4899',     // PINK
+    'Approved': '#ec4899',      // PINK
+    'In Progress': '#3b82f6',
+    'Rejected': '#ef4444',
+    'default': '#22c55e'
   };
   const color = colors[status] || colors['default'];
   const size = isNearest ? 40 : 22;
   
   if (isNearest) {
-    // Nearest property - GREEN with rotating border animation
     return L.divIcon({
       className: 'nearest-marker-animated',
       html: `
         <style>
-          @keyframes rotate-border {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
-          }
           @keyframes pulse-green {
-            0%, 100% { 
-              transform: scale(1); 
-              box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
-            }
-            50% { 
-              transform: scale(1.15); 
-              box-shadow: 0 0 25px 8px rgba(34, 197, 94, 0.4);
-            }
-          }
-          @keyframes ping-green {
-            0% { transform: scale(1); opacity: 0.8; }
-            75%, 100% { transform: scale(2.8); opacity: 0; }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
           }
         </style>
-        <div style="position: relative; width: ${size + 30}px; height: ${size + 30}px;">
-          <!-- Rotating green border ring -->
-          <div style="
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(0deg);
-            width: ${size + 16}px;
-            height: ${size + 16}px;
-            border-radius: 50%;
-            border: 4px dashed #22c55e;
-            animation: rotate-border 2s linear infinite;
-          "></div>
-          <!-- Ping effect -->
-          <div style="
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: ${size}px;
-            height: ${size}px;
-            background-color: rgba(34, 197, 94, 0.4);
-            border-radius: 50%;
-            animation: ping-green 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-          "></div>
-          <!-- Main green marker -->
-          <div style="
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            width: ${size}px;
-            height: ${size}px;
-            border-radius: 50%;
-            border: 4px solid white;
-            box-shadow: 0 0 20px rgba(34, 197, 94, 0.8), 0 0 40px rgba(34, 197, 94, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 900;
-            color: white;
-            animation: pulse-green 1.2s ease-in-out infinite;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-          ">${number}</div>
-        </div>`,
-      iconSize: [size + 30, size + 30],
-      iconAnchor: [(size + 30)/2, (size + 30)/2],
-      popupAnchor: [0, -(size + 30)/2]
+        <div style="
+          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+          width: ${size}px;
+          height: ${size}px;
+          border-radius: 50%;
+          border: 4px solid white;
+          box-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: 900;
+          color: white;
+          animation: pulse-green 1.2s ease-in-out infinite;
+        ">${number}</div>`,
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2],
+      popupAnchor: [0, -size/2]
     });
   }
   
-  // Regular marker
   return L.divIcon({
     className: 'custom-numbered-marker',
     html: `<div style="
