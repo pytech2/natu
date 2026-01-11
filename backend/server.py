@@ -2308,7 +2308,7 @@ async def generate_arranged_pdf(
     sn_color: str = Form("red"),
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate arranged PDF with serial numbers (ADMIN only) - A4 size with 25% increased height"""
+    """Generate arranged PDF with serial numbers (ADMIN only) - A4 size with 25% increased height. Excludes N/A serial bills."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2318,11 +2318,14 @@ async def generate_arranged_pdf(
     if colony and colony.strip():
         query["colony"] = {"$regex": colony, "$options": "i"}
     
-    # Get arranged bills
+    # Exclude N/A serial bills from PDF generation
+    query["serial_na"] = {"$ne": True}
+    
+    # Get arranged bills (excluding N/A)
     bills = await db.bills.find(query, {"_id": 0}).sort("serial_number", 1).to_list(None)
     
     if not bills:
-        raise HTTPException(status_code=404, detail="No bills found")
+        raise HTTPException(status_code=404, detail="No bills found (all may have N/A serial numbers)")
     
     # Get original PDF
     batch = await db.batches.find_one({"id": bills[0]["batch_id"]})
