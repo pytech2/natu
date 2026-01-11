@@ -220,7 +220,7 @@ export default function Survey() {
         property.longitude
       );
       setDistanceFromProperty(Math.round(distance));
-      setWithinRange(distance <= 50);
+      setWithinRange(distance <= 15);
     }
   }, [location, property]);
 
