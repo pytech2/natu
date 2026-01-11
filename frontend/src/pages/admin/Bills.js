@@ -672,11 +672,17 @@ export default function BillsPage() {
                 </thead>
                 <tbody>
                   {bills.map((bill) => (
-                    <tr key={bill.id}>
+                    <tr key={bill.id} className={bill.serial_na ? 'bg-amber-50' : ''}>
                       <td>
-                        <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 font-bold rounded-full">
-                          {bill.serial_number}
-                        </span>
+                        {bill.serial_na ? (
+                          <span className="inline-flex items-center justify-center px-2 h-8 bg-amber-100 text-amber-700 font-bold rounded text-xs">
+                            N/A
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 font-bold rounded-full">
+                            {bill.serial_number}
+                          </span>
+                        )}
                       </td>
                       <td className="font-mono">{bill.property_id || '-'}</td>
                       <td className="max-w-[150px] truncate">{bill.owner_name || '-'}</td>
@@ -697,7 +703,7 @@ export default function BillsPage() {
                           <span className="text-emerald-600">✓</span>
                         ) : (
                           <span className="text-slate-400">-</span>
-                        )}
+                        )}}
                       </td>
                       <td>
                         <Button
