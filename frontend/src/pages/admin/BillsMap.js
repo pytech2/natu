@@ -79,7 +79,7 @@ const createPropertyIdIcon = (propertyId, status) => {
   };
   const color = colors[status] || colors['default'];
   
-  // Compact marker with Property ID label - 2px padding
+  // MINIMAL padding marker - compact height
   return L.divIcon({
     className: 'property-id-marker',
     html: `
@@ -90,27 +90,28 @@ const createPropertyIdIcon = (propertyId, status) => {
       ">
         <div style="
           background-color: ${color};
-          padding: 2px 4px;
+          padding: 1px 3px;
           border-radius: 2px;
           border: 1px solid white;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          box-shadow: 0 1px 2px rgba(0,0,0,0.3);
           font-size: 9px;
           font-weight: 600;
           color: white;
           white-space: nowrap;
+          line-height: 1;
         ">${propertyId}</div>
         <div style="
           width: 0;
           height: 0;
           border-left: 3px solid transparent;
           border-right: 3px solid transparent;
-          border-top: 4px solid ${color};
+          border-top: 3px solid ${color};
           margin-top: -1px;
         "></div>
       </div>`,
-    iconSize: [60, 22],
-    iconAnchor: [30, 22],
-    popupAnchor: [0, -18]
+    iconSize: [60, 16],
+    iconAnchor: [30, 16],
+    popupAnchor: [0, -12]
   });
 };
 
