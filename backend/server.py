@@ -2676,10 +2676,16 @@ async def copy_bills_to_properties(
     # Convert bills to properties
     properties = []
     for i, bill in enumerate(bills):
+        # Use the actual BillSrNo from PDF, or mark as N/A
+        bill_serial = bill.get("serial_number", 0)
+        is_serial_na = bill.get("serial_na", False) or bill_serial == 0
+        
         prop = {
             "id": str(uuid.uuid4()),
             "batch_id": prop_batch_id,
-            "serial_number": i + 1,
+            "serial_number": bill_serial if not is_serial_na else 0,
+            "serial_na": is_serial_na,
+            "bill_sr_no": bill.get("bill_sr_no", "N/A") if is_serial_na else str(bill_serial),
             "property_id": bill.get("property_id", str(uuid.uuid4())[:8].upper()),
             "old_property_id": bill.get("old_property_id", ""),
             "owner_name": bill.get("owner_name", "Unknown"),
