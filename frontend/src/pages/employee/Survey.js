@@ -724,18 +724,32 @@ export default function Survey() {
 
                 <div className="space-y-2">
                   <Label>Self Satisfied? *</Label>
-                  <Select
-                    value={formData.self_satisfied}
-                    onValueChange={(value) => setFormData({ ...formData, self_satisfied: value })}
-                  >
-                    <SelectTrigger data-testid="self-satisfied-select">
-                      <SelectValue placeholder="Is the notice receiver satisfied?" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes - Satisfied</SelectItem>
-                      <SelectItem value="no">No - Not Satisfied</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-6 mt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="self_satisfied"
+                        value="yes"
+                        checked={formData.self_satisfied === 'yes'}
+                        onChange={(e) => setFormData({ ...formData, self_satisfied: e.target.value })}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        data-testid="self-satisfied-yes"
+                      />
+                      <span className="text-sm font-medium">Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="self_satisfied"
+                        value="no"
+                        checked={formData.self_satisfied === 'no'}
+                        onChange={(e) => setFormData({ ...formData, self_satisfied: e.target.value })}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        data-testid="self-satisfied-no"
+                      />
+                      <span className="text-sm font-medium">No</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
