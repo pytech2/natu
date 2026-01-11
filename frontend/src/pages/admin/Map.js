@@ -77,23 +77,70 @@ const spreadOverlappingMarkers = (properties) => {
   return spreadProperties;
 };
 
-// Custom small marker icons with serial number
+// Custom marker showing PROPERTY ID with label (same as Survey Map)
+const createPropertyIdIcon = (propertyId, status) => {
+  const colors = {
+    'Pending': '#22c55e',       // GREEN - pending
+    'Completed': '#ec4899',     // PINK - completed
+    'Approved': '#ec4899',      // PINK - approved
+    'Residential': '#22c55e',   // GREEN
+    'Commercial': '#f97316',    // Orange
+    'Vacant Plot': '#22c55e',   // GREEN
+    'Mix Use': '#a855f7',       // Purple
+    'default': '#22c55e'        // Green default
+  };
+  const color = colors[status] || colors['default'];
+  
+  // Compact marker with Property ID label - 2px padding
+  return L.divIcon({
+    className: 'property-id-marker',
+    html: `
+      <div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      ">
+        <div style="
+          background-color: ${color};
+          padding: 2px 4px;
+          border-radius: 2px;
+          border: 1px solid white;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          font-size: 9px;
+          font-weight: 600;
+          color: white;
+          white-space: nowrap;
+        ">${propertyId}</div>
+        <div style="
+          width: 0;
+          height: 0;
+          border-left: 3px solid transparent;
+          border-right: 3px solid transparent;
+          border-top: 4px solid ${color};
+          margin-top: -1px;
+        "></div>
+      </div>`,
+    iconSize: [60, 22],
+    iconAnchor: [30, 22],
+    popupAnchor: [0, -18]
+  });
+};
+
+// Keep old numbered icon as fallback
 const createNumberedIcon = (number, category) => {
   const colors = {
-    'Residential': '#3b82f6',      // Blue
-    'Commercial': '#f97316',       // Orange
-    'Vacant Plot': '#22c55e',      // Green
-    'Vacant': '#22c55e',           // Green (alternate)
-    'Mix Use': '#a855f7',          // Purple
-    'Mixed': '#a855f7',            // Purple (alternate)
-    'default': '#6b7280'           // Gray
+    'Residential': '#3b82f6',
+    'Commercial': '#f97316',
+    'Vacant Plot': '#22c55e',
+    'Vacant': '#22c55e',
+    'Mix Use': '#a855f7',
+    'Mixed': '#a855f7',
+    'default': '#6b7280'
   };
   
-  // Normalize category for matching
   const normalizedCategory = category?.trim() || 'default';
   const color = colors[normalizedCategory] || colors['default'];
   
-  // Small circular pin with number
   return L.divIcon({
     className: 'custom-numbered-marker',
     html: `<div style="
