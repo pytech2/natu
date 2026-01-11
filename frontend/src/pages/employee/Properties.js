@@ -764,47 +764,81 @@ export default function Properties() {
               </CardContent>
             </Card>
           ) : (
-            filteredProperties.map((property, index) => (
-              <Card 
-                key={property.id} 
-                className={`cursor-pointer hover:shadow-md transition-shadow ${
-                  index === 0 && userLocation ? 'nearest-card-green' : ''
-                }`}
-                onClick={() => navigate(`/employee/survey/${property.id}`)}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
-                      index === 0 && userLocation ? 'bg-green-500 ring-4 ring-green-300 ring-offset-2 animate-pulse' :
-                      property.status === 'Pending' ? 'bg-orange-500' :
-                      property.status === 'Completed' || property.status === 'Approved' ? 'bg-pink-500' : 'bg-slate-500'
-                    }`}>
-                      {property.serial_number || index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-blue-600">{property.property_id}</span>
-                        {index === 0 && userLocation && (
-                          <span className="nearest-badge-green text-xs text-white px-2 py-0.5 rounded-full font-bold shadow-lg">
-                            ⭐ NEAREST
-                          </span>
+            filteredProperties.map((property, index) => {
+              const isCompleted = property.status === 'Completed' || property.status === 'Approved';
+              const isRejected = property.status === 'Rejected';
+              const isPending = property.status === 'Pending';
+              const isNearestPending = index === 0 && userLocation && isPending;
+              
+              return (
+                <Card 
+                  key={property.id} 
+                  className={`transition-shadow ${
+                    isNearestPending ? 'nearest-card-green cursor-pointer hover:shadow-md' : 
+                    isCompleted ? 'opacity-60 bg-slate-50' :
+                    isRejected ? 'border-red-300 bg-red-50 cursor-pointer hover:shadow-md' :
+                    'cursor-pointer hover:shadow-md'
+                  }`}
+                  onClick={() => {
+                    if (isCompleted) {
+                      toast.info('This survey is already completed');
+                      return;
+                    }
+                    navigate(`/employee/survey/${property.id}`);
+                  }}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
+                        isNearestPending ? 'bg-green-500 ring-4 ring-green-300 ring-offset-2 animate-pulse' :
+                        isRejected ? 'bg-red-500' :
+                        isCompleted ? 'bg-pink-500' : 
+                        isPending ? 'bg-orange-500' : 'bg-slate-500'
+                      }`}>
+                        {isCompleted ? '✓' : isRejected ? '!' : (property.serial_number || index + 1)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs text-blue-600">{property.property_id}</span>
+                          {isNearestPending && (
+                            <span className="nearest-badge-green text-xs text-white px-2 py-0.5 rounded-full font-bold shadow-lg">
+                              ⭐ NEAREST
+                            </span>
+                          )}
+                          {isCompleted && (
+                            <span className="text-xs text-white bg-pink-500 px-2 py-0.5 rounded-full font-medium">
+                              ✓ Done
+                            </span>
+                          )}
+                          {isRejected && (
+                            <span className="text-xs text-white bg-red-500 px-2 py-0.5 rounded-full font-medium">
+                              ⚠ Rejected
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-semibold text-slate-800 truncate">{property.owner_name}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-slate-500 truncate">{property.colony}</span>
+                          {property.distance !== undefined && property.distance !== Infinity && (
+                            <span className="text-xs font-medium text-green-600 flex-shrink-0 ml-2">
+                              📍 {formatDistance(property.distance)}
+                            </span>
+                          )}
+                        </div>
+                        {/* Show rejection reason if rejected */}
+                        {isRejected && property.reject_remarks && (
+                          <div className="mt-2 p-2 bg-red-100 rounded text-xs text-red-700">
+                            <strong>Rejection Reason:</strong> {property.reject_remarks}
+                          </div>
                         )}
                       </div>
-                      <p className="font-semibold text-slate-800 truncate">{property.owner_name}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-slate-500 truncate">{property.colony}</span>
-                        {property.distance !== undefined && property.distance !== Infinity && (
-                          <span className="text-xs font-medium text-green-600 flex-shrink-0 ml-2">
-                            📍 {formatDistance(property.distance)}
-                          </span>
-                        )}
-                      </div>
+                      {!isCompleted && <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />}
+                      {isCompleted && <Lock className="w-5 h-5 text-pink-400 flex-shrink-0" />}
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              );
+            })
           )}
         </div>
 
