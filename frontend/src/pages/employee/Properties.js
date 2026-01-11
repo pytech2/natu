@@ -712,7 +712,7 @@ export default function Properties() {
         </Card>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <div className="bg-white rounded-lg p-2 text-center border">
             <p className="text-lg font-bold text-slate-800">{stats.total}</p>
             <p className="text-xs text-slate-500">Total</p>
@@ -724,6 +724,10 @@ export default function Properties() {
           <div className="bg-pink-50 rounded-lg p-2 text-center border border-pink-200">
             <p className="text-lg font-bold text-pink-600">{stats.completed}</p>
             <p className="text-xs text-pink-600">Done</p>
+          </div>
+          <div className="bg-red-50 rounded-lg p-2 text-center border border-red-200">
+            <p className="text-lg font-bold text-red-600">{stats.rejected || 0}</p>
+            <p className="text-xs text-red-600">Rejected</p>
           </div>
         </div>
 
