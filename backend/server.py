@@ -2303,12 +2303,9 @@ async def arrange_bills_by_route(
 async def generate_arranged_pdf(
     batch_id: str = Form(None),
     colony: str = Form(None),
-    sn_position: str = Form("top-right"),  # top-left, top-right, bottom-left, bottom-right
-    sn_font_size: int = Form(48),
-    sn_color: str = Form("red"),
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate arranged PDF with serial numbers (ADMIN only) - A4 size with 25% increased height. Excludes N/A serial bills."""
+    """Generate PDF in same sequence as uploaded - skips bills without owner name. No numbering added."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2318,14 +2315,11 @@ async def generate_arranged_pdf(
     if colony and colony.strip():
         query["colony"] = {"$regex": colony, "$options": "i"}
     
-    # Exclude N/A serial bills from PDF generation
-    query["serial_na"] = {"$ne": True}
-    
-    # Get arranged bills (excluding N/A)
-    bills = await db.bills.find(query, {"_id": 0}).sort("serial_number", 1).to_list(None)
+    # Get bills sorted by page number (original sequence)
+    bills = await db.bills.find(query, {"_id": 0}).sort("page_number", 1).to_list(None)
     
     if not bills:
-        raise HTTPException(status_code=404, detail="No bills found (all may have N/A serial numbers)")
+        raise HTTPException(status_code=404, detail="No bills found")
     
     # Get original PDF
     batch = await db.batches.find_one({"id": bills[0]["batch_id"]})
@@ -2336,80 +2330,31 @@ async def generate_arranged_pdf(
     if not original_pdf_path.exists():
         raise HTTPException(status_code=404, detail="Original PDF file not found")
     
-    # Create new PDF with serial numbers
+    # Create new PDF - keep original sequence, no numbering
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_filename = f"arranged_{colony or 'all'}_{timestamp}.pdf"
     output_path = UPLOAD_DIR / output_filename
-    
-    # Color mapping
-    color_map = {
-        "red": (1, 0, 0),
-        "blue": (0, 0, 1),
-        "green": (0, 0.5, 0),
-        "black": (0, 0, 0),
-        "orange": (1, 0.5, 0)
-    }
-    sn_rgb = color_map.get(sn_color.lower(), (1, 0, 0))
     
     # Open original PDF and create new one
     src_pdf = fitz.open(str(original_pdf_path))
     output_pdf = fitz.open()
     
+    included_count = 0
     for bill in bills:
         page_num = bill.get("page_number", 1) - 1
         if page_num < 0 or page_num >= len(src_pdf):
             continue
         
-        # Simply copy the page as-is from source
+        # Simply copy the page as-is from source - no modifications
         output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
-        new_page = output_pdf[-1]
-        
-        # Get page dimensions
-        rect = new_page.rect
-        rotation = new_page.rotation
-        
-        # Search for "BillSrNo" to place our serial number nearby
-        bill_sr_positions = new_page.search_for("BillSrNo")
-        
-        if bill_sr_positions:
-            # Found BillSrNo - place serial number after it
-            pos = bill_sr_positions[0]
-            if rotation == 90:
-                # 90° rotation - visual right is coordinate Y+
-                sn_x = pos.x0
-                sn_y = pos.y1 + 10
-            else:
-                # Normal - place to the right
-                sn_x = pos.x1 + 50
-                sn_y = pos.y0 + 15
-        else:
-            # Fallback position - top right corner
-            if rotation == 90:
-                sn_x = rect.width - 60
-                sn_y = 80
-            elif rotation == 270:
-                sn_x = 60
-                sn_y = rect.height - 80
-            else:
-                sn_x = rect.width - 80
-                sn_y = 60
-        
-        # Add GPS serial number with red color
-        new_page.insert_text(
-            (sn_x, sn_y), 
-            f"{bill['serial_number']}", 
-            fontsize=sn_font_size, 
-            color=sn_rgb, 
-            fontname="helv",
-            rotate=rotation
-        )
+        included_count += 1
     
     output_pdf.save(str(output_path))
     output_pdf.close()
     src_pdf.close()
     
     return {
-        "message": f"Generated PDF with {len(bills)} bills (arranged by GPS)",
+        "message": f"Generated PDF with {included_count} bills",
         "filename": output_filename,
         "download_url": f"/api/uploads/{output_filename}"
     }
