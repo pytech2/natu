@@ -238,7 +238,13 @@ export default function BillsPage() {
     }
   };
 
-  const handleArrangeByRoute = async () => {
+  const handleArrangeByRoute = () => {
+    // Show confirmation dialog instead of immediately arranging
+    setGpsArrangeDialog(true);
+  };
+
+  const confirmGpsArrangement = async () => {
+    setArranging(true);
     try {
       const formData = new FormData();
       if (filters.batch_id) formData.append('batch_id', filters.batch_id);
@@ -253,8 +259,11 @@ export default function BillsPage() {
 
       toast.success(response.data.message);
       fetchBills();
+      setGpsArrangeDialog(false);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to arrange bills');
+    } finally {
+      setArranging(false);
     }
   };
 
