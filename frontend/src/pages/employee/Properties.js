@@ -436,14 +436,22 @@ export default function Properties() {
       { enableHighAccuracy: true }
     );
     
-    // Watch position for continuous updates (every 25m movement or 5 seconds)
+    // Watch position for continuous updates - REDUCED FREQUENCY to avoid performance issues
+    // Only update every 50m movement or 30 seconds max
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        setUserLocation(prev => {
+          // Only update if moved more than 50m to prevent constant re-renders
+          if (prev) {
+            const dist = calculateDistance(prev.latitude, prev.longitude, pos.coords.latitude, pos.coords.longitude);
+            if (dist < 50) return prev; // Skip small movements
+          }
+          return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        });
         setLastUpdate(new Date());
       },
       (err) => console.error('GPS watch error:', err),
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000, distanceFilter: 25 }
+      { enableHighAccuracy: true, maximumAge: 30000, timeout: 30000 }
     );
   };
 
