@@ -353,27 +353,28 @@ export default function BillsMapPage() {
               <div style={{ height: '600px' }}>
                 <MapContainer
                   center={defaultCenter}
-                  zoom={14}
+                  zoom={18}
                   minZoom={5}
-                  maxZoom={18}
+                  maxZoom={21}
                   maxBounds={[[-85, -180], [85, 180]]}
                   maxBoundsViscosity={1.0}
                   style={{ height: '100%', width: '100%' }}
                   scrollWheelZoom={true}
                 >
+                  {/* Google Satellite - High quality */}
                   <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+                    maxZoom={21}
                   />
                   
                   <FitBounds bills={bills} />
                   
-                  {/* Spread overlapping markers so all serial numbers are visible */}
+                  {/* Property markers with PROPERTY ID labels */}
                   {spreadOverlappingMarkers(bills).map((bill) => (
                     <Marker
                       key={bill.id}
                       position={[bill.spreadLat, bill.spreadLng]}
-                      icon={createBillIcon(bill.serial_number, bill.category)}
+                      icon={createPropertyIdIcon(bill.property_id, bill.category)}
                     >
                       <Popup maxWidth={350}>
                         <div className="p-2 min-w-[250px]">
