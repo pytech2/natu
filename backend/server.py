@@ -2078,6 +2078,7 @@ async def upload_pdf_bills(
     # Extract text from each page using PyMuPDF
     bills = []
     skipped_count = 0
+    na_serial_count = 0
     try:
         pdf_doc = fitz.open(str(pdf_path))
         
@@ -2095,9 +2096,22 @@ async def upload_pdf_bills(
             
             bill_data["id"] = str(uuid.uuid4())
             bill_data["batch_id"] = batch_id
-            bill_data["serial_number"] = len(bills) + 1  # Sequential serial for valid bills only
+            
+            # Use Bill Serial Number from PDF (bill_sr_no field)
+            # If missing/blank, set to "N/A" and mark as skipped for ordering
+            pdf_serial = bill_data.get("bill_sr_no", "").strip()
+            if pdf_serial and pdf_serial.isdigit():
+                bill_data["serial_number"] = int(pdf_serial)
+                bill_data["serial_na"] = False
+            else:
+                bill_data["serial_number"] = 0  # Use 0 for sorting purposes
+                bill_data["serial_na"] = True   # Mark as N/A for ordering
+                bill_data["bill_sr_no"] = "N/A"
+                na_serial_count += 1
+            
             bill_data["created_at"] = datetime.now(timezone.utc).isoformat()
             bill_data["status"] = "Pending"
+            bill_data["gps_arranged"] = False  # Not GPS arranged by default
             
             bills.append(bill_data)
         
