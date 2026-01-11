@@ -52,6 +52,10 @@ export default function Submissions() {
   const [editData, setEditData] = useState({});
   const [editPropertyData, setEditPropertyData] = useState({});
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editPhotos, setEditPhotos] = useState([]);
+  const [newPhotoFile, setNewPhotoFile] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef(null);
 
   const employeeIdFilter = searchParams.get('employee_id') || '';
 
