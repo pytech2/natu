@@ -164,6 +164,11 @@ export default function Submissions() {
       amount: submission.property_amount || '',
       ward: submission.property_ward || ''
     });
+    // Photos - filter duplicates
+    const uniquePhotos = submission.photos?.filter((photo, index, self) => 
+      index === self.findIndex(p => p.file_url === photo.file_url)
+    ) || [];
+    setEditPhotos(uniquePhotos);
     setEditDialog(true);
   };
 
