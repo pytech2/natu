@@ -1074,11 +1074,15 @@ async def approve_reject_submission(data: SubmissionApproval, current_user: dict
         {"$set": update_data}
     )
     
-    # Update property status
+    # Update property status and include rejection remarks
     prop_status = "Completed" if data.action == "APPROVE" else "Rejected"
+    prop_update = {"status": prop_status}
+    if data.action == "REJECT" and data.remarks:
+        prop_update["reject_remarks"] = data.remarks
+    
     await db.properties.update_one(
         {"id": submission["property_record_id"]},
-        {"$set": {"status": prop_status}}
+        {"$set": prop_update}
     )
     
     return {"message": f"Submission {new_status.lower()}"}
