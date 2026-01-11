@@ -1903,8 +1903,56 @@ async def get_attendance_records(
 
 # ============== PDF BILL PROCESSING ==============
 
+# Helper function to extract BillSrNo from page using block-based extraction
+def extract_bill_sr_no_from_page(page) -> str:
+    """Extract BillSrNo from PDF page using position-aware extraction"""
+    try:
+        blocks = page.get_text("dict")["blocks"]
+        billsr_y = None
+        billsr_x = None
+        
+        # First find the BillSrNo label position
+        for block in blocks:
+            if "lines" in block:
+                for line in block["lines"]:
+                    for span in line["spans"]:
+                        text = span["text"].strip().lower()
+                        if 'billsrno' in text or 'bill sr no' in text:
+                            bbox = span["bbox"]
+                            billsr_y = bbox[1]  # y position
+                            billsr_x = bbox[2]  # x position (right edge of label)
+                            # Check if number is on same line after ":"
+                            full_text = span["text"]
+                            match = re.search(r'[:\s]+(\d+)\s*$', full_text)
+                            if match:
+                                return match.group(1)
+        
+        # If we found BillSrNo label, look for a number nearby
+        if billsr_y is not None:
+            candidates = []
+            for block in blocks:
+                if "lines" in block:
+                    for line in block["lines"]:
+                        for span in line["spans"]:
+                            text = span["text"].strip()
+                            bbox = span["bbox"]
+                            # Look for standalone numbers in similar y position (within 20 pixels)
+                            if text.isdigit() and abs(bbox[1] - billsr_y) < 20:
+                                # Prefer numbers to the right of the label
+                                if billsr_x is None or bbox[0] >= billsr_x - 50:
+                                    candidates.append((abs(bbox[1] - billsr_y), text))
+            
+            if candidates:
+                # Return the closest number
+                candidates.sort(key=lambda x: x[0])
+                return candidates[0][1]
+        
+        return ""
+    except Exception:
+        return ""
+
 # Helper function to extract bill data from PDF text
-def extract_bill_data(text: str, page_num: int) -> dict:
+def extract_bill_data(text: str, page_num: int, page=None) -> dict:
     """Extract structured bill data from PDF page text"""
     
     def find_value(patterns, text, default=""):
@@ -1919,12 +1967,21 @@ def extract_bill_data(text: str, page_num: int) -> dict:
     latitude = float(coords_match.group(1)) if coords_match else None
     longitude = float(coords_match.group(2)) if coords_match else None
     
-    bill_data = {
-        "bill_sr_no": find_value([
+    # Try to extract BillSrNo using block-based extraction first
+    bill_sr_no = ""
+    if page is not None:
+        bill_sr_no = extract_bill_sr_no_from_page(page)
+    
+    # Fallback to regex if block extraction failed
+    if not bill_sr_no:
+        bill_sr_no = find_value([
             r'BillSrNo\.?\s*[:\s]*\s*(\d+)',      # BillSrNo. : 112 or BillSrNo : 112
             r'Bill\s*Sr\s*No\.?\s*[:\s]*(\d+)',   # Bill Sr No. : 112
             r'Bill\s*Serial\s*No\.?\s*[:\s]*(\d+)' # Bill Serial No. : 112
-        ], text),
+        ], text)
+    
+    bill_data = {
+        "bill_sr_no": bill_sr_no,
         "property_id": find_value([r'Property\s*Id[:\s]*([A-Z0-9]+)', r'PropertyId[:\s]*([A-Z0-9]+)'], text),
         "old_property_id": find_value([r'Old\s*Property\s*Id[:\s]*([A-Z0-9/-]+)', r'OldPropertyId[:\s]*([A-Z0-9/-]+)'], text),
         "financial_year": find_value([r'Financial\s*Year[:\s]*(\d{4}-\d{2,4})', r'FY[:\s]*(\d{4}-\d{2,4})'], text, "2025-26"),
