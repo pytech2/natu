@@ -2,340 +2,166 @@
 
 **PRODUCT REQUIREMENTS:**
 - **Roles:** Super Admin, Surveyor, Supervisor, MC Officer with specific permissions.
-- **Admin Workflow:** Login, upload property data (Excel/PDF), manage users (mobile as login, password reset), assign properties to single or multiple employees, view a dashboard with stats (including attendance), review/approve/reject submissions, export data, and view properties on a map with logical route sorting.
-- **PDF Bill Processing System:** A complete workflow to extract data from multi-page PDFs, store it, filter by colony, sort by a logical GPS walking route, re-number serials, generate new arranged PDFs (with serial numbers printed correctly, even on rotated pages), and allow editing of extracted bill data with PDF regeneration.
-- **Surveyor Workflow:** Login (using mobile number), view assigned properties, and submit a survey. A complex workflow where surveyors mark attendance, see all assigned properties on a map that tracks their live location, and can view a property list sorted by proximity.
-- **Attendance:** A one-time daily attendance system for surveyors with a selfie, visible on the admin dashboard and a dedicated admin attendance page.
+- **Admin Workflow:** Login, upload property data (Excel/PDF), manage users, assign properties. A key requirement is processing PDF bills: extracting data (including the bill's own serial number), handling missing serials as N/A, and allowing a manually triggered GPS-based re-arrangement of bills for route optimization. The admin must be able to view properties on a satellite map, track employee attendance/location, review survey submissions, and export Approved data.
+- **Surveyor Workflow:** Login, view assigned properties on a high-quality satellite map that tracks their live location and highlights the nearest property. The map should be printable as a PDF for field use. The survey form must support special conditions like House Locked or Owner Denied, which alter the required fields. A Self-Certified status must be captured via a radio button.
+- **Attendance:** A daily attendance system for surveyors with a selfie, visible on the admin dashboard.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a FastAPI backend, React frontend, and MongoDB. JWT authentication uses mobile numbers as usernames.
-- **Backend:** A monolithic  handles all API logic. The critical employee login bug has been fixed. PDF handling logic was significantly updated to filter records with NA owner names and to correctly place GPS-sorted serial numbers on generated bills.
+A full-stack application with a FastAPI backend, React frontend, and MongoDB.
+- **Backend:** A monolithic  handles all API logic. It has been updated to support multi-employee assignments, filter exports by Approved status, handle N/A serial numbers from PDF uploads, and make survey fields optional based on special conditions.
 - **Frontend:**
-    - **Admin Panel:** A Delete by Colony feature was added to the Bills page.
-    - **Employee/Surveyor Panel:** This has been the focus of development.
-        - **Attendance:** The page now only allows taking a selfie (no upload) and, upon success, displays an embedded map of all assigned properties with a Print PDF option.
-        - **Properties Page:** This page has been completely overhauled. It now features a persistent map view below search/filter controls. It actively tracks the surveyor's GPS location, sorts the property list by proximity (Nearest First), and highlights the nearest property with a glowing animation on both the map and the list. It also includes a Full Size Map modal for a detailed, printable view.
-        - **Maps:** All maps in the application have been updated with  and  limits to prevent users from seeing blank tiles.
+    - **Admin Panel:** Features user management, property management, and data handling. All maps have been upgraded to use Google Satellite imagery with property ID labels. The Bills page now has a confirmation dialog for the manually-triggered GPS route arrangement. The Export page defaults to exporting only Approved surveys. The Attendance page correctly displays data and includes a map to view employee GPS locations.
+    - **Employee/Surveyor Panel:** A dynamic properties page shows assigned properties on a Google Satellite map with live GPS tracking. The nearest property is highlighted with a static green border. Completed properties are marked with a **pink** pin. The map zoom is now user-controlled after an initial load to prevent erratic auto-zooming. The map can be downloaded as a high-quality PDF. The survey form uses radio buttons for Self-Certified status and dynamically adjusts required fields based on House Locked or Owner Denied selections.
 
 **Last working item**:
-- **Last item agent was working:** Implementing an enhanced highlighting feature for the nearest property on the employee's Assigned Properties page. This includes a blinking/glowing animation for the map pin and the corresponding list card. A Full Size Map button that opens a fullscreen modal view was also added.
-- **Status:** USER VERIFICATION PENDING
-- **Agent Testing Done:** Y (via screenshots)
-- **Which testing method agent to use?** frontend testing agent
+- **Last item agent was working:** Fixing a PDF generation error reported by the user. The user also requested to remove all manual serial numbering options from the UI and backend logic. The system should now use the serial number from the uploaded PDF (or N/A if missing) and maintain the original PDF sequence, only skipping bills where the owner's name is not found.
+- **Status:** IN PROGRESS
+- **Agent Testing Done:** N
+- **Which testing method agent to use?** both
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1:** Full user verification of the enhanced Employee Properties page. (P0)
-- **Issue 2:** The mobile photo watermark bug persists. (P1)
-- **Issue 3:** Comprehensive end-to-end verification of all recently added features is pending. (P1)
+- **Issue 1:** Fix and test the PDF generation workflow. (P0)
+- **Issue 2:** The mobile photo watermark bug persists and needs user verification. (P1)
+- **Issue 3:** Comprehensive end-to-end verification of all recently added features is pending. (P2)
 
 **Issues Detail:**
-- **Issue 1: Full user verification of the enhanced Employee Properties page.**
-    - **Description:** The employee properties page has many new, complex features (live GPS sort, nearest property animation, fullscreen map modal, smart zoom). While the agent has implemented and tested them via screenshots, the user has not confirmed if the complete workflow meets their expectations.
+- **Issue 1: Fix and test the PDF generation workflow.**
+    - **Description:** The user reported an error when clicking Generate PDF on the Admin Bills page. They also clarified that no manual serial numbering should be applied; the system should keep the original PDF sequence, use the serial number from the bill itself (or 'N/A'), and only skip bills with no owner name. The agent has implemented code changes but has not tested them.
     - **Next debug checklist:**
-        1.  Ask the user to log in as an employee.
-        2.  Navigate to the Assigned Properties page.
-        3.  Verify the layout: search/filter at top, map below, stats, then the property list.
-        4.  Confirm the nearest property is highlighted with an animation on both the map and the list.
-        5.  Click the Full Size Map button and verify the modal opens correctly and shows all properties.
-        6.  Confirm the smart zoom algorithm behaves as expected when moving.
-    - **Status:** USER VERIFICATION PENDING
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** frontend
+        1. Restart the backend service.
+        2. As an admin, navigate to the PDF Bills page.
+        3. Select a batch and colony.
+        4. Click the Generate PDF button.
+        5. Verify that a PDF is downloaded without any errors.
+        6. Verify that the UI dialog for PDF generation no longer shows any serial numbering options.
+        7. Inspect the generated PDF to confirm it contains the correct bills in the original order, without any overlaid serial numbers.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** both
     - **Blocked on other issue:** None
 
 - **Issue 2: Mobile Photo Watermark Bug**
-    - **Description:** When a surveyor uses a mobile device to take a photo directly via the camera input, the GPS/timestamp watermark is not applied. This is a long-standing issue.
+    - **Description:** When a surveyor uses a mobile device to take a photo directly via the camera input, the GPS/timestamp watermark is not applied. This is a long-standing, recurring issue. An attempted fix was made, but it requires verification on a physical mobile device.
     - **Next debug checklist:**
-        1.  In , investigate the  function and its interaction with the file input when using a mobile camera.
-        2.  Use mobile simulation in browser dev tools to test the Take Photo functionality.
-        3.  Submit a survey with a photo taken from the camera and check as admin if the watermark is present.
-    - **Status:** NOT STARTED
+        1. Log in as a surveyor on a mobile device.
+        2. Start a survey and use the Take Photo option (not gallery).
+        3. Submit the survey.
+        4. Log in as an admin and view the submission to check if the photo has the GPS and timestamp watermark.
+    - **Status:** TESTING PENDING
     - **Is recurring issue?** Y
     - **Should Test frontend/backend/both after fix?** frontend
     - **Blocked on other issue:** None
 
 - **Issue 3: Comprehensive end-to-end verification.**
-    - **Description:** Many features were added rapidly (employee login fix, delete by colony, PDF NA filter, PDF format changes, surveyor map flows). A full regression and feature test is needed to ensure stability.
+    - **Description:** Many critical features have been added or fixed recently (multi-employee assignment, survey logic changes, map upgrades, export filtering). A full regression test is needed to ensure stability.
     - **Next debug checklist:**
-        1.  **Admin:** Upload PDF, verify NA records are skipped. Generate PDF, verify format. Use Delete by Colony.
-        2.  **Employee:** Mark attendance, verify map appears. Go to Properties, verify GPS sort/highlight. Start and complete a survey.
+        1.  **Admin:** Upload a new PDF batch, verify N/A serials, assign properties to multiple employees, review a submission, and export approved data.
+        2.  **Employee:** Log in, mark attendance, open the properties map (verify satellite view and no auto-zoom), complete a survey normally, and complete another using House Locked.
     - **Status:** NOT STARTED
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** both
     - **Blocked on other issue:** None
 
 **In progress Task List**:
-- None.
+- **Task 1: Finalize PDF Generation Fix**
+    - **Where to resume:** The agent has already modified  and . The next step is to test the entire flow as described in Issue 1 above.
+    - **What will be achieved:** The Generate PDF feature will be stable, error-free, and aligned with the user's requirement of preserving the original PDF sequence without manual numbering.
+    - **Status:** IN PROGRESS
+    - **Should Test frontend/backend/both after fix?** both
+    - **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **Backend Refactoring (P0):** Decompose the monolithic  into a modular structure using FastAPI routers (e.g., , , ). This is critical for maintainability.
+    - **Backend Refactoring (P0):** Decompose the monolithic  into a modular structure using FastAPI routers (e.g., , , ). This is critical for maintainability and has been postponed multiple times.
 - **Future Tasks:**
     - **Offline Support:** Enable the surveyor's mobile interface to work offline and sync data later.
     - **Download ZIP:** Add a feature to download all split-employee PDFs as a single ZIP file.
+    - **Remove Employee:** Add a feature in the UI to remove a single employee from a property that is assigned to multiple people.
 
 **Completed work in this session**
-- **Bug Fix (CRITICAL):** Fixed the employee login flow by correcting the password hash field during password reset. This unblocked all employee-side features.
-- **Bug Fix:** Fixed assigned properties not appearing for employees after login.
-- **Feature (PDF Upload):** Implemented logic to skip records with NA or empty owner names during PDF bill import.
-- **Feature (PDF Generation):**
-    - Underwent multiple iterations to fix formatting (1 bill per page, correct rotation).
-    - Successfully implemented adding the GPS-sorted serial number (1, 2, 3...) directly onto the bill image.
-- **Feature (Bill Management):** Implemented a Delete by Colony feature on the admin Bills page.
-- **Feature (Surveyor Attendance Map):** The employee attendance page was updated to remove the Upload option and now shows an embedded map of all assigned properties after attendance is marked.
-- **Feature (Enhanced Properties Page):** The employee Assigned Properties page was completely rewritten to include:
-    - A persistent, always-visible map.
-    - Live GPS tracking that sorts the property list by the nearest location.
-    - A glowing animation to highlight the nearest property on both the map and the list.
-    - A Full Size Map modal for a detailed view.
-    - A smart zoom algorithm that adjusts the map view based on the user's distance from the properties.
-- **Feature (Deployment):** Created an  script and detailed instructions for deploying the application on a Hostinger VPS.
-- **Improvement (Map UX):** Applied  and  limits to all five map instances across the application to prevent blank tiles.
-
-**Earlier issues found/mentioned but not fixed**
-- **Issue 1: Mobile Photo Watermark Bug**
-    - **Debug checklist:** See Issues Detail section above.
-    - **Why to solve this issue and what will be achieved with this?** This is a core requirement for verifying the location and time of a survey photo.
-    - **Should Test frontend/backend/both after fix:** frontend
-    - **Is recurring issue?** Y
-
-**Known issue recurrence from previous fork**
-- **Issue recurrence in previous fork:** Mobile Photo Watermark Bug
-- **Recurrence count:** 3+
-- **Status:** NOT STARTED
+- **Property Assignment Fix (CRITICAL):** Fixed the bug where assigning properties would overwrite existing assignments. The logic now correctly adds new employees to a property, allowing multiple assignments.
+- **Survey Form Overhaul:**
+    - Replaced the Self-Certified dropdown with radio buttons.
+    - Added House Locked and Owner Denied special conditions that allow submitting a survey with optional photos and signatures.
+    - Removed the Property Location Map from the survey form.
+- **Map Upgrades (All Maps):**
+    - Switched all maps (Employee Properties, Admin Properties, Admin Bills) from OpenStreetMap to **Google Satellite** tiles for high-quality imagery.
+    - Changed map markers to display the **Property ID** (e.g., 3U1UCF40) instead of a serial number, with compact styling.
+    - Changed the marker color for **completed** surveys to **pink**.
+- **Surveyor Map UX Improvements:**
+    - **Auto-Zoom Fix:** Resolved the issue where the map would aggressively zoom out. It now performs an initial zoom and then gives the user manual control.
+    - **PDF Download:** Implemented a feature to download the full surveyor map as a high-quality, 100% zoomed PDF for field use.
+- **Admin Panel Enhancements:**
+    - **Attendance Tracker:** Fixed the attendance data display and added a map view to show employee GPS locations.
+    - **Export Logic:** Updated the export feature to default to Approved submissions only.
+    - **GPS Arrangement:** Made the GPS-based bill arrangement a manually-triggered action protected by a confirmation dialog.
+    - **PDF Serial Numbers:** Updated the PDF upload process to use the serial number from the bill itself, marking missing ones as N/A and excluding them from sorting.
+- **Bug Fixes:**
+    - **Nearest Property Animation:** Removed the rotating border animation as requested, leaving a static green highlight.
+    - **Duplicate Photos:** Prevented new surveys from uploading the same photo twice.
+    - **Mobile Watermark (Attempted Fix):** Applied a fix to better handle mobile camera images; awaiting user verification.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 - **Backend:** FastAPI, MongoDB (Motor), JWT, PyMuPDF, reportlab.
-- **Frontend:** React, React-Leaflet, Tailwind CSS, Shadcn UI, Axios, **html2canvas, jspdf**.
-- **Algorithms:** Nearest-neighbor for GPS route sorting, Live location tracking (), dynamic map boundary calculation (), smart zoom logic based on distance.
-- **UI/UX:** CSS keyframe animations for highlighting, conditional rendering for complex layouts, modal dialogs for fullscreen views.
-
-**key DB schema**
-- No changes were made to the database schema in this session.
-
-**changes in tech stack**
-- **Added:** ,  for frontend PDF generation.
+- **Frontend:** React, React-Leaflet, Tailwind CSS, Shadcn UI, Axios, html2canvas, jspdf.
+- **Maps:** Using Google Satellite tiles via a URL in . Dynamic markers with custom HTML/CSS for displaying property IDs.
+- **PDF Handling:**  for extraction,  for generation. Logic now handles custom serial numbers and skips records based on conditions.
+- **UI/UX:** Conditional rendering for dynamic forms (), confirmation dialogs ( from Shadcn), custom map markers.
 
 **All files of reference**
-- : Fixed login bug, updated PDF upload filtering and generation logic multiple times.
-- : Added Delete by Colony button and dialog.
-- : Reworked to remove photo upload and embed a property map.
-- : Completely rewritten to be a dynamic, GPS-aware dashboard with a persistent map and nearest-property highlighting.
-- : Added zoom limits to the map.
-- , : Added zoom limits.
-- [0;32m
-╔════════════════════════════════════════════════════════════╗
-║     NSTU INDIA PRIVATE LIMITED - App Installation          ║
-║     Property Tax Notice Distribution System                ║
-╚════════════════════════════════════════════════════════════╝
-[0m
-[1;33m[1/8] Updating system...[0m
-Hit:1 http://deb.debian.org/debian bookworm InRelease
-Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
-Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
-Hit:4 https://deb.nodesource.com/node_20.x nodistro InRelease
-Get:5 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 InRelease [3001 B]
-Get:6 http://deb.debian.org/debian-security bookworm-security/main arm64 Packages [286 kB]
-Get:7 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0/multiverse arm64 Packages [97.8 kB]
-Get:8 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0/multiverse amd64 Packages [99.1 kB]
-Fetched 589 kB in 1s (712 kB/s)
-Reading package lists...
-Building dependency tree...
-Reading state information...
-1 package can be upgraded. Run 'apt list --upgradable' to see it.
-Reading package lists...
-Building dependency tree...
-Reading state information...
-Calculating upgrade...
-The following packages will be upgraded:
-  libsodium23
-1 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
-Need to get 118 kB of archives.
-After this operation, 27.6 kB of additional disk space will be used.
-Get:1 http://deb.debian.org/debian-security bookworm-security/main arm64 libsodium23 arm64 1.0.18-1+deb12u1 [118 kB]
-Fetched 118 kB in 0s (1864 kB/s)
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 38353 files and directories currently installed.)
-Preparing to unpack .../libsodium23_1.0.18-1+deb12u1_arm64.deb ...
-Unpacking libsodium23:arm64 (1.0.18-1+deb12u1) over (1.0.18-1) ...
-Setting up libsodium23:arm64 (1.0.18-1+deb12u1) ...
-Processing triggers for libc-bin (2.36-9+deb12u13) ...
-[1;33m[2/8] Installing dependencies...[0m
-Reading package lists...
-Building dependency tree...
-Reading state information...
-curl is already the newest version (7.88.1-10+deb12u14).
-wget is already the newest version (1.21.3-1+deb12u1).
-git is already the newest version (1:2.39.5-0+deb12u2).
-nginx is already the newest version (1.22.1-9+deb12u3).
-python3 is already the newest version (3.11.2-1+b1).
-python3 set to manually installed.
-nodejs is already the newest version (20.19.6-1nodesource1).
-Some packages could not be installed. This may mean that you have
-requested an impossible situation or if you are using the unstable
-distribution that some required packages have not yet been created
-or been moved out of Incoming.
-The following information may help to resolve the situation:
-
-The following packages have unmet dependencies:
- nodejs : Conflicts: npm
- npm : Depends: node-agent-base but it is not going to be installed
-       Depends: node-archy but it is not going to be installed
-       Depends: node-cacache (>= 17) but it is not going to be installed
-       Depends: node-chalk (>= 5.1.2-2~) but it is not going to be installed
-       Depends: node-cli-table3
-       Depends: node-columnify but it is not going to be installed
-       Depends: node-cssesc
-       Depends: node-debug but it is not going to be installed
-       Depends: node-emoji-regex
-       Depends: node-gyp but it is not going to be installed
-       Depends: node-http-proxy-agent
-       Depends: node-https-proxy-agent but it is not going to be installed
-       Depends: node-mkdirp but it is not going to be installed
-       Depends: node-ms but it is not going to be installed
-       Depends: node-nopt but it is not going to be installed
-       Depends: node-normalize-package-data but it is not going to be installed
-       Depends: node-npm-bundled but it is not going to be installed
-       Depends: node-npm-normalize-package-bin
-       Depends: node-npm-package-arg (>= 10) but it is not going to be installed
-       Depends: node-npmlog but it is not going to be installed
-       Depends: node-postcss-selector-parser
-       Depends: node-read-package-json but it is not going to be installed
-       Depends: node-rimraf but it is not going to be installed
-       Depends: node-semver but it is not going to be installed
-       Depends: node-string-width but it is not going to be installed
-       Depends: node-strip-ansi but it is not going to be installed
-       Depends: node-tar but it is not going to be installed
-       Depends: node-validate-npm-package-name but it is not going to be installed
-       Depends: node-which but it is not going to be installed
-       Depends: nodejs:any
-       Recommends: node-tap but it is not going to be installed: New file for deployment.
+- : The core backend file, modified for property assignment, PDF generation/upload, survey submission, and export logic.
+- : The main surveyor map view, updated with Google Satellite tiles, Property ID markers, pink completed status, and a fix for the auto-zoom issue.
+- : The survey form, updated with radio buttons and conditional logic for optional fields.
+- : The admin PDF management page, updated with a confirmation dialog and UI changes to remove numbering options.
+- : Admin attendance page, fixed to display data and show a map.
+- , : Admin map views, updated to use Google Satellite tiles.
+- : UI updated to reflect Approved Only export.
 
 **Areas that need refactoring**:
-- **:** This remains the highest priority. The file has grown even larger and more complex, making it difficult to maintain. It must be broken down into FastAPI routers.
-- ****: This file was created but its functionality was later integrated into  and . It should be reviewed and likely deleted to avoid confusion.
-
-**key api endpoints**
-- : (Fixed) Now works correctly with hashed passwords.
-- : (Modified) Now filters out records where the owner's name is NA.
-- : (Heavily Modified) Underwent several rewrites to adjust page layout and correctly place serial numbers.
-- : (Heavily Modified) Mirrored the changes made to .
+- **:** This is the highest priority. The monolithic file is becoming increasingly difficult and risky to modify. It MUST be broken down into FastAPI routers.
 
 **Critical Info for New Agent**
-- **Your top priority is to guide the user through verifying the new Employee Properties page.** It is a complex feature with many moving parts (GPS, animations, modals), and user confirmation is essential before proceeding.
-- The  monolith is a significant technical debt. After verifying the current features, you MUST propose the backend refactoring task to the user.
-- The user frequently changes requirements, especially for UI and PDF outputs. Always confirm the desired outcome clearly before and after implementation.
-- The recurring Mobile Photo Watermark bug is still pending and should be addressed once the current feature set is stable and verified.
-
-**documents and test reports created in this job**
-- [0;32m
-╔════════════════════════════════════════════════════════════╗
-║     NSTU INDIA PRIVATE LIMITED - App Installation          ║
-║     Property Tax Notice Distribution System                ║
-╚════════════════════════════════════════════════════════════╝
-[0m
-[1;33m[1/8] Updating system...[0m
-Hit:1 http://deb.debian.org/debian bookworm InRelease
-Hit:2 http://deb.debian.org/debian bookworm-updates InRelease
-Hit:3 http://deb.debian.org/debian-security bookworm-security InRelease
-Hit:4 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 InRelease
-Hit:5 https://deb.nodesource.com/node_20.x nodistro InRelease
-Reading package lists...
-Building dependency tree...
-Reading state information...
-All packages are up to date.
-Reading package lists...
-Building dependency tree...
-Reading state information...
-Calculating upgrade...
-0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
-[1;33m[2/8] Installing dependencies...[0m
-Reading package lists...
-Building dependency tree...
-Reading state information...
-curl is already the newest version (7.88.1-10+deb12u14).
-wget is already the newest version (1.21.3-1+deb12u1).
-git is already the newest version (1:2.39.5-0+deb12u2).
-nginx is already the newest version (1.22.1-9+deb12u3).
-python3 is already the newest version (3.11.2-1+b1).
-python3 set to manually installed.
-nodejs is already the newest version (20.19.6-1nodesource1).
-Some packages could not be installed. This may mean that you have
-requested an impossible situation or if you are using the unstable
-distribution that some required packages have not yet been created
-or been moved out of Incoming.
-The following information may help to resolve the situation:
-
-The following packages have unmet dependencies:
- nodejs : Conflicts: npm
- npm : Depends: node-agent-base but it is not going to be installed
-       Depends: node-archy but it is not going to be installed
-       Depends: node-cacache (>= 17) but it is not going to be installed
-       Depends: node-chalk (>= 5.1.2-2~) but it is not going to be installed
-       Depends: node-cli-table3
-       Depends: node-columnify but it is not going to be installed
-       Depends: node-cssesc
-       Depends: node-debug but it is not going to be installed
-       Depends: node-emoji-regex
-       Depends: node-gyp but it is not going to be installed
-       Depends: node-http-proxy-agent
-       Depends: node-https-proxy-agent but it is not going to be installed
-       Depends: node-mkdirp but it is not going to be installed
-       Depends: node-ms but it is not going to be installed
-       Depends: node-nopt but it is not going to be installed
-       Depends: node-normalize-package-data but it is not going to be installed
-       Depends: node-npm-bundled but it is not going to be installed
-       Depends: node-npm-normalize-package-bin
-       Depends: node-npm-package-arg (>= 10) but it is not going to be installed
-       Depends: node-npmlog but it is not going to be installed
-       Depends: node-postcss-selector-parser
-       Depends: node-read-package-json but it is not going to be installed
-       Depends: node-rimraf but it is not going to be installed
-       Depends: node-semver but it is not going to be installed
-       Depends: node-string-width but it is not going to be installed
-       Depends: node-strip-ansi but it is not going to be installed
-       Depends: node-tar but it is not going to be installed
-       Depends: node-validate-npm-package-name but it is not going to be installed
-       Depends: node-which but it is not going to be installed
-       Depends: nodejs:any
-       Recommends: node-tap but it is not going to be installed
+- **Your immediate task is to test and finalize the PDF generation fix.** The user has been very specific about the requirements: no errors, no manual numbering, and keep the original sequence.
+- **The backend refactor of  is the most important upcoming task.** You should propose this to the user as the next major work item after the current issues are resolved to improve the app's stability.
+- **The mobile watermark bug is a known recurring issue.** Even if tests pass in simulation, be prepared for it to resurface and require user verification on a real device.
+- The user frequently provides feedback with images and videos. Analyze these artifacts carefully to understand their intent, especially for UI/UX changes.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **LATEST:** Wants nearest property highlighted with animation on map/list; wants Fit All button changed to Full Size Map opening a fullscreen modal. **Status: Completed, pending user verification.**
-2.  Wants a smart zoom algorithm that adjusts the map based on user's distance to properties. **Status: Completed.**
-3.  Wants the map to be always visible on the properties page, above the stats and list. **Status: Completed.**
-4.  Reported that the map view was broken (pins not visible, buttons not working). **Status: Completed (fixed).**
-5.  Requested adding a boundary to the map, a Full View button, and animation for the map toggle button. **Status: Completed.**
-6.  Requested setting the default zoom level to match a provided screenshot. **Status: Completed.**
-7.  Requested changing the default zoom level multiple times (45%, 80%, 97%). **Status: Completed.**
-8.  Requested to prevent the map from zooming out too far, showing blank tiles. **Status: Completed.**
-9.  Requested that the GPS-arranged serial number (1, 2, 3...) be made visible on the generated PDF. **Status: Completed.**
-10. Reported that the generated PDF format was completely wrong. **Status: Completed (fixed).**
+1.  **LATEST:** Reported a PDF generation error and clarified requirements: remove numbering options, keep original PDF sequence, use the PDF's own serial number (or N/A), and skip PDFs with no owner name. **Status: In Progress.**
+2.  Provided a large set of requirements: change surveyor dropdown to radio, handle PDF serial numbers correctly, and make GPS arrangement a manual process with confirmation. **Status: Completed.**
+3.  Reported that the surveyor map auto-zooms out, making it unusable. **Status: Completed (fixed).**
+4.  Requested that both admin-side maps (Property Map and Bills Map) use the same Google Satellite view as the surveyor map. **Status: Completed.**
+5.  Requested to reduce the padding on the property ID map markers. **Status: Completed.**
+6.  Requested higher quality map imagery (max zoom) to match a provided Google Earth screenshot. **Status: Completed (switched to Google Satellite).**
+7.  Requested the map show the Property ID on markers instead of a serial number and use a satellite view. **Status: Completed.**
+8.  Provided an image showing the desired format for the downloadable map PDF. **Status: Completed.**
+9.  Requested that completed surveys turn the map marker **pink** and that surveyors can download a 100% zoomed map as a PDF. **Status: Completed.**
+10. Provided a short terminal command snippet to update the app on a Hostinger VPS. **Status: Completed.**
 
 **Project Health Check:**
-- **Broken:** No. The critical login/assignment bug is fixed. The main employee workflow is now functional but requires user verification.
+- **Broken:** The Admin PDF generation feature is currently broken and is the active work item.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- **Leaflet & React-Leaflet:** Used for interactive maps.
+- **Leaflet & React-Leaflet:** Used for all interactive maps. Now configured to use Google Satellite tiles.
 - **PyMuPDF, pytesseract, pdf2image, reportlab:** Backend dependencies for PDF processing.
-- **html2canvas, jspdf:** Frontend dependencies for client-side PDF generation (printing maps).
+- **html2canvas, jspdf:** Frontend dependencies for client-side PDF generation (downloading maps).
 
 **Testing status**
-- **Testing agent used after significant changes:** NO
+- **Testing agent used after significant changes:** YES (used once to verify a batch of fixes, including an attempt at the watermark bug).
 - **Troubleshoot agent used after agent stuck in loop:** NO
 - **Test files created:** None
-- **Known regressions:** The mobile watermark bug is a known, recurring issue.
+- **Known regressions:** The mobile photo watermark bug is a known, recurring regression.
 
 **Credentials to test flow:**
 - **Admin:**  / 
-- **Employee/Surveyor:** Create via the admin panel. The password reset and login flow is now confirmed to be working.
+- **Employee/Surveyor:** Create via the admin panel. The password reset and login flow is confirmed to be working.
 
 **What agent forgot to execute**
-- The backend refactoring of  remains the most significant postponed task. It was correctly de-prioritized to address the user's urgent bug fixes and feature requests.
-- The recurring Mobile Photo Watermark bug has not been addressed in this session.</analysis>
+- The agent has consistently (and correctly) prioritized urgent user requests and bug fixes over the long-term task of refactoring . This remains the most significant piece of planned work yet to be executed.</analysis>
