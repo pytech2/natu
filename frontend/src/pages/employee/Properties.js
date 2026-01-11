@@ -410,7 +410,8 @@ export default function Properties() {
       
       const pending = props.filter(p => p.status === 'Pending').length;
       const completed = props.filter(p => ['Completed', 'Approved'].includes(p.status)).length;
-      setStats({ total: props.length, pending, completed });
+      const rejected = props.filter(p => p.status === 'Rejected').length;
+      setStats({ total: props.length, pending, completed, rejected });
     } catch (error) {
       toast.error('Failed to load properties');
     } finally {
