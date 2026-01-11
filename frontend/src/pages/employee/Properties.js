@@ -796,14 +796,21 @@ export default function Properties() {
                 >
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
-                        isNearestPending ? 'bg-green-500 ring-4 ring-green-300 ring-offset-2 animate-pulse' :
-                        isRejected ? 'bg-red-500' :
-                        isCompleted ? 'bg-pink-500' : 
-                        isPending ? 'bg-orange-500' : 'bg-slate-500'
-                      }`}>
-                        {isCompleted ? '✓' : isRejected ? '!' : (property.serial_number || index + 1)}
-                      </div>
+                      {/* Serial Number Circle - shows BillSrNo from PDF or N/A */}
+                      {property.serial_na ? (
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-amber-500 text-white font-bold text-xs flex-shrink-0">
+                          N/A
+                        </div>
+                      ) : (
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
+                          isNearestPending ? 'bg-green-500 ring-4 ring-green-300 ring-offset-2 animate-pulse' :
+                          isRejected ? 'bg-red-500' :
+                          isCompleted ? 'bg-pink-500' : 
+                          isPending ? 'bg-orange-500' : 'bg-slate-500'
+                        }`}>
+                          {isCompleted ? '✓' : isRejected ? '!' : (property.serial_number || property.bill_sr_no || '-')}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono text-xs text-blue-600">{property.property_id}</span>
