@@ -230,25 +230,35 @@ const formatDistance = (meters) => {
   return `${(meters / 1000).toFixed(1)}km`;
 };
 
-// Map Controller - Dynamic zoom based on distance from user to properties
+// Map Controller - Only auto-zoom on first load, then let user control
 function MapController({ properties, userLocation, fitKey }) {
   const map = useMap();
+  const hasInitialized = useRef(false);
+  const lastFitKey = useRef(null);
   
   useEffect(() => {
     const validProps = properties.filter(p => p.latitude && p.longitude);
     
     if (validProps.length === 0) return;
     
-    // If no user location, just fit to all properties
+    // Only auto-fit when fitKey changes (user clicks "Fit All") or on first load
+    const shouldFit = !hasInitialized.current || (fitKey && fitKey !== lastFitKey.current);
+    
+    if (!shouldFit) return;
+    
+    hasInitialized.current = true;
+    lastFitKey.current = fitKey;
+    
+    // If no user location, fit to first property at high zoom
     if (!userLocation || !userLocation.latitude) {
-      const bounds = L.latLngBounds(validProps.map(p => [p.latitude, p.longitude]));
-      map.flyToBounds(bounds, { padding: [50, 50], duration: 0.5 });
+      const firstProp = validProps[0];
+      map.setView([firstProp.latitude, firstProp.longitude], 18, { animate: true, duration: 0.5 });
       return;
     }
     
     // Calculate distance to nearest property
     let nearestDistance = Infinity;
-    let nearestProperty = null;
+    let nearestProperty = validProps[0];
     
     validProps.forEach(p => {
       const dist = calculateDistance(userLocation.latitude, userLocation.longitude, p.latitude, p.longitude);
@@ -258,52 +268,32 @@ function MapController({ properties, userLocation, fitKey }) {
       }
     });
     
-    // Dynamic zoom based on distance (in meters)
-    // Higher zoom = closer view (max 21 for Google Satellite)
-    let zoomLevel;
-    if (nearestDistance > 200000) {        // > 200 km
-      zoomLevel = 8;
-    } else if (nearestDistance > 100000) { // 100-200 km
-      zoomLevel = 10;
-    } else if (nearestDistance > 50000) {  // 50-100 km
-      zoomLevel = 11;
-    } else if (nearestDistance > 20000) {  // 20-50 km
+    // Set zoom based on distance - start zoomed in, let user zoom out if needed
+    let zoomLevel = 18; // Default high zoom
+    
+    if (nearestDistance > 100000) {      // > 100 km - very far
       zoomLevel = 12;
-    } else if (nearestDistance > 10000) {  // 10-20 km
-      zoomLevel = 13;
-    } else if (nearestDistance > 5000) {   // 5-10 km
+    } else if (nearestDistance > 50000) { // 50-100 km
       zoomLevel = 14;
-    } else if (nearestDistance > 2000) {   // 2-5 km
+    } else if (nearestDistance > 10000) { // 10-50 km
+      zoomLevel = 15;
+    } else if (nearestDistance > 5000) {  // 5-10 km
       zoomLevel = 16;
-    } else if (nearestDistance > 1000) {   // 1-2 km
+    } else if (nearestDistance > 1000) {  // 1-5 km
       zoomLevel = 17;
-    } else if (nearestDistance > 500) {    // 500m - 1km
+    } else {                               // < 1 km - close
       zoomLevel = 18;
-    } else if (nearestDistance > 200) {    // 200-500m
-      zoomLevel = 19;
-    } else if (nearestDistance > 50) {     // 50-200m
-      zoomLevel = 20;
-    } else {                                // < 50m (very close)
-      zoomLevel = 21;  // Max zoom for Google Satellite
     }
     
-    // Create bounds including user and all properties
-    const allPoints = [
-      [userLocation.latitude, userLocation.longitude],
-      ...validProps.map(p => [p.latitude, p.longitude])
-    ];
-    const bounds = L.latLngBounds(allPoints);
+    // Center on nearest property (not user location)
+    map.setView([nearestProperty.latitude, nearestProperty.longitude], zoomLevel, { 
+      animate: true, 
+      duration: 0.5 
+    });
     
-    // Calculate center between user and nearest property
-    const centerLat = (userLocation.latitude + nearestProperty.latitude) / 2;
-    const centerLng = (userLocation.longitude + nearestProperty.longitude) / 2;
+    console.log(`Initial zoom set: Distance ${(nearestDistance/1000).toFixed(1)}km, Zoom: ${zoomLevel}`);
     
-    // Fly to calculated center with dynamic zoom
-    map.flyTo([centerLat, centerLng], zoomLevel, { duration: 0.8 });
-    
-    console.log(`Distance to nearest: ${(nearestDistance/1000).toFixed(1)}km, Zoom: ${zoomLevel}`);
-    
-  }, [map, fitKey, userLocation, properties]);
+  }, [map, fitKey]); // Only depend on fitKey, not userLocation or properties
   
   return null;
 }
