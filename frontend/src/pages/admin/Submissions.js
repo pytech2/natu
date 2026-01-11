@@ -796,23 +796,48 @@ export default function Submissions() {
                   </CardContent>
                 </Card>
 
-                {/* Photos Section */}
+                {/* Photos Section - with Delete and Add */}
                 <Card className="border-amber-200 bg-amber-50/50">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-amber-700">
-                      <Camera className="w-4 h-4" />
-                      PHOTOS (with GPS Watermark)
+                    <CardTitle className="text-sm font-semibold flex items-center justify-between text-amber-700">
+                      <span className="flex items-center gap-2">
+                        <Camera className="w-4 h-4" />
+                        PHOTOS (with GPS Watermark)
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => photoInputRef.current?.click()}
+                        disabled={uploadingPhoto}
+                        className="h-7 text-xs"
+                      >
+                        {uploadingPhoto ? (
+                          <>Uploading...</>
+                        ) : (
+                          <>
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Photo
+                          </>
+                        )}
+                      </Button>
+                      <input
+                        type="file"
+                        ref={photoInputRef}
+                        accept="image/*"
+                        onChange={handleAddPhoto}
+                        className="hidden"
+                      />
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {selectedSubmission.photos?.length > 0 ? (
+                    {editPhotos?.length > 0 ? (
                       <div className="grid grid-cols-2 gap-4">
-                        {selectedSubmission.photos.map((photo, idx) => (
+                        {editPhotos.map((photo, idx) => (
                           <div key={idx} className="relative group">
                             <img
                               src={`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`}
                               alt={photo.photo_type}
-                              className="w-full h-40 object-cover rounded-lg border-2 border-white shadow"
+                              className="w-full h-40 object-cover rounded-lg border-2 border-white shadow cursor-pointer"
                               onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`, '_blank')}
                             />
                             <span className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-semibold shadow ${
@@ -822,6 +847,15 @@ export default function Submissions() {
                             }`}>
                               {photo.photo_type}
                             </span>
+                            {/* Delete Button */}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleDeletePhoto(idx)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="secondary"
@@ -837,6 +871,15 @@ export default function Submissions() {
                       <div className="text-center py-8 text-slate-400">
                         <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-30" />
                         <p>No photos available</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => photoInputRef.current?.click()}
+                          className="mt-2"
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add Photo
+                        </Button>
                       </div>
                     )}
                   </CardContent>
