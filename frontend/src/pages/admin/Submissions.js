@@ -350,28 +350,6 @@ export default function Submissions() {
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                            {(!sub.status || sub.status === 'Pending') && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleApprove(sub.id)}
-                                  title="Approve"
-                                  className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                >
-                                  <Check className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openRejectDialog(sub)}
-                                  title="Reject"
-                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
-                              </>
-                            )}
                           </div>
                         </td>
                       </tr>
