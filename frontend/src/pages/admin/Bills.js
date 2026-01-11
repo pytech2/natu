@@ -700,7 +700,7 @@ export default function BillsPage() {
                           <span className="text-emerald-600">✓</span>
                         ) : (
                           <span className="text-slate-400">-</span>
-                        )}}
+                        )}
                       </td>
                       <td>
                         <Button
