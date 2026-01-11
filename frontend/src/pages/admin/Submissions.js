@@ -175,8 +175,13 @@ export default function Submissions() {
   const handleEdit = async () => {
     setSavingEdit(true);
     try {
-      // Update submission only (property data is read-only)
-      await axios.put(`${API_URL}/admin/submissions/${selectedSubmission.id}`, editData, {
+      // Update submission with new data and updated photos
+      const updateData = {
+        ...editData,
+        photos: editPhotos
+      };
+      
+      await axios.put(`${API_URL}/admin/submissions/${selectedSubmission.id}`, updateData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -191,6 +196,48 @@ export default function Submissions() {
       toast.error('Failed to save changes');
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const handleDeletePhoto = (photoIndex) => {
+    const newPhotos = editPhotos.filter((_, idx) => idx !== photoIndex);
+    setEditPhotos(newPhotos);
+    toast.success('Photo removed. Click Save to apply changes.');
+  };
+
+  const handleAddPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('submission_id', selectedSubmission.id);
+      formData.append('photo_type', 'HOUSE');
+      
+      const response = await axios.post(`${API_URL}/admin/submissions/upload-photo`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Add new photo to list
+      const newPhoto = {
+        file_url: response.data.file_url,
+        photo_type: 'HOUSE'
+      };
+      setEditPhotos([...editPhotos, newPhoto]);
+      toast.success('Photo added successfully');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+      if (photoInputRef.current) {
+        photoInputRef.current.value = '';
+      }
     }
   };
 
