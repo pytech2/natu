@@ -2147,8 +2147,8 @@ async def upload_pdf_bills(
             page = pdf_doc[page_num]
             text = page.get_text()
             
-            # Extract bill data
-            bill_data = extract_bill_data(text, page_num + 1)
+            # Extract bill data (pass page for block-based BillSrNo extraction)
+            bill_data = extract_bill_data(text, page_num + 1, page)
             
             # Skip if owner name is NA or empty
             if not is_valid_owner_name(bill_data.get("owner_name")):
