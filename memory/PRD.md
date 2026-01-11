@@ -25,89 +25,85 @@ Build a full-stack web application for NSTU India Private Limited to manage prop
 
 ### Authentication & Users
 - [x] JWT-based authentication using mobile numbers
-- [x] Password reset functionality (Fixed hash storage bug)
+- [x] Password reset functionality
 - [x] Role-based access control
 - [x] Employee management (CRUD)
 
 ### Admin Features
-- [x] Dashboard with statistics (properties, completions, attendance)
-- [x] Employee performance charts
+- [x] Dashboard with statistics
 - [x] Property upload via Excel
-- [x] PDF Bill upload and processing
-  - [x] Multi-page PDF extraction
-  - [x] Filter out "NA" owner names during import
-  - [x] GPS-based route sorting by colony
-  - [x] **BillSrNo extraction from PDF** (extracts "BillSrNo. : 112" format)
-  - [x] N/A handling for missing serial numbers
-- [x] Generate arranged PDFs per colony (original sequence, no numbering overlay)
+- [x] PDF Bill upload with BillSrNo extraction
+- [x] Generate arranged PDFs (original sequence, no numbering overlay)
 - [x] Split PDFs by assigned employee
 - [x] Delete by Colony feature
 - [x] Property Map view (Google Satellite)
-- [x] Submissions review/approval
-- [x] **Multi-employee assignment** - Same properties can be assigned to multiple employees
-- [x] **Export Approved Submissions Only** - Excel and PDF export defaults to Approved status
-- [x] **Attendance GPS Tracker** - Map shows employee check-in locations with markers
+- [x] Submissions review/approval with rejection remarks
+- [x] Multi-employee assignment
+- [x] Export Approved Submissions Only
+- [x] Attendance GPS Tracker
 
 ### Employee/Surveyor Features
 - [x] Mobile-optimized dashboard
 - [x] Daily attendance with selfie capture
 - [x] Assigned Properties page with:
-  - [x] Persistent map view
-  - [x] **Live GPS tracking** with real-time location
-  - [x] **Nearest-first sorting** based on surveyor location
-  - [x] **GREEN static highlight** for nearest property
+  - [x] Live GPS tracking (optimized for performance)
+  - [x] Nearest-first sorting for pending properties
+  - [x] **Completed properties locked** - show "Done" badge, click shows toast
+  - [x] **Rejected properties highlighted** - show red badge and rejection reason
+  - [x] Stats: Total, Pending, Done, Rejected
   - [x] Full Size Map modal
-  - [x] Smart zoom algorithm (no aggressive auto-zoom)
   - [x] Print map as PDF feature
 - [x] Survey submission with:
-  - [x] **Photo capture with GPS/timestamp watermark**
-  - [x] Signature pad (now optional)
-  - [x] GPS coordinates
-  - [x] **Special Conditions**: House Locked / Owner Denied options
+  - [x] Photo capture with GPS/timestamp watermark
+  - [x] Optional signature pad
+  - [x] Special Conditions: House Locked / Owner Denied
 
 ### Survey Form Features
 - [x] Property Information display
 - [x] GPS Status with 50m range validation
-- [x] **Special Conditions** (House Locked / Owner Denied)
-- [x] **Self-Certified** radio buttons
-- [x] Notice Receiver Details (conditional)
-- [x] Property Photo capture with GPS watermark
-- [x] **Signature is now OPTIONAL**
+- [x] Special Conditions (House Locked / Owner Denied)
+- [x] Self-Certified radio buttons
 - [x] Survey submission to backend
-- [x] Completed survey view
+- [x] Completed survey view (read-only)
 
 ### Maps & Visualization
 - [x] Google Satellite tiles for all maps
 - [x] Custom markers showing Property ID
-- [x] Min/Max zoom limits
-- [x] User location marker (blue dot)
-- [x] Property clustering
 - [x] Pink markers for completed surveys
+- [x] Red markers for rejected surveys
 
 ---
 
-## Recent Fixes (January 2026)
+## Recent Fixes (January 11, 2026)
 
-### BillSrNo Extraction (Fixed - Jan 11)
-- Enhanced extraction to find BillSrNo using position-aware block detection
-- Handles "BillSrNo. : 112" format where number may be in separate text block
-- Bills without BillSrNo marked as "N/A" with amber badge
+### Surveyor Performance Issues (Fixed)
+- Reduced GPS tracking frequency from 25m to 50m threshold
+- Added distance calculation caching to prevent constant re-renders
+- GPS watch updates throttled to significant movements only
 
-### PDF Generation (Fixed - Jan 11)
-- Removed all serial numbering options from UI
-- PDF generates in original sequence
-- No serial numbers overlaid on generated PDF
+### Completed Properties Locking (Fixed)
+- Completed/Approved surveys now show lock icon
+- Clicking shows toast instead of reopening survey
+- Visual styling: faded/grayed appearance
 
-### Syntax Error Fix (Jan 11)
-- Fixed Bills.js line 703 (extra closing brace)
+### Rejected Properties Display (Fixed)
+- Red "⚠ Rejected" badge on property cards
+- Rejection reason displayed under property card
+- Stats row now shows 4 columns including Rejected count
+- Backend: Rejection remarks now saved to property record
+
+### BillSrNo Extraction (Fixed)
+- Enhanced extraction for "BillSrNo. : 112" format
+- Position-aware block detection
+- N/A handling for missing serial numbers
 
 ---
 
 ## Known Issues
 
 ### P1: Mobile Photo Watermark
-- Watermark may not apply when using mobile camera directly
-- Fix applied but needs user verification on real device
+- Watermark may not apply on some mobile cameras
+- Needs user verification on real device
 
 ---
 
@@ -115,36 +111,28 @@ Build a full-stack web application for NSTU India Private Limited to manage prop
 
 ### High Priority
 1. **Backend Refactoring** - `server.py` is 2800+ lines
-   - Split into modular FastAPI routers:
-     - `/routes/auth.py`
-     - `/routes/users.py`
-     - `/routes/properties.py`
-     - `/routes/bills.py`
-     - `/routes/submissions.py`
+   - Split into modular FastAPI routers
 
 ---
 
 ## Future/Backlog Tasks
 
-1. **Offline Support** - Enable surveyor mobile to work offline and sync later
+1. **Offline Support** - Enable surveyor mobile to work offline
 2. **Download ZIP** - All split-employee PDFs as single ZIP
-3. **Remove Employee** - Option to remove specific employee from property assignment
+3. **Remove Employee** - Option to remove specific employee from assignment
 4. **Push Notifications** - For new assignments
 
 ---
 
 ## Test Credentials
 - **Admin**: `admin` / `nastu123`
-- **Employee**: Create via admin panel
+- **Employee**: `rajeev_gurgaon` / `test123`
 
 ## Key Files
-- `/app/backend/server.py` - Main backend (monolithic, needs refactoring)
-- `/app/frontend/src/pages/employee/Properties.js` - GPS-aware property list
-- `/app/frontend/src/pages/employee/Attendance.js` - Attendance with selfie
-- `/app/frontend/src/pages/employee/Survey.js` - Survey form with watermark
-- `/app/frontend/src/pages/admin/Attendance.js` - GPS tracker map
+- `/app/backend/server.py` - Main backend
+- `/app/frontend/src/pages/employee/Properties.js` - Surveyor property list (updated)
+- `/app/frontend/src/pages/employee/Survey.js` - Survey form
 - `/app/frontend/src/pages/admin/Bills.js` - PDF bills management
-- `/app/frontend/src/pages/admin/Export.js` - Approved export
 
 ---
 
