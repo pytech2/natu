@@ -354,7 +354,7 @@ export default function Survey() {
   const handleSubmit = async () => {
     // Validations - GPS check still required
     if (withinRange === false) {
-      toast.error('You must be within 50 meters of the property to submit');
+      toast.error('You must be within 15 meters of the property to submit');
       return;
     }
 
