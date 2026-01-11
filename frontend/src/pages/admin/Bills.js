@@ -1220,6 +1220,41 @@ export default function BillsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* GPS Arrangement Confirmation Dialog */}
+        <AlertDialog open={gpsArrangeDialog} onOpenChange={setGpsArrangeDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Arrange Bills by GPS Route?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will rearrange <strong>{pagination.total}</strong> bills
+                {filters.colony && ` from ${filters.colony}`}
+                {filters.batch_id && ` in the selected batch`} based on their GPS coordinates to optimize the route.
+                This action will update the serial numbers of the bills.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmGpsArrangement}
+                disabled={arranging}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {arranging ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Arranging...
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpDown className="w-4 h-4 mr-2" />
+                    Arrange by Route
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );
