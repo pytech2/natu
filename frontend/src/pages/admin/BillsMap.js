@@ -65,7 +65,56 @@ const spreadOverlappingMarkers = (bills) => {
   return spreadBills;
 };
 
-// Custom small marker with serial number
+// Custom marker showing PROPERTY ID with label (same as Survey Map)
+const createPropertyIdIcon = (propertyId, status) => {
+  const colors = {
+    'Pending': '#22c55e',       // GREEN - pending
+    'Completed': '#ec4899',     // PINK - completed
+    'Approved': '#ec4899',      // PINK - approved
+    'Residential': '#22c55e',   // GREEN
+    'Commercial': '#f97316',    // Orange
+    'Vacant Plot': '#22c55e',   // GREEN
+    'Mix Use': '#a855f7',       // Purple
+    'default': '#22c55e'        // Green default
+  };
+  const color = colors[status] || colors['default'];
+  
+  // Compact marker with Property ID label - 2px padding
+  return L.divIcon({
+    className: 'property-id-marker',
+    html: `
+      <div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      ">
+        <div style="
+          background-color: ${color};
+          padding: 2px 4px;
+          border-radius: 2px;
+          border: 1px solid white;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          font-size: 9px;
+          font-weight: 600;
+          color: white;
+          white-space: nowrap;
+        ">${propertyId}</div>
+        <div style="
+          width: 0;
+          height: 0;
+          border-left: 3px solid transparent;
+          border-right: 3px solid transparent;
+          border-top: 4px solid ${color};
+          margin-top: -1px;
+        "></div>
+      </div>`,
+    iconSize: [60, 22],
+    iconAnchor: [30, 22],
+    popupAnchor: [0, -18]
+  });
+};
+
+// Keep old bill icon as fallback
 const createBillIcon = (serialNumber, category) => {
   const colors = {
     'Residential': '#3b82f6',
