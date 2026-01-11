@@ -1131,6 +1131,41 @@ async def edit_submission(
     
     return {"message": "Submission updated"}
 
+@api_router.post("/admin/submissions/upload-photo")
+async def upload_submission_photo(
+    file: UploadFile = File(...),
+    submission_id: str = Form(...),
+    photo_type: str = Form("HOUSE"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload a new photo to a submission (admin only)"""
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Save the file
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{submission_id}_{photo_type.lower()}_{timestamp}.jpg"
+    file_path = UPLOAD_DIR / filename
+    
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    
+    file_url = f"/api/uploads/{filename}"
+    
+    # Add photo to submission
+    photo_data = {
+        "file_url": file_url,
+        "photo_type": photo_type
+    }
+    
+    await db.submissions.update_one(
+        {"id": submission_id},
+        {"$push": {"photos": photo_data}}
+    )
+    
+    return {"message": "Photo uploaded", "file_url": file_url}
+
 @api_router.put("/admin/properties/{property_id}")
 async def edit_property(
     property_id: str,
