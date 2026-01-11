@@ -1920,7 +1920,11 @@ def extract_bill_data(text: str, page_num: int) -> dict:
     longitude = float(coords_match.group(2)) if coords_match else None
     
     bill_data = {
-        "bill_sr_no": find_value([r'Bill\s*Sr\s*No[:\s]*(\d+)', r'BillSrNo[:\s]*(\d+)'], text),
+        "bill_sr_no": find_value([
+            r'BillSrNo\.?\s*[:\s]*\s*(\d+)',      # BillSrNo. : 112 or BillSrNo : 112
+            r'Bill\s*Sr\s*No\.?\s*[:\s]*(\d+)',   # Bill Sr No. : 112
+            r'Bill\s*Serial\s*No\.?\s*[:\s]*(\d+)' # Bill Serial No. : 112
+        ], text),
         "property_id": find_value([r'Property\s*Id[:\s]*([A-Z0-9]+)', r'PropertyId[:\s]*([A-Z0-9]+)'], text),
         "old_property_id": find_value([r'Old\s*Property\s*Id[:\s]*([A-Z0-9/-]+)', r'OldPropertyId[:\s]*([A-Z0-9/-]+)'], text),
         "financial_year": find_value([r'Financial\s*Year[:\s]*(\d{4}-\d{2,4})', r'FY[:\s]*(\d{4}-\d{2,4})'], text, "2025-26"),
