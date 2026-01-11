@@ -273,9 +273,6 @@ export default function BillsPage() {
       const formData = new FormData();
       if (filters.batch_id) formData.append('batch_id', filters.batch_id);
       if (filters.colony) formData.append('colony', filters.colony);
-      formData.append('sn_position', pdfOptions.sn_position);
-      formData.append('sn_font_size', pdfOptions.sn_font_size);
-      formData.append('sn_color', pdfOptions.sn_color);
 
       const response = await axios.post(`${API_URL}/admin/bills/generate-pdf`, formData, {
         headers: { 
