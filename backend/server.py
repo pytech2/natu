@@ -2253,7 +2253,7 @@ async def arrange_bills_by_route(
     colony: str = Form(None),
     current_user: dict = Depends(get_current_user)
 ):
-    """Arrange bills by GPS route and assign new serial numbers"""
+    """Arrange bills by GPS route and assign new serial numbers (excludes N/A serial bills)"""
     if current_user["role"] not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
@@ -2264,24 +2264,39 @@ async def arrange_bills_by_route(
         query["colony"] = {"$regex": colony, "$options": "i"}
     
     # Get all matching bills
-    bills = await db.bills.find(query, {"_id": 0}).to_list(None)
+    all_bills = await db.bills.find(query, {"_id": 0}).to_list(None)
     
-    if not bills:
+    if not all_bills:
         raise HTTPException(status_code=404, detail="No bills found")
     
-    # Sort by GPS route
-    sorted_bills = sort_by_gps_route(bills)
+    # Separate bills with valid serial numbers from N/A serial bills
+    valid_bills = [b for b in all_bills if not b.get("serial_na", False)]
+    na_bills = [b for b in all_bills if b.get("serial_na", False)]
     
-    # Update serial numbers in database
+    if not valid_bills:
+        raise HTTPException(status_code=400, detail="No bills with valid serial numbers to arrange")
+    
+    # Sort valid bills by GPS route
+    sorted_bills = sort_by_gps_route(valid_bills)
+    
+    # Update serial numbers for sorted bills and mark as GPS arranged
     for i, bill in enumerate(sorted_bills):
         await db.bills.update_one(
             {"id": bill["id"]},
-            {"$set": {"serial_number": i + 1, "route_ordered": True}}
+            {"$set": {"serial_number": i + 1, "gps_arranged": True}}
+        )
+    
+    # Mark N/A bills as skipped from ordering
+    for bill in na_bills:
+        await db.bills.update_one(
+            {"id": bill["id"]},
+            {"$set": {"gps_arranged": False, "skipped_from_order": True}}
         )
     
     return {
-        "message": f"Arranged {len(sorted_bills)} bills by GPS route",
-        "total_arranged": len(sorted_bills)
+        "message": f"Arranged {len(sorted_bills)} bills by GPS route. {len(na_bills)} bills with N/A serial skipped.",
+        "total_arranged": len(sorted_bills),
+        "skipped_na": len(na_bills)
     }
 
 @api_router.post("/admin/bills/generate-pdf")
