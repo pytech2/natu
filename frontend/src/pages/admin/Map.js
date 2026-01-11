@@ -599,9 +599,9 @@ export default function PropertyMap() {
               <div style={{ height: '600px', width: '100%' }}>
                 <MapContainer
                   center={defaultCenter}
-                  zoom={15}
+                  zoom={18}
                   minZoom={5}
-                  maxZoom={18}
+                  maxZoom={21}
                   maxBounds={[[-85, -180], [85, 180]]}
                   maxBoundsViscosity={1.0}
                   style={{ height: '100%', width: '100%' }}
@@ -610,12 +610,12 @@ export default function PropertyMap() {
                   {getTileLayer()}
                   <FitBounds properties={filteredProperties} />
                   
-                  {/* Spread overlapping markers so all serial numbers are visible */}
+                  {/* Property markers with PROPERTY ID labels */}
                   {spreadOverlappingMarkers(filteredProperties).map((property) => (
                     <Marker
                       key={property.id}
                       position={[property.spreadLat, property.spreadLng]}
-                      icon={createNumberedIcon(property.serial_number || 0, property.category)}
+                      icon={createPropertyIdIcon(property.property_id, property.status || property.category)}
                     >
                       <Popup maxWidth={350} className="property-popup">
                         <div className="p-2 min-w-[280px]">
