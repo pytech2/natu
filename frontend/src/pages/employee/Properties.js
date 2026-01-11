@@ -47,7 +47,7 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
   const color = colors[status] || colors['default'];
   
   if (isNearest) {
-    // Nearest property - larger with animation
+    // Nearest property - slightly larger with animation, MINIMAL padding
     return L.divIcon({
       className: 'property-id-marker-nearest',
       html: `
@@ -59,14 +59,15 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
         ">
           <div style="
             background-color: ${color};
-            padding: 2px 4px;
+            padding: 1px 4px;
             border-radius: 2px;
-            border: 1px solid white;
+            border: 2px solid white;
             box-shadow: 0 1px 4px rgba(0,0,0,0.4);
             font-size: 10px;
             font-weight: 700;
             color: white;
             white-space: nowrap;
+            line-height: 1;
             animation: pulse 1.5s ease-in-out infinite;
           ">${propertyId}</div>
           <div style="
@@ -74,7 +75,7 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
             height: 0;
             border-left: 4px solid transparent;
             border-right: 4px solid transparent;
-            border-top: 5px solid ${color};
+            border-top: 4px solid ${color};
             margin-top: -1px;
           "></div>
         </div>
@@ -84,9 +85,9 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
             50% { transform: scale(1.1); }
           }
         </style>`,
-      iconSize: [70, 25],
-      iconAnchor: [35, 25],
-      popupAnchor: [0, -20]
+      iconSize: [70, 18],
+      iconAnchor: [35, 18],
+      popupAnchor: [0, -14]
     });
   }
   
