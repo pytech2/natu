@@ -2135,8 +2135,9 @@ async def upload_pdf_bills(
         "name": batch_name,
         "total_bills": len(bills),
         "skipped_bills": skipped_count,
+        "na_serial_bills": na_serial_count,
         "colonies": colonies,
-        "message": f"Successfully extracted {len(bills)} bills from PDF. Skipped {skipped_count} records with NA/empty owner names."
+        "message": f"Successfully extracted {len(bills)} bills from PDF. Skipped {skipped_count} records with NA/empty owner names. {na_serial_count} bills have N/A serial numbers."
     }
 
 @api_router.get("/admin/bills")
