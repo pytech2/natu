@@ -335,6 +335,9 @@ export default function Properties() {
   }, []);
 
   // Filter and sort properties when filters or location changes
+  // Use useRef to prevent unnecessary recalculations
+  const lastLocationRef = useRef(null);
+  
   useEffect(() => {
     let filtered = [...properties];
     
@@ -348,23 +351,54 @@ export default function Properties() {
       );
     }
     
-    // Status filter
+    // Status filter - show pending first by default, but allow filtering
     if (statusFilter !== 'all') {
       filtered = filtered.filter(p => p.status === statusFilter);
     }
     
     // Sort by distance if user location is available
-    if (userLocation) {
+    // Only recalculate distances when location changes significantly (>50m)
+    const shouldRecalculate = !lastLocationRef.current || !userLocation ||
+      calculateDistance(
+        lastLocationRef.current.latitude, lastLocationRef.current.longitude,
+        userLocation?.latitude || 0, userLocation?.longitude || 0
+      ) > 50;
+    
+    if (userLocation && shouldRecalculate) {
+      lastLocationRef.current = { ...userLocation };
       filtered = filtered.map(p => ({
         ...p,
         distance: p.latitude && p.longitude 
           ? calculateDistance(userLocation.latitude, userLocation.longitude, p.latitude, p.longitude)
           : Infinity
-      })).sort((a, b) => a.distance - b.distance);
+      }));
+    } else if (userLocation) {
+      // Use cached distances from previous calculation
+      filtered = filtered.map(p => ({
+        ...p,
+        distance: p.distance !== undefined ? p.distance : (
+          p.latitude && p.longitude 
+            ? calculateDistance(userLocation.latitude, userLocation.longitude, p.latitude, p.longitude)
+            : Infinity
+        )
+      }));
     }
     
+    // Sort: Pending properties first, then by distance
+    filtered.sort((a, b) => {
+      // Priority: Pending > Rejected > Completed/Approved
+      const statusOrder = { 'Pending': 0, 'Rejected': 1, 'Completed': 2, 'Approved': 3 };
+      const aOrder = statusOrder[a.status] ?? 2;
+      const bOrder = statusOrder[b.status] ?? 2;
+      
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      
+      // Then by distance
+      return (a.distance || Infinity) - (b.distance || Infinity);
+    });
+    
     setFilteredProperties(filtered);
-  }, [properties, search, statusFilter, userLocation]);
+  }, [properties, search, statusFilter, userLocation?.latitude, userLocation?.longitude]);
 
   const fetchProperties = async () => {
     try {
