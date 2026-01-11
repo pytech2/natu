@@ -2242,7 +2242,8 @@ async def list_bills(
         start = (page - 1) * limit
         bills = sorted_bills[start:start + limit]
     else:
-        bills = await db.bills.find(query, {"_id": 0}).sort("serial_number", 1).skip((page - 1) * limit).limit(limit).to_list(limit)
+        # Sort by page_number to maintain original PDF sequence
+        bills = await db.bills.find(query, {"_id": 0}).sort("page_number", 1).skip((page - 1) * limit).limit(limit).to_list(limit)
     
     return {
         "bills": bills,
