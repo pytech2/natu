@@ -109,6 +109,10 @@ export default function BillsPage() {
   const [copyDialog, setCopyDialog] = useState(false);
   const [copying, setCopying] = useState(false);
 
+  // GPS Arrangement confirmation dialog
+  const [gpsArrangeDialog, setGpsArrangeDialog] = useState(false);
+  const [arranging, setArranging] = useState(false);
+
   useEffect(() => {
     fetchBatches();
     fetchColonies();
