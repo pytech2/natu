@@ -37,11 +37,12 @@ Build a full-stack web application for NSTU India Private Limited to manage prop
   - [x] Multi-page PDF extraction
   - [x] Filter out "NA" owner names during import
   - [x] GPS-based route sorting by colony
-  - [x] Serial number generation on bills
-- [x] Generate arranged PDFs per colony
+  - [x] **BillSrNo extraction from PDF** (extracts "BillSrNo. : 112" format)
+  - [x] N/A handling for missing serial numbers
+- [x] Generate arranged PDFs per colony (original sequence, no numbering overlay)
 - [x] Split PDFs by assigned employee
 - [x] Delete by Colony feature
-- [x] Property Map view
+- [x] Property Map view (Google Satellite)
 - [x] Submissions review/approval
 - [x] **Multi-employee assignment** - Same properties can be assigned to multiple employees
 - [x] **Export Approved Submissions Only** - Excel and PDF export defaults to Approved status
@@ -54,12 +55,12 @@ Build a full-stack web application for NSTU India Private Limited to manage prop
   - [x] Persistent map view
   - [x] **Live GPS tracking** with real-time location
   - [x] **Nearest-first sorting** based on surveyor location
-  - [x] **GREEN animated highlight** for nearest property
+  - [x] **GREEN static highlight** for nearest property
   - [x] Full Size Map modal
-  - [x] Smart zoom algorithm
+  - [x] Smart zoom algorithm (no aggressive auto-zoom)
   - [x] Print map as PDF feature
 - [x] Survey submission with:
-  - [x] **Photo capture with GPS/timestamp watermark** (Fixed for mobile)
+  - [x] **Photo capture with GPS/timestamp watermark**
   - [x] Signature pad (now optional)
   - [x] GPS coordinates
   - [x] **Special Conditions**: House Locked / Owner Denied options
@@ -67,52 +68,46 @@ Build a full-stack web application for NSTU India Private Limited to manage prop
 ### Survey Form Features
 - [x] Property Information display
 - [x] GPS Status with 50m range validation
-- [x] **Special Conditions** (NEW):
-  - House Locked option
-  - Owner Denied option
-  - Allows submission without photo, signature, and receiver details
-- [x] Notice Receiver Details (conditional - hidden when special condition selected)
-- [x] Property Photo capture with GPS watermark (mobile-compatible)
+- [x] **Special Conditions** (House Locked / Owner Denied)
+- [x] **Self-Certified** radio buttons
+- [x] Notice Receiver Details (conditional)
+- [x] Property Photo capture with GPS watermark
 - [x] **Signature is now OPTIONAL**
 - [x] Survey submission to backend
 - [x] Completed survey view
 
 ### Maps & Visualization
-- [x] Interactive maps using Leaflet
-- [x] Custom numbered markers
-- [x] Min/Max zoom limits to prevent blank tiles
+- [x] Google Satellite tiles for all maps
+- [x] Custom markers showing Property ID
+- [x] Min/Max zoom limits
 - [x] User location marker (blue dot)
 - [x] Property clustering
+- [x] Pink markers for completed surveys
 
 ---
 
 ## Recent Fixes (January 2026)
 
-### Mobile Photo Watermark (Fixed)
-- Changed from FileReader to `createObjectURL` for mobile compatibility
-- Added fallback GPS fetch when taking photo
-- Double watermark: top-left (green GPS) + bottom-right (full details)
+### BillSrNo Extraction (Fixed - Jan 11)
+- Enhanced extraction to find BillSrNo using position-aware block detection
+- Handles "BillSrNo. : 112" format where number may be in separate text block
+- Bills without BillSrNo marked as "N/A" with amber badge
 
-### Multiple Employee Assignment (Fixed)
-- Properties can now be assigned to multiple employees
-- Assignment ADDS new employees instead of replacing
-- Display shows comma-separated names (e.g., "Rajeev, Sunil")
+### PDF Generation (Fixed - Jan 11)
+- Removed all serial numbering options from UI
+- PDF generates in original sequence
+- No serial numbers overlaid on generated PDF
 
-### Export Approved Only (Implemented)
-- Excel/PDF export defaults to "Approved Only" submissions
-- Filter dropdown allows: Approved, Pending, Completed, All
-
-### Attendance GPS Tracker (Implemented)
-- "View GPS Locations" button on admin attendance page
-- Interactive map with green employee markers
-- Click to see details and "Open in Google Maps"
+### Syntax Error Fix (Jan 11)
+- Fixed Bills.js line 703 (extra closing brace)
 
 ---
 
 ## Known Issues
 
-### None Critical
-All P0/P1 issues have been resolved.
+### P1: Mobile Photo Watermark
+- Watermark may not apply when using mobile camera directly
+- Fix applied but needs user verification on real device
 
 ---
 
@@ -140,7 +135,7 @@ All P0/P1 issues have been resolved.
 
 ## Test Credentials
 - **Admin**: `admin` / `nastu123`
-- **Employee**: `rajeev_gurgaon` / `test123`
+- **Employee**: Create via admin panel
 
 ## Key Files
 - `/app/backend/server.py` - Main backend (monolithic, needs refactoring)
@@ -148,15 +143,9 @@ All P0/P1 issues have been resolved.
 - `/app/frontend/src/pages/employee/Attendance.js` - Attendance with selfie
 - `/app/frontend/src/pages/employee/Survey.js` - Survey form with watermark
 - `/app/frontend/src/pages/admin/Attendance.js` - GPS tracker map
+- `/app/frontend/src/pages/admin/Bills.js` - PDF bills management
 - `/app/frontend/src/pages/admin/Export.js` - Approved export
 
 ---
 
-## Test Results (Latest)
-- **Backend**: 100% (16/16 tests passed)
-- **Frontend**: 100% (all UI features verified)
-- **Test Report**: `/app/test_reports/iteration_6.json`
-
----
-
-*Last Updated: January 9, 2026*
+*Last Updated: January 11, 2026*
