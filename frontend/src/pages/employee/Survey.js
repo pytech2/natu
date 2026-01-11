@@ -587,7 +587,7 @@ export default function Survey() {
                       {withinRange ? 'Within range' : 'Out of range'} - {distanceFromProperty}m from property
                     </p>
                     <p className="text-xs text-slate-600">
-                      {withinRange ? 'You can submit the survey' : 'Move closer to the property (within 50m)'}
+                      {withinRange ? 'You can submit the survey' : 'Move closer to the property (within 15m)'}
                     </p>
                   </div>
                 </div>
