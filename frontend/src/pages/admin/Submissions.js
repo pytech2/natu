@@ -635,6 +635,16 @@ export default function Submissions() {
                   <CardContent>
                     <div className="grid grid-cols-3 gap-4">
                       <div>
+                        <Label className="text-xs text-slate-500">Serial Number</Label>
+                        <p className="font-mono font-medium text-slate-800">
+                          {selectedSubmission.property_serial_na ? (
+                            <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">N/A</span>
+                          ) : (
+                            selectedSubmission.property_serial_number || '-'
+                          )}
+                        </p>
+                      </div>
+                      <div>
                         <Label className="text-xs text-slate-500">Property ID</Label>
                         <p className="font-mono font-medium text-slate-800">{selectedSubmission.property_id || '-'}</p>
                       </div>
@@ -657,6 +667,55 @@ export default function Submissions() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Special Conditions - same as Survey Form */}
+                {(selectedSubmission.special_condition || selectedSubmission.self_certified !== undefined) && (
+                  <Card className="border-blue-200 bg-blue-50/50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2 text-blue-700">
+                        <AlertTriangle className="w-4 h-4" />
+                        SPECIAL CONDITIONS
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-3 gap-4">
+                        {selectedSubmission.special_condition && (
+                          <div className="col-span-2">
+                            <Label className="text-xs text-slate-500">Special Condition</Label>
+                            <div className={`mt-1 px-3 py-2 rounded-lg flex items-center gap-2 ${
+                              selectedSubmission.special_condition === 'house_locked' 
+                                ? 'bg-amber-100 text-amber-700' 
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {selectedSubmission.special_condition === 'house_locked' ? (
+                                <>
+                                  <Lock className="w-4 h-4" />
+                                  <span className="font-semibold">House Locked</span>
+                                </>
+                              ) : (
+                                <>
+                                  <UserX className="w-4 h-4" />
+                                  <span className="font-semibold">Owner Denied</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <Label className="text-xs text-slate-500">Self Certified</Label>
+                          <div className={`mt-1 px-3 py-2 rounded-lg flex items-center gap-2 ${
+                            selectedSubmission.self_certified 
+                              ? 'bg-emerald-100 text-emerald-700' 
+                              : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            <CheckCircle className="w-4 h-4" />
+                            <span className="font-semibold">{selectedSubmission.self_certified ? 'Yes' : 'No'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Survey Submission Details - EDITABLE */}
                 <Card className="border-emerald-200 bg-emerald-50/50">
