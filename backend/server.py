@@ -1117,6 +1117,10 @@ async def edit_submission(
             else:
                 update_data[field] = value
     
+    # Handle photos update
+    if "photos" in data:
+        update_data["photos"] = data["photos"]
+    
     update_data["edited_by"] = current_user["id"]
     update_data["edited_at"] = datetime.now(timezone.utc).isoformat()
     
