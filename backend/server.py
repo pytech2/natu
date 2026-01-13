@@ -2456,8 +2456,8 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 2 BILLS PER PAGE - Properly handle rotated source PDFs
-        # Source has rotation=90, we need to derotate first
+        # 2 BILLS PER PAGE - NEW APPROACH: Render as image first
+        # This ensures we capture the EXACT visual output without rotation issues
         
         bills_per_page = 2
         
@@ -2466,87 +2466,61 @@ async def generate_arranged_pdf(
         A4_HEIGHT = 841.89
         
         # Each slot
-        slot_height = A4_HEIGHT / bills_per_page  # ~420.94
-        
-        # Create a temporary document with derotated pages
-        temp_pdf = fitz.open()
-        
-        for i in range(len(src_pdf)):
-            src_page = src_pdf[i]
-            
-            # Get the page's rotation
-            rotation = src_page.rotation
-            
-            if rotation != 0:
-                # Create new page with corrected dimensions
-                # If rotation is 90 or 270, swap width/height
-                if rotation in [90, 270]:
-                    new_width = src_page.rect.height
-                    new_height = src_page.rect.width
-                else:
-                    new_width = src_page.rect.width
-                    new_height = src_page.rect.height
-                
-                # Create new page
-                new_page = temp_pdf.new_page(width=new_width, height=new_height)
-                
-                # Copy content with counter-rotation
-                new_page.show_pdf_page(
-                    new_page.rect,
-                    src_pdf,
-                    i,
-                    rotate=-rotation  # Counter-rotate
-                )
-            else:
-                # No rotation, just copy
-                temp_pdf.insert_pdf(src_pdf, from_page=i, to_page=i)
-        
-        # Now use temp_pdf which has properly oriented pages
-        # Get dimensions of derotated page
-        temp_page = temp_pdf[0]
-        src_width = temp_page.rect.width   # Should be 595 (portrait width)
-        src_height = temp_page.rect.height  # Should be 842 (portrait height)
-        
-        # Scale to fit in slot - use 85% to ensure no cropping with more margin
-        scale_w = (A4_WIDTH * 0.85) / src_width
-        scale_h = (slot_height * 0.92) / src_height
-        scale = min(scale_w, scale_h)
-        
-        scaled_width = src_width * scale
-        scaled_height = src_height * scale
-        
-        # Add bigger left margin to shift content right (10% of A4 width)
-        left_margin = A4_WIDTH * 0.10
-        x_offset = left_margin + (A4_WIDTH - left_margin - scaled_width) / 2
+        slot_height = A4_HEIGHT / bills_per_page
         
         current_page = None
         position = 0
         
         for bill in bills:
             page_num = bill.get("page_number", 1) - 1
-            if page_num < 0 or page_num >= len(temp_pdf):
+            if page_num < 0 or page_num >= len(src_pdf):
                 continue
             
             if position == 0:
                 current_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
             
-            y_start = position * slot_height
-            y_offset_center = (slot_height - scaled_height) / 2
+            # Get source page and render to image
+            src_page = src_pdf[page_num]
             
-            dest_rect = fitz.Rect(
+            # Render at 150 DPI for good quality (72 DPI is default)
+            # Matrix(2,2) = 144 DPI which is good balance of quality/size
+            zoom = 1.5
+            mat = fitz.Matrix(zoom, zoom)
+            pix = src_page.get_pixmap(matrix=mat)
+            
+            # Pixmap has the correctly rendered content (rotation applied)
+            pix_width = pix.width / zoom   # Original width in points
+            pix_height = pix.height / zoom  # Original height in points
+            
+            # Scale to fit in slot with margin
+            margin = 20  # 20pt margin on each side
+            available_width = A4_WIDTH - (2 * margin)
+            available_height = slot_height - (2 * margin / bills_per_page)
+            
+            scale_w = available_width / pix_width
+            scale_h = available_height / pix_height
+            scale = min(scale_w, scale_h) * 0.95  # 95% to ensure fit
+            
+            final_width = pix_width * scale
+            final_height = pix_height * scale
+            
+            # Center in slot
+            x_offset = (A4_WIDTH - final_width) / 2
+            y_start = position * slot_height
+            y_offset = (slot_height - final_height) / 2
+            
+            rect = fitz.Rect(
                 x_offset,
-                y_start + y_offset_center,
-                x_offset + scaled_width,
-                y_start + y_offset_center + scaled_height
+                y_start + y_offset,
+                x_offset + final_width,
+                y_start + y_offset + final_height
             )
             
-            # Use derotated temp_pdf
-            current_page.show_pdf_page(dest_rect, temp_pdf, page_num)
+            # Insert the rendered image
+            current_page.insert_image(rect, pixmap=pix)
             
             included_count += 1
             position = (position + 1) % bills_per_page
-        
-        temp_pdf.close()
     
     output_pdf.save(str(output_path))
     output_pdf.close()
