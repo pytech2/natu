@@ -2457,7 +2457,7 @@ async def generate_arranged_pdf(
             included_count += 1
     else:
         # 3 BILLS PER PAGE - Render as image for accurate output
-        # This ensures we capture the EXACT visual output without rotation issues
+        # MAXIMIZE bill size to reduce white space
         
         bills_per_page = 3
         
@@ -2465,7 +2465,7 @@ async def generate_arranged_pdf(
         A4_WIDTH = 595.28
         A4_HEIGHT = 841.89
         
-        # Each slot
+        # Each slot - use full height
         slot_height = A4_HEIGHT / bills_per_page
         
         current_page = None
@@ -2482,24 +2482,23 @@ async def generate_arranged_pdf(
             # Get source page and render to image
             src_page = src_pdf[page_num]
             
-            # Render at 1x scale (72 DPI) - keeps file size small
+            # Render at 1x scale
             pix = src_page.get_pixmap()
             
-            # Convert to JPEG bytes for smaller file size
-            img_bytes = pix.tobytes("jpeg", 75)  # 75% quality JPEG
+            # Convert to JPEG
+            img_bytes = pix.tobytes("jpeg", 80)
             
-            # Pixmap dimensions in points
+            # Pixmap dimensions
             pix_width = pix.width
             pix_height = pix.height
             
-            # Scale to fit in slot - MAXIMIZE to reduce white space
-            margin = 5  # Minimal margin
-            available_width = A4_WIDTH - (2 * margin)
-            available_height = slot_height - (margin * 0.5)
+            # MAXIMIZE - use almost full width and height
+            available_width = A4_WIDTH - 4  # Only 2pt margin on each side
+            available_height = slot_height - 2  # Minimal vertical gap
             
             scale_w = available_width / pix_width
             scale_h = available_height / pix_height
-            scale = min(scale_w, scale_h)  # Use full scale, no reduction
+            scale = min(scale_w, scale_h) * 1.02  # Slight boost
             
             final_width = pix_width * scale
             final_height = pix_height * scale
