@@ -2456,60 +2456,79 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 3 BILLS PER A4 PAGE - Stacked vertically
-        # ┌────────────────────────┐
-        # │      INVOICE 1         │  <- 1/3 height
-        # ├────────────────────────┤
-        # │      INVOICE 2         │  <- 1/3 height
-        # ├────────────────────────┤
-        # │      INVOICE 3         │  <- 1/3 height
-        # └────────────────────────┘
+        # 3 BILLS PER PAGE - Stacked vertically on A4 Portrait
+        # Source invoices are landscape (842x595), need to fit on portrait page
+        # We'll use A4 Portrait and scale each invoice to fit full width
         
-        # A4 Portrait: 595.276 x 841.890 points
+        # A4 Portrait dimensions
         page_width = 595.276
         page_height = 841.890
         
-        # Each invoice gets 1/3 of page height
-        section_height = page_height / bills_per_page  # ~280 pts each
-        margin = 5
+        # Each section height (3 sections)
+        section_height = page_height / bills_per_page  # ~280 pts
+        margin_x = 10
+        margin_y = 5
         
         current_page = None
-        position = 0  # 0=top, 1=middle, 2=bottom
+        position = 0
         
         for bill in bills:
             page_num = bill.get("page_number", 1) - 1
             if page_num < 0 or page_num >= len(src_pdf):
                 continue
             
-            # Create new A4 page when starting fresh
+            src_page = src_pdf[page_num]
+            src_width = src_page.rect.width   # 842 (landscape)
+            src_height = src_page.rect.height  # 595 (landscape)
+            
+            # Create new page when needed
             if position == 0:
                 current_page = output_pdf.new_page(width=page_width, height=page_height)
             
-            # Calculate destination rectangle for this invoice
-            # Full width, 1/3 height, stacked from top to bottom
-            y_start = position * section_height + margin
-            y_end = (position + 1) * section_height - margin
+            # Calculate section boundaries
+            section_top = position * section_height + margin_y
+            section_bottom = (position + 1) * section_height - margin_y
+            available_width = page_width - (2 * margin_x)
+            available_height = section_bottom - section_top
             
-            dest_rect = fitz.Rect(
-                margin,           # left
-                y_start,          # top
-                page_width - margin,  # right
-                y_end             # bottom
-            )
+            # Calculate scale to fit invoice in section
+            # Scale by width (invoice must fit full width)
+            scale = available_width / src_width
+            scaled_height = src_height * scale
             
-            # Insert invoice scaled to fit in the section
-            # show_pdf_page automatically scales while maintaining aspect ratio
+            # If scaled height exceeds available, scale by height instead
+            if scaled_height > available_height:
+                scale = available_height / src_height
+                scaled_width = src_width * scale
+                # Center horizontally
+                x_offset = (available_width - scaled_width) / 2
+                dest_rect = fitz.Rect(
+                    margin_x + x_offset,
+                    section_top,
+                    margin_x + x_offset + scaled_width,
+                    section_top + available_height
+                )
+            else:
+                # Center vertically
+                y_offset = (available_height - scaled_height) / 2
+                dest_rect = fitz.Rect(
+                    margin_x,
+                    section_top + y_offset,
+                    margin_x + available_width,
+                    section_top + y_offset + scaled_height
+                )
+            
+            # Insert the invoice
             current_page.show_pdf_page(dest_rect, src_pdf, page_num)
             
-            # Draw separator line between invoices
+            # Draw separator line
             if position < bills_per_page - 1:
                 line_y = (position + 1) * section_height
                 current_page.draw_line(
-                    fitz.Point(margin, line_y),
-                    fitz.Point(page_width - margin, line_y),
-                    color=(0.7, 0.7, 0.7),
-                    width=0.5,
-                    dashes="[2 2]"  # Dotted line
+                    fitz.Point(margin_x, line_y),
+                    fitz.Point(page_width - margin_x, line_y),
+                    color=(0.6, 0.6, 0.6),
+                    width=0.5
                 )
             
             included_count += 1
