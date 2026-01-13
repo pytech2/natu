@@ -2412,10 +2412,10 @@ async def arrange_bills_by_route(
 async def generate_arranged_pdf(
     batch_id: str = Form(None),
     colony: str = Form(None),
-    bills_per_page: int = Form(1),  # Default 1 bill per page
+    bills_per_page: int = Form(1),  # 1 = full page, 3 = stacked vertically
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate PDF - preserves original bill layout. No scaling or transformation."""
+    """Generate PDF with invoices. Option for 1 per page or 3 stacked vertically."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2425,13 +2425,11 @@ async def generate_arranged_pdf(
     if colony and colony.strip():
         query["colony"] = {"$regex": colony, "$options": "i"}
     
-    # Get bills sorted by page number (original sequence)
     bills = await db.bills.find(query, {"_id": 0}).sort("page_number", 1).to_list(None)
     
     if not bills:
         raise HTTPException(status_code=404, detail="No bills found")
     
-    # Get original PDF
     batch = await db.batches.find_one({"id": bills[0]["batch_id"]})
     if not batch or not batch.get("pdf_filename"):
         raise HTTPException(status_code=404, detail="Original PDF not found")
@@ -2444,72 +2442,87 @@ async def generate_arranged_pdf(
     output_filename = f"arranged_{colony or 'all'}_{timestamp}.pdf"
     output_path = UPLOAD_DIR / output_filename
     
-    # Open original PDF
     src_pdf = fitz.open(str(original_pdf_path))
     output_pdf = fitz.open()
     
     included_count = 0
     
     if bills_per_page == 1:
-        # ONE BILL PER PAGE - Direct copy, NO transformation, NO scaling
-        # This preserves the original invoice layout exactly as designed
+        # ONE BILL PER PAGE - Direct copy, preserves original layout exactly
         for bill in bills:
             page_num = bill.get("page_number", 1) - 1
             if page_num < 0 or page_num >= len(src_pdf):
                 continue
-            
-            # Direct insert - copies page exactly as-is from source
-            # No scaling, no rotation, no transformation
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # Multiple bills per page - stack on A4 Landscape
-        page_width = 841.890
-        page_height = 595.276
-        bill_height = page_height / bills_per_page
-        margin = 2
+        # 3 BILLS PER A4 PAGE - Stacked vertically
+        # ┌────────────────────────┐
+        # │      INVOICE 1         │  <- 1/3 height
+        # ├────────────────────────┤
+        # │      INVOICE 2         │  <- 1/3 height
+        # ├────────────────────────┤
+        # │      INVOICE 3         │  <- 1/3 height
+        # └────────────────────────┘
         
-        current_output_page = None
-        bill_position = 0
+        # A4 Portrait: 595.276 x 841.890 points
+        page_width = 595.276
+        page_height = 841.890
+        
+        # Each invoice gets 1/3 of page height
+        section_height = page_height / bills_per_page  # ~280 pts each
+        margin = 5
+        
+        current_page = None
+        position = 0  # 0=top, 1=middle, 2=bottom
         
         for bill in bills:
             page_num = bill.get("page_number", 1) - 1
             if page_num < 0 or page_num >= len(src_pdf):
                 continue
             
-            src_page = src_pdf[page_num]
-            src_rect = src_page.rect
+            # Create new A4 page when starting fresh
+            if position == 0:
+                current_page = output_pdf.new_page(width=page_width, height=page_height)
             
-            if bill_position == 0:
-                current_output_page = output_pdf.new_page(width=page_width, height=page_height)
+            # Calculate destination rectangle for this invoice
+            # Full width, 1/3 height, stacked from top to bottom
+            y_start = position * section_height + margin
+            y_end = (position + 1) * section_height - margin
             
-            # Calculate destination rectangle
-            y_start = bill_position * bill_height + margin
-            y_end = (bill_position + 1) * bill_height - margin
-            dest_rect = fitz.Rect(margin, y_start, page_width - margin, y_end)
+            dest_rect = fitz.Rect(
+                margin,           # left
+                y_start,          # top
+                page_width - margin,  # right
+                y_end             # bottom
+            )
             
-            # Scale to fit in the allocated space
-            current_output_page.show_pdf_page(dest_rect, src_pdf, page_num)
+            # Insert invoice scaled to fit in the section
+            # show_pdf_page automatically scales while maintaining aspect ratio
+            current_page.show_pdf_page(dest_rect, src_pdf, page_num)
             
-            # Draw separator line
-            if bill_position < bills_per_page - 1:
-                line_y = (bill_position + 1) * bill_height
-                current_output_page.draw_line(
+            # Draw separator line between invoices
+            if position < bills_per_page - 1:
+                line_y = (position + 1) * section_height
+                current_page.draw_line(
                     fitz.Point(margin, line_y),
                     fitz.Point(page_width - margin, line_y),
-                    color=(0.8, 0.8, 0.8),
-                    width=0.3
+                    color=(0.7, 0.7, 0.7),
+                    width=0.5,
+                    dashes="[2 2]"  # Dotted line
                 )
             
             included_count += 1
-            bill_position = (bill_position + 1) % bills_per_page
+            position = (position + 1) % bills_per_page
     
     output_pdf.save(str(output_path))
     output_pdf.close()
     src_pdf.close()
     
+    pages_created = (included_count + bills_per_page - 1) // bills_per_page if bills_per_page > 1 else included_count
+    
     return {
-        "message": f"Generated PDF with {included_count} bills ({bills_per_page} per page)",
+        "message": f"Generated {pages_created} pages with {included_count} bills ({bills_per_page} per page)",
         "filename": output_filename,
         "download_url": f"/api/uploads/{output_filename}"
     }
