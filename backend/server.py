@@ -2492,14 +2492,14 @@ async def generate_arranged_pdf(
             pix_width = pix.width
             pix_height = pix.height
             
-            # Scale to fit in slot with margin
-            margin = 10
+            # Scale to fit in slot - MAXIMIZE to reduce white space
+            margin = 5  # Minimal margin
             available_width = A4_WIDTH - (2 * margin)
-            available_height = slot_height - margin
+            available_height = slot_height - (margin * 0.5)
             
             scale_w = available_width / pix_width
             scale_h = available_height / pix_height
-            scale = min(scale_w, scale_h) * 0.95
+            scale = min(scale_w, scale_h)  # Use full scale, no reduction
             
             final_width = pix_width * scale
             final_height = pix_height * scale
