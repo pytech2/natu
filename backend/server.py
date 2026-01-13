@@ -2457,11 +2457,11 @@ async def generate_arranged_pdf(
             included_count += 1
     else:
         # 3 BILLS PER PAGE - Stack landscape bills vertically on A4 portrait
-        # NO ROTATION - bills stay landscape, just scaled to fit width
+        # NO ROTATION - bills stay landscape, scaled to fit 3 per page
         #
         # Source: Landscape 842 x 595 pts
         # Target: A4 Portrait (595.28 x 841.89 pts)
-        # Each bill scaled to fit A4 width, 3 stacked = fills the height
+        # Scale based on HEIGHT so 3 bills fit vertically with NO gaps
         #
         # ┌─────────────────────────┐
         # │ ═══════════════════════ │  ← Bill 1 (landscape, scaled)
@@ -2480,15 +2480,18 @@ async def generate_arranged_pdf(
         src_width = src_page.rect.width   # ~842 (landscape width)
         src_height = src_page.rect.height  # ~595 (landscape height)
         
-        # Calculate scale to fit A4 width
-        scale = A4_WIDTH / src_width  # scale factor
+        # Each bill gets exactly 1/3 of A4 height
+        slot_height = A4_HEIGHT / bills_per_page  # ~280.63 pts
+        
+        # Scale based on height to ensure 3 bills fit perfectly
+        scale = slot_height / src_height  # ~0.4716
         
         # Scaled bill dimensions
-        scaled_width = A4_WIDTH  # fills full width
-        scaled_height = src_height * scale  # proportionally scaled height
+        scaled_height = slot_height  # exactly fills slot vertically
+        scaled_width = src_width * scale  # proportionally scaled width (~397 pts)
         
-        # Height for each bill slot (A4 height / 3)
-        slot_height = A4_HEIGHT / bills_per_page
+        # Center horizontally on A4 page
+        x_offset = (A4_WIDTH - scaled_width) / 2  # ~99 pts margin on each side
         
         current_page = None
         position = 0
@@ -2502,18 +2505,15 @@ async def generate_arranged_pdf(
             if position == 0:
                 current_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
             
-            # Calculate Y position - stack from top
+            # Calculate Y position - stack from top, no gaps
             y_start = position * slot_height
             
-            # Center the scaled bill vertically within its slot
-            y_offset = (slot_height - scaled_height) / 2
-            
-            # Destination rectangle - full width, centered in slot
+            # Destination rectangle - centered horizontally, fills slot vertically
             dest_rect = fitz.Rect(
-                0,                              # left
-                y_start + y_offset,             # top (centered in slot)
-                scaled_width,                   # right (full A4 width)
-                y_start + y_offset + scaled_height  # bottom
+                x_offset,                       # left (centered)
+                y_start,                        # top (no gap)
+                x_offset + scaled_width,        # right
+                y_start + scaled_height         # bottom (fills slot)
             )
             
             # Insert bill WITHOUT rotation - keeps landscape orientation
