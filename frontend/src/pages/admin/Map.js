@@ -223,6 +223,14 @@ export default function PropertyMap() {
     sn_color: 'red'
   });
 
+  // Survey View/Edit state
+  const [surveyDialog, setSurveyDialog] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [surveyData, setSurveyData] = useState(null);
+  const [loadingSurvey, setLoadingSurvey] = useState(false);
+  const [rejectDialog, setRejectDialog] = useState(false);
+  const [rejectRemarks, setRejectRemarks] = useState('');
+
   // Default center (Kurukshetra, Haryana)
   const defaultCenter = [29.9506, 76.8378];
 
