@@ -881,9 +881,9 @@ export default function PropertyMap() {
           </DialogContent>
         </Dialog>
 
-        {/* Survey View Dialog */}
+        {/* Survey View Dialog - with high z-index to appear above map */}
         <Dialog open={surveyDialog} onOpenChange={setSurveyDialog}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto z-[9999]" style={{zIndex: 9999}}>
             <DialogHeader>
               <DialogTitle className="font-heading flex items-center justify-between">
                 <span>Survey Data - {selectedProperty?.property_id}</span>
