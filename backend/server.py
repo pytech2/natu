@@ -2481,7 +2481,7 @@ async def generate_arranged_pdf(
         # Get actual DISPLAYED dimensions (accounting for rotation)
         # When rotation is 90 or 270, width and height are swapped visually
         if src_rotation in [90, 270]:
-            # Rotated: use mediabox which has correct dimensions
+            # Rotated: displayed dimensions are from mediabox
             src_width = src_page.mediabox.width   # 595 (displayed width)
             src_height = src_page.mediabox.height  # 842 (displayed height)
         else:
@@ -2527,9 +2527,22 @@ async def generate_arranged_pdf(
                 y_start + y_offset + scaled_height
             )
             
-            # Insert bill - PyMuPDF handles rotation automatically
-            # No need for manual counter-rotation
-            current_page.show_pdf_page(dest_rect, src_pdf, page_num)
+            # Get source page rotation and counter-rotate to display upright
+            page_rotation = src_pdf[page_num].rotation
+            # Counter-rotate: if source is rotated 90° CW, we rotate 90° CCW to show upright
+            # show_pdf_page rotate param: positive = CCW rotation
+            # To counter 90° CW rotation, use rotate=-90 (or 270)
+            if page_rotation == 90:
+                counter_rotate = -90  # Counter-clockwise to fix clockwise rotation
+            elif page_rotation == 270:
+                counter_rotate = 90
+            elif page_rotation == 180:
+                counter_rotate = 180
+            else:
+                counter_rotate = 0
+            
+            # Insert bill with counter-rotation
+            current_page.show_pdf_page(dest_rect, src_pdf, page_num, rotate=counter_rotate)
             
             included_count += 1
             position = (position + 1) % bills_per_page
