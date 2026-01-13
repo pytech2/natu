@@ -2460,11 +2460,9 @@ async def generate_arranged_pdf(
         # Handle source PDF rotation properly
         #
         # ┌─────────────────────────┐
-        # │ ═══════════════════════ │  ← Bill 1
-        # │                         │
+        # │ ═══════════════════════ │  ← Bill 1 (full width, no crop)
         # ├─────────────────────────┤
-        # │ ═══════════════════════ │  ← Bill 2
-        # │                         │
+        # │ ═══════════════════════ │  ← Bill 2 (full width, no crop)
         # └─────────────────────────┘
         
         # Force 2 bills per page
@@ -2474,33 +2472,37 @@ async def generate_arranged_pdf(
         A4_WIDTH = 595.28
         A4_HEIGHT = 841.89
         
-        # Get source page and check rotation
+        # Get source page info
         src_page = src_pdf[0]
         src_rotation = src_page.rotation
         
-        # Get actual DISPLAYED dimensions (accounting for rotation)
-        # When rotation is 90 or 270, width and height are swapped visually
+        # The source has rotation=90, meaning:
+        # - mediabox is 595 x 842 (portrait storage)
+        # - Content was drawn landscape (842 x 595) then rotated 90° CW
+        # - When we counter-rotate (-90°), content becomes landscape again: 842 x 595
+        
+        # After counter-rotation, the CONTENT dimensions will be:
         if src_rotation in [90, 270]:
-            # Rotated: displayed dimensions are from mediabox
-            src_width = src_page.mediabox.width   # 595 (displayed width)
-            src_height = src_page.mediabox.height  # 842 (displayed height)
+            # Content is landscape after counter-rotation
+            content_width = src_page.rect.width   # 842 (landscape width)
+            content_height = src_page.rect.height  # 595 (landscape height)
         else:
-            src_width = src_page.rect.width
-            src_height = src_page.rect.height
+            content_width = src_page.rect.width
+            content_height = src_page.rect.height
         
         # Each bill slot on A4
         slot_height = A4_HEIGHT / bills_per_page  # ~420.94 pts
         
-        # Scale to fit: choose the smaller scale to fit both width and height
-        scale_w = A4_WIDTH / src_width
-        scale_h = slot_height / src_height
-        scale = min(scale_w, scale_h)  # Use smaller to ensure full bill fits
+        # Scale to fit A4 width (landscape content → portrait page)
+        scale_w = A4_WIDTH / content_width  # 595.28 / 842 = 0.707
+        scale_h = slot_height / content_height  # 420.94 / 595 = 0.707
+        scale = min(scale_w, scale_h)  # Use smaller to ensure no cropping
         
-        # Scaled bill dimensions
-        scaled_width = src_width * scale
-        scaled_height = src_height * scale
+        # Scaled dimensions
+        scaled_width = content_width * scale   # 842 * 0.707 = ~595
+        scaled_height = content_height * scale  # 595 * 0.707 = ~420
         
-        # Center horizontally and vertically
+        # Center horizontally
         x_offset = (A4_WIDTH - scaled_width) / 2
         
         current_page = None
@@ -2519,7 +2521,7 @@ async def generate_arranged_pdf(
             y_start = position * slot_height
             y_offset = (slot_height - scaled_height) / 2
             
-            # Destination rectangle - centered
+            # Destination rectangle - LANDSCAPE dimensions for counter-rotated content
             dest_rect = fitz.Rect(
                 x_offset,
                 y_start + y_offset,
@@ -2527,13 +2529,13 @@ async def generate_arranged_pdf(
                 y_start + y_offset + scaled_height
             )
             
-            # Get source page rotation and counter-rotate to display upright
+            # Get source page rotation
             page_rotation = src_pdf[page_num].rotation
-            # Counter-rotate: if source is rotated 90° CW, we rotate 90° CCW to show upright
-            # show_pdf_page rotate param: positive = CCW rotation
-            # To counter 90° CW rotation, use rotate=-90 (or 270)
+            
+            # Counter-rotate to display upright
+            # Source is rotated 90° CW, so counter with -90° (or 270°)
             if page_rotation == 90:
-                counter_rotate = -90  # Counter-clockwise to fix clockwise rotation
+                counter_rotate = 270  # 270° CCW = 90° CW counter
             elif page_rotation == 270:
                 counter_rotate = 90
             elif page_rotation == 180:
