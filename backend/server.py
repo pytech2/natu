@@ -2482,24 +2482,24 @@ async def generate_arranged_pdf(
             # Get source page and render to image
             src_page = src_pdf[page_num]
             
-            # Render at 150 DPI for good quality (72 DPI is default)
-            # Matrix(2,2) = 144 DPI which is good balance of quality/size
-            zoom = 1.5
-            mat = fitz.Matrix(zoom, zoom)
-            pix = src_page.get_pixmap(matrix=mat)
+            # Render at 1x scale (72 DPI) - keeps file size small
+            pix = src_page.get_pixmap()
             
-            # Pixmap has the correctly rendered content (rotation applied)
-            pix_width = pix.width / zoom   # Original width in points
-            pix_height = pix.height / zoom  # Original height in points
+            # Convert to JPEG bytes for smaller file size
+            img_bytes = pix.tobytes("jpeg", 75)  # 75% quality JPEG
+            
+            # Pixmap dimensions in points
+            pix_width = pix.width
+            pix_height = pix.height
             
             # Scale to fit in slot with margin
-            margin = 20  # 20pt margin on each side
+            margin = 15
             available_width = A4_WIDTH - (2 * margin)
-            available_height = slot_height - (2 * margin / bills_per_page)
+            available_height = slot_height - margin
             
             scale_w = available_width / pix_width
             scale_h = available_height / pix_height
-            scale = min(scale_w, scale_h) * 0.95  # 95% to ensure fit
+            scale = min(scale_w, scale_h) * 0.92
             
             final_width = pix_width * scale
             final_height = pix_height * scale
@@ -2516,8 +2516,8 @@ async def generate_arranged_pdf(
                 y_start + y_offset + final_height
             )
             
-            # Insert the rendered image
-            current_page.insert_image(rect, pixmap=pix)
+            # Insert the JPEG image
+            current_page.insert_image(rect, stream=img_bytes)
             
             included_count += 1
             position = (position + 1) % bills_per_page
