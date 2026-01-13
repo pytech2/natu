@@ -220,7 +220,7 @@ export default function Survey() {
         property.longitude
       );
       setDistanceFromProperty(Math.round(distance));
-      setWithinRange(distance <= 15);
+      setWithinRange(distance <= 50);
     }
   }, [location, property]);
 
@@ -354,7 +354,7 @@ export default function Survey() {
   const handleSubmit = async () => {
     // Validations - GPS check still required
     if (withinRange === false) {
-      toast.error('You must be within 15 meters of the property to submit');
+      toast.error('You must be within 50 meters of the property to submit');
       return;
     }
 
@@ -587,7 +587,7 @@ export default function Survey() {
                       {withinRange ? 'Within range' : 'Out of range'} - {distanceFromProperty}m from property
                     </p>
                     <p className="text-xs text-slate-600">
-                      {withinRange ? 'You can submit the survey' : 'Move closer to the property (within 15m)'}
+                      {withinRange ? 'You can submit the survey' : 'Move closer to the property (within 50m)'}
                     </p>
                   </div>
                 </div>
