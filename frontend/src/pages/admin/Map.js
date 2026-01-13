@@ -716,16 +716,14 @@ export default function PropertyMap() {
                         <div className="p-2 min-w-[280px]">
                           <div className="flex items-center justify-between mb-3">
                             <span className="font-mono text-sm font-bold text-blue-600">
-                              #{property.serial_number || 0} - {property.property_id}
+                              {property.serial_na ? (
+                                <span className="bg-amber-100 text-amber-700 px-1 rounded text-xs mr-1">N/A</span>
+                              ) : (
+                                <span>#{property.serial_number || 0} - </span>
+                              )}
+                              {property.property_id}
                             </span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              property.category === 'Residential' ? 'bg-blue-100 text-blue-700' :
-                              property.category === 'Commercial' ? 'bg-amber-100 text-amber-700' :
-                              property.category === 'Vacant Plot' ? 'bg-emerald-100 text-emerald-700' :
-                              'bg-purple-100 text-purple-700'
-                            }`}>
-                              {property.category}
-                            </span>
+                            {getStatusBadge(property.status)}
                           </div>
                           
                           <div className="space-y-2 text-sm">
@@ -768,6 +766,18 @@ export default function PropertyMap() {
                               <p className="text-xs text-slate-400 font-mono">
                                 GPS: {property.latitude?.toFixed(6)}, {property.longitude?.toFixed(6)}
                               </p>
+                            </div>
+
+                            {/* View Survey Button */}
+                            <div className="pt-2 border-t">
+                              <Button
+                                size="sm"
+                                className="w-full bg-blue-600 hover:bg-blue-700"
+                                onClick={() => handleViewSurvey(property)}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Survey Data
+                              </Button>
                             </div>
                           </div>
                         </div>
