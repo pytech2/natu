@@ -2457,12 +2457,13 @@ async def generate_arranged_pdf(
             included_count += 1
     else:
         # 2 BILLS PER PAGE - Stack bills vertically on A4 portrait
-        # Source PDFs may have rotation flag - we render them correctly
+        # Source PDFs have rotation=90, content appears rotated
+        # We need to counter-rotate while preserving full content
         #
         # ┌─────────────────────────┐
-        # │ ═══════════════════════ │  ← Bill 1 (full, no crop)
+        # │ ═══════════════════════ │  ← Bill 1 (upright, full)
         # ├─────────────────────────┤
-        # │ ═══════════════════════ │  ← Bill 2 (full, no crop)
+        # │ ═══════════════════════ │  ← Bill 2 (upright, full)
         # └─────────────────────────┘
         
         bills_per_page = 2
@@ -2473,28 +2474,43 @@ async def generate_arranged_pdf(
         
         # Get source info
         src_page = src_pdf[0]
-        src_rotation = src_page.rotation
+        src_rotation = src_page.rotation  # 90
         
-        # Source page actual dimensions (rect gives the page size)
-        # When rendering, PyMuPDF uses these dimensions regardless of rotation flag
-        src_rect = src_page.rect
-        src_width = src_rect.width   # 842
-        src_height = src_rect.height  # 595
+        # Source page rect (before rotation consideration)
+        src_rect = src_page.rect  # 842 x 595
         
-        # The content is landscape (842 wide x 595 tall)
-        # We want to fit 2 of these on A4 portrait
+        # When source has rotation=90:
+        # - The content is stored in landscape (842 x 595)
+        # - To display it upright, we counter-rotate by -90
+        # - After counter-rotation, visible dimensions become 595 x 842 (portrait)
         
-        # Each slot height
+        # After counter-rotation, content will be portrait: 595 wide x 842 tall
+        if src_rotation == 90:
+            display_width = src_rect.height   # 595
+            display_height = src_rect.width   # 842
+            counter_rotate = -90
+        elif src_rotation == 270:
+            display_width = src_rect.height
+            display_height = src_rect.width
+            counter_rotate = 90
+        else:
+            display_width = src_rect.width
+            display_height = src_rect.height
+            counter_rotate = 0
+        
+        # Each slot height on A4
         slot_height = A4_HEIGHT / bills_per_page  # ~420.94
         
-        # Scale to fit A4 width
-        scale = A4_WIDTH / src_width  # 595.28 / 842 = 0.707
+        # Scale to fit: content is portrait, needs to fit in slot
+        scale_w = A4_WIDTH / display_width      # 595.28 / 595 = ~1.0
+        scale_h = slot_height / display_height  # 420.94 / 842 = ~0.5
+        scale = min(scale_w, scale_h)  # 0.5
         
         # Scaled dimensions
-        scaled_width = src_width * scale   # ~595
-        scaled_height = src_height * scale  # ~420
+        scaled_width = display_width * scale    # 595 * 0.5 = ~297
+        scaled_height = display_height * scale  # 842 * 0.5 = ~421
         
-        # Center
+        # Center horizontally
         x_offset = (A4_WIDTH - scaled_width) / 2
         
         current_page = None
@@ -2511,7 +2527,7 @@ async def generate_arranged_pdf(
             y_start = position * slot_height
             y_offset_center = (slot_height - scaled_height) / 2
             
-            # Destination rectangle
+            # Destination rectangle for portrait content
             dest_rect = fitz.Rect(
                 x_offset,
                 y_start + y_offset_center,
@@ -2519,18 +2535,12 @@ async def generate_arranged_pdf(
                 y_start + y_offset_center + scaled_height
             )
             
-            # Use clip to get the full page content
-            # The clip should be the mediabox for proper content extraction
-            src_page_obj = src_pdf[page_num]
-            clip_rect = src_page_obj.rect  # Use full rect
-            
-            # show_pdf_page with clip ensures we get all content
-            # Don't use rotate - let the content stay as-is in the source
+            # Insert with counter-rotation to make content upright
             current_page.show_pdf_page(
                 dest_rect, 
                 src_pdf, 
                 page_num,
-                clip=clip_rect
+                rotate=counter_rotate
             )
             
             included_count += 1
