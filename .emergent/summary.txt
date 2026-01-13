@@ -5,104 +5,105 @@
 - **Admin Workflow:** Login, upload property data (Excel/PDF), manage users, assign properties. A key requirement is processing PDF bills: extracting data (including the bill's own serial number), handling missing serials as N/A, and allowing a manually triggered GPS-based re-arrangement of bills for route optimization. The admin must be able to view properties on a satellite map, track employee attendance/location, review survey submissions, and export Approved data.
 - **Surveyor Workflow:** Login, view assigned properties on a high-quality satellite map that tracks their live location and highlights the nearest property. The map should be printable as a PDF for field use. The survey form must support special conditions like House Locked or Owner Denied, which alter the required fields. A Self-Certified status must be captured via a radio button.
 - **Attendance:** A daily attendance system for surveyors with a selfie, visible on the admin dashboard.
+- **PDF Generation:** The admin needs to generate PDFs of bills. The latest requirement is to match a specific layout provided by the user in a reference PDF (), which involves stacking three portrait-style invoices vertically on a single page.
 
-**User's preferred language**: English
+**User's preferred language**: The user communicates in a mix of English and Hindi. The next agent MUST be prepared to understand and respond to instructions in both languages.
 
 **what currently exists?**
 A full-stack application with a FastAPI backend, React frontend, and MongoDB.
-- **Backend:** A monolithic  handles all API logic. It has been updated to support multi-employee assignments, filter exports by Approved status, handle N/A serial numbers from PDF uploads, and make survey fields optional based on special conditions.
+- **Backend:** A monolithic  (now >2800 lines) handles all API logic. It has been updated to support PDF serial number extraction (BillSrNo or N/A), copying serial numbers to properties, allowing admins to edit submission photos, and provides multiple (currently incorrect) PDF generation options.
 - **Frontend:**
-    - **Admin Panel:** Features user management, property management, and data handling. All maps have been upgraded to use Google Satellite imagery with property ID labels. The Bills page now has a confirmation dialog for the manually-triggered GPS route arrangement. The Export page defaults to exporting only Approved surveys. The Attendance page correctly displays data and includes a map to view employee GPS locations.
-    - **Employee/Surveyor Panel:** A dynamic properties page shows assigned properties on a Google Satellite map with live GPS tracking. The nearest property is highlighted with a static green border. Completed properties are marked with a **pink** pin. The map zoom is now user-controlled after an initial load to prevent erratic auto-zooming. The map can be downloaded as a high-quality PDF. The survey form uses radio buttons for Self-Certified status and dynamically adjusts required fields based on House Locked or Owner Denied selections.
+    - **Admin Panel:** Features for user management, property management, and data handling. The submission review page now allows adding/deleting photos and has a UI matching the survey form. The admin property map allows viewing survey data in a popup. The PDF generation dialog has an option for 1 or 3 bills per page.
+    - **Employee/Surveyor Panel:** The properties page has been refactored to address performance issues and UI bugs. It now shows N/A for missing serial numbers, locks completed properties, and is supposed to show rejection reasons. The survey submission distance has been set to 50m.
 
 **Last working item**:
-- **Last item agent was working:** Fixing a PDF generation error reported by the user. The user also requested to remove all manual serial numbering options from the UI and backend logic. The system should now use the serial number from the uploaded PDF (or N/A if missing) and maintain the original PDF sequence, only skipping bills where the owner's name is not found.
+- **Last item agent was working:** The user reported that the generated PDF is still incorrect. The text is rotated, there is excessive whitespace, and the content is cut off. The user's final instruction was to fix this by analyzing the provided correct  and a screenshot showing the bad output. The agent's last thought was to analyze the correct PDF to understand the required layout.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** both
+- **Which testing method agent to use?** backend testing agent. The agent must trigger the PDF generation via the API and then instruct the testing agent to download and visually inspect the generated PDF file, comparing it against the user-provided .
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1:** Fix and test the PDF generation workflow. (P0)
-- **Issue 2:** The mobile photo watermark bug persists and needs user verification. (P1)
-- **Issue 3:** Comprehensive end-to-end verification of all recently added features is pending. (P2)
+- **Issue 1:** Fix the PDF generation layout to match the user's reference file. (P0)
+- **Issue 2:** Verify fixes for surveyor app performance and UI bugs. (P1)
+- **Issue 3:** The mobile photo watermark bug requires user verification. (P2)
 
 **Issues Detail:**
-- **Issue 1: Fix and test the PDF generation workflow.**
-    - **Description:** The user reported an error when clicking Generate PDF on the Admin Bills page. They also clarified that no manual serial numbering should be applied; the system should keep the original PDF sequence, use the serial number from the bill itself (or 'N/A'), and only skip bills with no owner name. The agent has implemented code changes but has not tested them.
+- **Issue 1: Fix PDF Generation Layout**
+    - **Description:** The user wants the generated PDF to exactly match their reference file . The current output is wrong, with rotated text, incorrect scaling, and excessive whitespace. The core problem is that the source bills are in landscape format, while the desired output requires rendering them in a stacked portrait format.
+    - **Attempted fixes:** The agent tried multiple strategies with : stacking 3 landscape bills on a portrait page, rotating landscape bills to portrait before stacking, and directly copying landscape bills. All attempts failed to produce the correct visual layout.
     - **Next debug checklist:**
-        1. Restart the backend service.
-        2. As an admin, navigate to the PDF Bills page.
-        3. Select a batch and colony.
-        4. Click the Generate PDF button.
-        5. Verify that a PDF is downloaded without any errors.
-        6. Verify that the UI dialog for PDF generation no longer shows any serial numbering options.
-        7. Inspect the generated PDF to confirm it contains the correct bills in the original order, without any overlaid serial numbers.
+        1.  Analyze the user-provided reference  again to determine its exact dimensions and structure.
+        2.  Analyze the source bills again to confirm their landscape dimensions ( pts).
+        3.  Refactor the  function in . Do not simply merge or rotate pages. Instead, create a new  canvas with the correct target dimensions (from ).
+        4.  For each bill, extract the necessary text and data fields from the source PDF.
+        5.  Draw the extracted text and data onto the new canvas at the correct coordinates to replicate the portrait layout seen in .
+        6.  Stack three of these newly drawn portrait bills onto a single output page.
     - **Status:** IN PROGRESS
     - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** both
+    - **Should Test frontend/backend/both after fix?** backend
     - **Blocked on other issue:** None
 
-- **Issue 2: Mobile Photo Watermark Bug**
-    - **Description:** When a surveyor uses a mobile device to take a photo directly via the camera input, the GPS/timestamp watermark is not applied. This is a long-standing, recurring issue. An attempted fix was made, but it requires verification on a physical mobile device.
+- **Issue 2: Surveyor App Performance and UI bugs**
+    - **Description:** User reported that submitted properties can be reopened, the app is very slow, the property list scrolls erratically, and rejection reasons are not visible.
+    - **Attempted fixes:** The agent refactored  to use  and , debounced GPS updates, added a lock icon for completed properties, and fixed the backend to save rejection remarks on the property document.
     - **Next debug checklist:**
-        1. Log in as a surveyor on a mobile device.
-        2. Start a survey and use the Take Photo option (not gallery).
-        3. Submit the survey.
-        4. Log in as an admin and view the submission to check if the photo has the GPS and timestamp watermark.
-    - **Status:** TESTING PENDING
-    - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** frontend
-    - **Blocked on other issue:** None
-
-- **Issue 3: Comprehensive end-to-end verification.**
-    - **Description:** Many critical features have been added or fixed recently (multi-employee assignment, survey logic changes, map upgrades, export filtering). A full regression test is needed to ensure stability.
-    - **Next debug checklist:**
-        1.  **Admin:** Upload a new PDF batch, verify N/A serials, assign properties to multiple employees, review a submission, and export approved data.
-        2.  **Employee:** Log in, mark attendance, open the properties map (verify satellite view and no auto-zoom), complete a survey normally, and complete another using House Locked.
-    - **Status:** NOT STARTED
+        1.  Log in as a surveyor and confirm that completed properties are locked (cannot be re-surveyed).
+        2.  As an admin, reject a survey with a remark. Then, as a surveyor, confirm the rejected property shows the remark in the list.
+        3.  Thoroughly test the performance of the property list by scrolling and clicking. This requires user feedback for final confirmation.
+    - **Status:** USER VERIFICATION PENDING
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** both
     - **Blocked on other issue:** None
 
+- **Issue 3: Mobile Photo Watermark Bug**
+    - **Description:** When a surveyor takes a photo directly via the mobile camera, the GPS/timestamp watermark is not applied. This is a recurring issue from the previous session.
+    - **Attempted fixes:** A fix was attempted in a previous session, but it was never verified by the user on a physical mobile device.
+    - **Status:** USER VERIFICATION PENDING
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** frontend
+    - **Blocked on other issue:** None
+
 **In progress Task List**:
-- **Task 1: Finalize PDF Generation Fix**
-    - **Where to resume:** The agent has already modified  and . The next step is to test the entire flow as described in Issue 1 above.
-    - **What will be achieved:** The Generate PDF feature will be stable, error-free, and aligned with the user's requirement of preserving the original PDF sequence without manual numbering.
-    - **Status:** IN PROGRESS
-    - **Should Test frontend/backend/both after fix?** both
-    - **Blocked on something:** None
+- None. All ongoing work is captured in the issue list.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **Backend Refactoring (P0):** Decompose the monolithic  into a modular structure using FastAPI routers (e.g., , , ). This is critical for maintainability and has been postponed multiple times.
+    - **Backend Refactoring (P0):** Decompose the monolithic  into a modular structure using FastAPI routers (e.g., , ). This is a critical task for maintainability that has been repeatedly postponed.
 - **Future Tasks:**
     - **Offline Support:** Enable the surveyor's mobile interface to work offline and sync data later.
     - **Download ZIP:** Add a feature to download all split-employee PDFs as a single ZIP file.
-    - **Remove Employee:** Add a feature in the UI to remove a single employee from a property that is assigned to multiple people.
+    - **Remove Employee:** Add a UI feature to remove a single employee from a property that is assigned to multiple people.
 
 **Completed work in this session**
-- **Property Assignment Fix (CRITICAL):** Fixed the bug where assigning properties would overwrite existing assignments. The logic now correctly adds new employees to a property, allowing multiple assignments.
-- **Survey Form Overhaul:**
-    - Replaced the Self-Certified dropdown with radio buttons.
-    - Added House Locked and Owner Denied special conditions that allow submitting a survey with optional photos and signatures.
-    - Removed the Property Location Map from the survey form.
-- **Map Upgrades (All Maps):**
-    - Switched all maps (Employee Properties, Admin Properties, Admin Bills) from OpenStreetMap to **Google Satellite** tiles for high-quality imagery.
-    - Changed map markers to display the **Property ID** (e.g., 3U1UCF40) instead of a serial number, with compact styling.
-    - Changed the marker color for **completed** surveys to **pink**.
-- **Surveyor Map UX Improvements:**
-    - **Auto-Zoom Fix:** Resolved the issue where the map would aggressively zoom out. It now performs an initial zoom and then gives the user manual control.
-    - **PDF Download:** Implemented a feature to download the full surveyor map as a high-quality, 100% zoomed PDF for field use.
-- **Admin Panel Enhancements:**
-    - **Attendance Tracker:** Fixed the attendance data display and added a map view to show employee GPS locations.
-    - **Export Logic:** Updated the export feature to default to Approved submissions only.
-    - **GPS Arrangement:** Made the GPS-based bill arrangement a manually-triggered action protected by a confirmation dialog.
-    - **PDF Serial Numbers:** Updated the PDF upload process to use the serial number from the bill itself, marking missing ones as N/A and excluding them from sorting.
-- **Bug Fixes:**
-    - **Nearest Property Animation:** Removed the rotating border animation as requested, leaving a static green highlight.
-    - **Duplicate Photos:** Prevented new surveys from uploading the same photo twice.
-    - **Mobile Watermark (Attempted Fix):** Applied a fix to better handle mobile camera images; awaiting user verification.
+- **PDF Serial Number Extraction & Display:**
+    - Backend logic in  now correctly extracts BillSrNo from PDFs, falling back to N/A if not found.
+    - Fixed property creation to copy the  and  status from the bill document.
+    - Ran a one-time migration to update all existing properties with the correct serial number info.
+    - Updated  and  to correctly display the serial number or an N/A badge, preserving the original PDF page order.
+- **Admin Submission Page Overhaul:**
+    - In , admins can now delete existing photos and upload new ones when editing a survey.
+    - The submission review dialog now shows the same fields as the survey form (including serial number and special conditions).
+    - Approve and Reject buttons were moved from the main list into the view/edit dialog.
+- **Surveyor Experience Fixes:**
+    - Attempted performance fixes in  by optimizing re-renders from GPS updates.
+    - Updated UI to show a lock icon for completed properties and display rejection reasons.
+    - Changed the GPS distance check for survey submission to **50 meters**.
+- **Admin Map Enhancements:**
+    - Added a View Survey Data button to property popups on the admin map (), which opens a dialog with survey details and approve/reject actions.
+    - Fixed a z-index issue where the dialog was appearing behind the map by adding a global style in .
+- **UI Compactness:**
+    - Reduced padding on map markers across , , and  for a more compact look.
+- **VPS Deployment Command:**
+    - Provided the user with a terminal command to deploy the application to their Hostinger VPS.
+
+**Earlier issues found/mentioned but not fixed**
+- **Mobile Photo Watermark Bug:** This is a known, recurring issue from a previous session that is still pending user verification on a real device.
+
+**Known issue recurrence from previous fork**
+- **Issue:** Mobile Photo Watermark Bug
+- **Recurrence count:** 2+
+- **Status:** USER VERIFICATION PENDING
 
 **Code Architecture**
 
@@ -110,58 +111,75 @@ A full-stack application with a FastAPI backend, React frontend, and MongoDB.
 **Key Technical Concepts**
 - **Backend:** FastAPI, MongoDB (Motor), JWT, PyMuPDF, reportlab.
 - **Frontend:** React, React-Leaflet, Tailwind CSS, Shadcn UI, Axios, html2canvas, jspdf.
-- **Maps:** Using Google Satellite tiles via a URL in . Dynamic markers with custom HTML/CSS for displaying property IDs.
-- **PDF Handling:**  for extraction,  for generation. Logic now handles custom serial numbers and skips records based on conditions.
-- **UI/UX:** Conditional rendering for dynamic forms (), confirmation dialogs ( from Shadcn), custom map markers.
+- **PDF Handling:** The agent's work heavily involved  for analyzing PDF structure and  for generating new PDFs, which is the source of the current main issue.
+
+**key DB schema**
+- ** collection:** Added , , .
+- ** collection:** The  field is now copied to the corresponding property's  upon rejection.
+
+**changes in tech stack**
+- None.
 
 **All files of reference**
-- : The core backend file, modified for property assignment, PDF generation/upload, survey submission, and export logic.
-- : The main surveyor map view, updated with Google Satellite tiles, Property ID markers, pink completed status, and a fix for the auto-zoom issue.
-- : The survey form, updated with radio buttons and conditional logic for optional fields.
-- : The admin PDF management page, updated with a confirmation dialog and UI changes to remove numbering options.
-- : Admin attendance page, fixed to display data and show a map.
-- , : Admin map views, updated to use Google Satellite tiles.
-- : UI updated to reflect Approved Only export.
+- : The monolithic backend file, heavily modified for PDF serial number logic, property creation, admin submission editing (photo upload), and the  endpoint.
+- : Refactored for performance, UI status indicators (lock icon, rejection remarks), and compact map markers.
+- : Overhauled to allow admin photo editing and to align its UI with the survey form.
+- : UI updated with a dropdown to select between 1 or 3 bills per page for PDF generation.
+- : Updated to show survey data in popups and fixed z-index issues.
+- : Added a global z-index fix to ensure dialogs appear above Leaflet maps.
 
 **Areas that need refactoring**:
-- **:** This is the highest priority. The monolithic file is becoming increasingly difficult and risky to modify. It MUST be broken down into FastAPI routers.
+- **:** This is the highest priority. The file is over 2800 lines and its complexity is making new features and bug fixes risky and time-consuming. It MUST be broken down into FastAPI routers.
+
+**key api endpoints**
+- : Heavily modified. Now accepts a  parameter and contains complex (but incorrect) logic for arranging bills.
+- : Modified to handle photo list updates.
+- : New endpoint to add a new photo to an existing submission.
+- : Logic was fixed to copy  and  from the source bill, replacing the previous auto-increment logic.
 
 **Critical Info for New Agent**
-- **Your immediate task is to test and finalize the PDF generation fix.** The user has been very specific about the requirements: no errors, no manual numbering, and keep the original sequence.
-- **The backend refactor of  is the most important upcoming task.** You should propose this to the user as the next major work item after the current issues are resolved to improve the app's stability.
-- **The mobile watermark bug is a known recurring issue.** Even if tests pass in simulation, be prepared for it to resurface and require user verification on a real device.
-- The user frequently provides feedback with images and videos. Analyze these artifacts carefully to understand their intent, especially for UI/UX changes.
+- Your immediate and highest priority task is to **fix the PDF generation layout**. The user has provided clear visual feedback (, screenshots). Do not try to merge or rotate existing PDF pages. You must implement a solution that *draws* the content from the source landscape bills onto a new, correctly-sized portrait canvas, replicating the layout in .
+- The user communicates in a mix of **English and Hindi**. Be prepared to understand instructions in both languages.
+- After fixing the PDF issue, you should propose the **backend refactor of ** as the next critical task to improve the app's stability and maintainability.
+- The surveyor app performance fixes need to be verified, likely with the user's help, as it's difficult to simulate real-world usage.
+
+**documents and test reports created in this job**
+- : Updated multiple times to reflect completed work and new requirements.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **LATEST:** Reported a PDF generation error and clarified requirements: remove numbering options, keep original PDF sequence, use the PDF's own serial number (or N/A), and skip PDFs with no owner name. **Status: In Progress.**
-2.  Provided a large set of requirements: change surveyor dropdown to radio, handle PDF serial numbers correctly, and make GPS arrangement a manual process with confirmation. **Status: Completed.**
-3.  Reported that the surveyor map auto-zooms out, making it unusable. **Status: Completed (fixed).**
-4.  Requested that both admin-side maps (Property Map and Bills Map) use the same Google Satellite view as the surveyor map. **Status: Completed.**
-5.  Requested to reduce the padding on the property ID map markers. **Status: Completed.**
-6.  Requested higher quality map imagery (max zoom) to match a provided Google Earth screenshot. **Status: Completed (switched to Google Satellite).**
-7.  Requested the map show the Property ID on markers instead of a serial number and use a satellite view. **Status: Completed.**
-8.  Provided an image showing the desired format for the downloadable map PDF. **Status: Completed.**
-9.  Requested that completed surveys turn the map marker **pink** and that surveyors can download a 100% zoomed map as a PDF. **Status: Completed.**
-10. Provided a short terminal command snippet to update the app on a Hostinger VPS. **Status: Completed.**
+1. **LATEST:** Provided a final, clear image of the incorrect PDF output, stating the text is rotated, whitespace is wrong, and content is cut. **Status: IN PROGRESS (This is the current P0 issue).**
+2. Provided a detailed prompt explaining *why* the previous PDF fix was wrong (tiling portrait bills on a landscape page) and what is required (a true landscape-native layout, one bill per page).
+3. Provided a diagram and prompt explaining they want 3 invoices stacked vertically on a single A4 page.
+4. User confirmed everything perfect and then requested the feature to print 3 bills on one A4 page.
+5. Asked for the terminal command to deploy the app to their Hostinger VPS.
+6. Reported that the View Survey Data dialog on the Admin Property Map was hiding behind the map. **Status: Completed.**
+7. Requested the survey submission distance be changed back to 50m and that surveyor data (with action buttons) be accessible from the Admin Property Map. **Status: Completed.**
+8. Asked to hide Approve/Reject buttons from the main submission list and move them inside the view/edit dialog. **Status: Completed.**
+9. Asked to add photo delete/add capabilities to the admin submission review page to match the survey form. **Status: Completed.**
+10. Reported multiple surveyor app issues: completed properties reopening, very poor performance, and rejection reasons not being visible. **Status: Fixes implemented, User Verification Pending.**
 
 **Project Health Check:**
-- **Broken:** The Admin PDF generation feature is currently broken and is the active work item.
+- **Broken:** The Admin Generate PDF feature is not producing the correct layout and is the active P0 issue.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- **Leaflet & React-Leaflet:** Used for all interactive maps. Now configured to use Google Satellite tiles.
-- **PyMuPDF, pytesseract, pdf2image, reportlab:** Backend dependencies for PDF processing.
+- **Leaflet & React-Leaflet:** Used for all interactive maps, configured with Google Satellite tiles.
+- **PyMuPDF, pytesseract, pdf2image, reportlab:** Backend dependencies for PDF processing.  is central to the current P0 issue.
 - **html2canvas, jspdf:** Frontend dependencies for client-side PDF generation (downloading maps).
 
 **Testing status**
-- **Testing agent used after significant changes:** YES (used once to verify a batch of fixes, including an attempt at the watermark bug).
+- **Testing agent used after significant changes:** NO (not in the latter half of the session for the major UI/PDF changes).
 - **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:** None
-- **Known regressions:** The mobile photo watermark bug is a known, recurring regression.
+- **Test files created:** None.
+- **Known regressions:**
+    - The PDF generation feature has regressed multiple times from the user's perspective during this session.
+    - The mobile photo watermark bug is a known, recurring regression from a previous session.
 
 **Credentials to test flow:**
 - **Admin:**  / 
-- **Employee/Surveyor:** Create via the admin panel. The password reset and login flow is confirmed to be working.
+- **Employee/Surveyor:** Create via the admin panel. The agent reset the password for surveyor  to .
 
 **What agent forgot to execute**
-- The agent has consistently (and correctly) prioritized urgent user requests and bug fixes over the long-term task of refactoring . This remains the most significant piece of planned work yet to be executed.</analysis>
+- The critical backend refactor of  was discussed but not started.
+- The mobile watermark bug from the previous handoff was not addressed.
+- Comprehensive end-to-end testing of the surveyor app performance/UI fixes was not completed; the fixes are pending user verification.</analysis>
