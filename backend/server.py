@@ -2412,9 +2412,10 @@ async def arrange_bills_by_route(
 async def generate_arranged_pdf(
     batch_id: str = Form(None),
     colony: str = Form(None),
+    bills_per_page: int = Form(3),  # Default 3 bills per A4 page
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate PDF in same sequence as uploaded - skips bills without owner name. No numbering added."""
+    """Generate PDF with multiple bills per A4 page - skips bills without owner name. No numbering added."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2439,31 +2440,89 @@ async def generate_arranged_pdf(
     if not original_pdf_path.exists():
         raise HTTPException(status_code=404, detail="Original PDF file not found")
     
-    # Create new PDF - keep original sequence, no numbering
+    # Create new PDF with 3 bills per A4 page
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_filename = f"arranged_{colony or 'all'}_{timestamp}.pdf"
     output_path = UPLOAD_DIR / output_filename
     
-    # Open original PDF and create new one
+    # Open original PDF
     src_pdf = fitz.open(str(original_pdf_path))
     output_pdf = fitz.open()
     
+    # A4 dimensions in points (595.276 x 841.890)
+    a4_width = 595.276
+    a4_height = 841.890
+    
+    # Calculate dimensions for 3 bills per page (stacked vertically)
+    bill_height = a4_height / bills_per_page  # ~280 points per bill
+    margin = 5  # Small margin between bills
+    
     included_count = 0
+    current_a4_page = None
+    bill_position = 0  # 0, 1, 2 for top, middle, bottom
+    
     for bill in bills:
         page_num = bill.get("page_number", 1) - 1
         if page_num < 0 or page_num >= len(src_pdf):
             continue
         
-        # Simply copy the page as-is from source - no modifications
-        output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
+        # Get source page
+        src_page = src_pdf[page_num]
+        src_rect = src_page.rect
+        
+        # Start new A4 page if needed
+        if bill_position == 0:
+            current_a4_page = output_pdf.new_page(width=a4_width, height=a4_height)
+        
+        # Calculate destination rectangle for this bill on the A4 page
+        y_start = bill_position * bill_height + margin
+        y_end = (bill_position + 1) * bill_height - margin
+        
+        dest_rect = fitz.Rect(margin, y_start, a4_width - margin, y_end)
+        
+        # Scale and place the source page into the destination rectangle
+        # Maintain aspect ratio
+        src_aspect = src_rect.width / src_rect.height
+        dest_aspect = dest_rect.width / dest_rect.height
+        
+        if src_aspect > dest_aspect:
+            # Source is wider - fit to width
+            new_width = dest_rect.width
+            new_height = new_width / src_aspect
+            y_offset = (dest_rect.height - new_height) / 2
+            final_rect = fitz.Rect(
+                dest_rect.x0,
+                dest_rect.y0 + y_offset,
+                dest_rect.x1,
+                dest_rect.y0 + y_offset + new_height
+            )
+        else:
+            # Source is taller - fit to height
+            new_height = dest_rect.height
+            new_width = new_height * src_aspect
+            x_offset = (dest_rect.width - new_width) / 2
+            final_rect = fitz.Rect(
+                dest_rect.x0 + x_offset,
+                dest_rect.y0,
+                dest_rect.x0 + x_offset + new_width,
+                dest_rect.y1
+            )
+        
+        # Insert the page as an image/xobject
+        current_a4_page.show_pdf_page(final_rect, src_pdf, page_num)
+        
+        # Draw a light border around each bill for separation
+        current_a4_page.draw_rect(dest_rect, color=(0.8, 0.8, 0.8), width=0.5)
+        
         included_count += 1
+        bill_position = (bill_position + 1) % bills_per_page
     
     output_pdf.save(str(output_path))
     output_pdf.close()
     src_pdf.close()
     
     return {
-        "message": f"Generated PDF with {included_count} bills",
+        "message": f"Generated PDF with {included_count} bills ({bills_per_page} per page)",
         "filename": output_filename,
         "download_url": f"/api/uploads/{output_filename}"
     }
