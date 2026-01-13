@@ -2456,20 +2456,22 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 3 BILLS PER PAGE - Stack landscape bills vertically on A4 portrait
-        # NO ROTATION - bills stay landscape, scaled to fit 3 per page
+        # 2 BILLS PER PAGE - Stack landscape bills vertically on A4 portrait
+        # Bills are scaled to fit width, 2 per page for better readability
         #
         # Source: Landscape 842 x 595 pts
         # Target: A4 Portrait (595.28 x 841.89 pts)
-        # Scale based on HEIGHT so 3 bills fit vertically with NO gaps
         #
         # ┌─────────────────────────┐
-        # │ ═══════════════════════ │  ← Bill 1 (landscape, scaled)
+        # │ ═══════════════════════ │  ← Bill 1 (landscape, scaled to width)
+        # │                         │
         # ├─────────────────────────┤
-        # │ ═══════════════════════ │  ← Bill 2 (landscape, scaled)
-        # ├─────────────────────────┤
-        # │ ═══════════════════════ │  ← Bill 3 (landscape, scaled)
+        # │ ═══════════════════════ │  ← Bill 2 (landscape, scaled to width)
+        # │                         │
         # └─────────────────────────┘
+        
+        # Force 2 bills per page for proper fit
+        bills_per_page = 2
         
         # A4 dimensions in points
         A4_WIDTH = 595.28
@@ -2480,18 +2482,15 @@ async def generate_arranged_pdf(
         src_width = src_page.rect.width   # ~842 (landscape width)
         src_height = src_page.rect.height  # ~595 (landscape height)
         
-        # Each bill gets exactly 1/3 of A4 height
-        slot_height = A4_HEIGHT / bills_per_page  # ~280.63 pts
-        
-        # Scale based on height to ensure 3 bills fit perfectly
-        scale = slot_height / src_height  # ~0.4716
+        # Scale to fit A4 width (full width usage)
+        scale = A4_WIDTH / src_width  # ~0.707
         
         # Scaled bill dimensions
-        scaled_height = slot_height  # exactly fills slot vertically
-        scaled_width = src_width * scale  # proportionally scaled width (~397 pts)
+        scaled_width = A4_WIDTH  # full width
+        scaled_height = src_height * scale  # ~420 pts
         
-        # Center horizontally on A4 page
-        x_offset = (A4_WIDTH - scaled_width) / 2  # ~99 pts margin on each side
+        # Each bill slot height
+        slot_height = A4_HEIGHT / bills_per_page  # ~420.94 pts
         
         current_page = None
         position = 0
@@ -2505,19 +2504,22 @@ async def generate_arranged_pdf(
             if position == 0:
                 current_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
             
-            # Calculate Y position - stack from top, no gaps
+            # Calculate Y position - stack from top
             y_start = position * slot_height
             
-            # Destination rectangle - centered horizontally, fills slot vertically
+            # Center bill vertically within its slot
+            y_offset = (slot_height - scaled_height) / 2
+            
+            # Destination rectangle - full width, centered in slot
             dest_rect = fitz.Rect(
-                x_offset,                       # left (centered)
-                y_start,                        # top (no gap)
-                x_offset + scaled_width,        # right
-                y_start + scaled_height         # bottom (fills slot)
+                0,                              # left
+                y_start + y_offset,             # top (centered in slot)
+                scaled_width,                   # right (full width)
+                y_start + y_offset + scaled_height  # bottom
             )
             
-            # Insert bill with 180° rotation to fix upside-down orientation
-            current_page.show_pdf_page(dest_rect, src_pdf, page_num, rotate=180)
+            # Insert bill - check source orientation and adjust
+            current_page.show_pdf_page(dest_rect, src_pdf, page_num)
             
             included_count += 1
             position = (position + 1) % bills_per_page
