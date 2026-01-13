@@ -2412,10 +2412,10 @@ async def arrange_bills_by_route(
 async def generate_arranged_pdf(
     batch_id: str = Form(None),
     colony: str = Form(None),
-    bills_per_page: int = Form(1),  # Default 1 bill per page (full page)
+    bills_per_page: int = Form(1),  # Default 1 bill per page
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate PDF with bills - ONE bill per A4 Landscape page, full width."""
+    """Generate PDF - preserves original bill layout. No scaling or transformation."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2448,63 +2448,27 @@ async def generate_arranged_pdf(
     src_pdf = fitz.open(str(original_pdf_path))
     output_pdf = fitz.open()
     
-    # A4 Landscape dimensions: 842 x 595 points (width x height)
-    page_width = 841.890
-    page_height = 595.276
-    margin = 10  # Minimal margin
-    
     included_count = 0
     
     if bills_per_page == 1:
-        # ONE BILL PER PAGE - Full landscape, no stacking
+        # ONE BILL PER PAGE - Direct copy, NO transformation, NO scaling
+        # This preserves the original invoice layout exactly as designed
         for bill in bills:
             page_num = bill.get("page_number", 1) - 1
             if page_num < 0 or page_num >= len(src_pdf):
                 continue
             
-            # Create new A4 Landscape page for each bill
-            output_page = output_pdf.new_page(width=page_width, height=page_height)
-            
-            # Get source page
-            src_page = src_pdf[page_num]
-            src_rect = src_page.rect
-            
-            # Destination: Full page with minimal margins
-            dest_rect = fitz.Rect(margin, margin, page_width - margin, page_height - margin)
-            
-            # Scale source to fill entire destination while maintaining aspect ratio
-            src_aspect = src_rect.width / src_rect.height
-            dest_aspect = dest_rect.width / dest_rect.height
-            
-            if src_aspect > dest_aspect:
-                # Source is wider - fit to width, center vertically
-                new_width = dest_rect.width
-                new_height = new_width / src_aspect
-                y_offset = (dest_rect.height - new_height) / 2
-                final_rect = fitz.Rect(
-                    dest_rect.x0,
-                    dest_rect.y0 + y_offset,
-                    dest_rect.x1,
-                    dest_rect.y0 + y_offset + new_height
-                )
-            else:
-                # Source is taller - fit to height, center horizontally
-                new_height = dest_rect.height
-                new_width = new_height * src_aspect
-                x_offset = (dest_rect.width - new_width) / 2
-                final_rect = fitz.Rect(
-                    dest_rect.x0 + x_offset,
-                    dest_rect.y0,
-                    dest_rect.x0 + x_offset + new_width,
-                    dest_rect.y1
-                )
-            
-            # Insert source page scaled to fill the landscape page
-            output_page.show_pdf_page(final_rect, src_pdf, page_num)
+            # Direct insert - copies page exactly as-is from source
+            # No scaling, no rotation, no transformation
+            output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # Multiple bills per page (stacked vertically)
+        # Multiple bills per page - stack on A4 Landscape
+        page_width = 841.890
+        page_height = 595.276
         bill_height = page_height / bills_per_page
+        margin = 2
+        
         current_output_page = None
         bill_position = 0
         
@@ -2519,29 +2483,23 @@ async def generate_arranged_pdf(
             if bill_position == 0:
                 current_output_page = output_pdf.new_page(width=page_width, height=page_height)
             
-            y_start = bill_position * bill_height + 2
-            y_end = (bill_position + 1) * bill_height - 2
+            # Calculate destination rectangle
+            y_start = bill_position * bill_height + margin
+            y_end = (bill_position + 1) * bill_height - margin
             dest_rect = fitz.Rect(margin, y_start, page_width - margin, y_end)
             
-            src_aspect = src_rect.width / src_rect.height
-            dest_aspect = dest_rect.width / dest_rect.height
+            # Scale to fit in the allocated space
+            current_output_page.show_pdf_page(dest_rect, src_pdf, page_num)
             
-            if src_aspect > dest_aspect:
-                new_width = dest_rect.width
-                new_height = new_width / src_aspect
-                y_offset = (dest_rect.height - new_height) / 2
-                final_rect = fitz.Rect(dest_rect.x0, dest_rect.y0 + y_offset, dest_rect.x1, dest_rect.y0 + y_offset + new_height)
-            else:
-                new_height = dest_rect.height
-                new_width = new_height * src_aspect
-                x_offset = (dest_rect.width - new_width) / 2
-                final_rect = fitz.Rect(dest_rect.x0 + x_offset, dest_rect.y0, dest_rect.x0 + x_offset + new_width, dest_rect.y1)
-            
-            current_output_page.show_pdf_page(final_rect, src_pdf, page_num)
-            
+            # Draw separator line
             if bill_position < bills_per_page - 1:
                 line_y = (bill_position + 1) * bill_height
-                current_output_page.draw_line(fitz.Point(margin, line_y), fitz.Point(page_width - margin, line_y), color=(0.7, 0.7, 0.7), width=0.5)
+                current_output_page.draw_line(
+                    fitz.Point(margin, line_y),
+                    fitz.Point(page_width - margin, line_y),
+                    color=(0.8, 0.8, 0.8),
+                    width=0.3
+                )
             
             included_count += 1
             bill_position = (bill_position + 1) % bills_per_page
@@ -2551,7 +2509,7 @@ async def generate_arranged_pdf(
     src_pdf.close()
     
     return {
-        "message": f"Generated PDF with {included_count} bills ({bills_per_page} per page, A4 Landscape)",
+        "message": f"Generated PDF with {included_count} bills ({bills_per_page} per page)",
         "filename": output_filename,
         "download_url": f"/api/uploads/{output_filename}"
     }
