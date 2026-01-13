@@ -924,12 +924,12 @@ export default function BillsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1">1 Bill per Page (Full Size - Recommended)</SelectItem>
-                    <SelectItem value="2">2 Bills per Page (Compact)</SelectItem>
+                    <SelectItem value="3">3 Bills per Page (Compact)</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-slate-500">
-                  {pdfOptions.bills_per_page === '2' 
-                    ? '2 bills stacked on each A4 page (better fit)' 
+                  {pdfOptions.bills_per_page === '3' 
+                    ? '3 bills stacked on each A4 page' 
                     : 'Each bill on separate A4 Landscape page (full width)'}
                 </p>
               </div>
