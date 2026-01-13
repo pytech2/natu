@@ -929,9 +929,11 @@ export default function BillsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-slate-500">
-                  {pdfOptions.bills_per_page === '3' 
-                    ? '3 bills stacked on each A4 page' 
-                    : 'Each bill on separate A4 Landscape page (full width)'}
+                  {pdfOptions.bills_per_page === '1' 
+                    ? 'Each bill on separate page (full size)' 
+                    : pdfOptions.bills_per_page === '2'
+                    ? '2 bills stacked on each A4 page'
+                    : '3 bills stacked on each A4 page (compact)'}
                 </p>
               </div>
             </div>
