@@ -2456,10 +2456,10 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 2 BILLS PER PAGE - NEW APPROACH: Render as image first
+        # 3 BILLS PER PAGE - Render as image for accurate output
         # This ensures we capture the EXACT visual output without rotation issues
         
-        bills_per_page = 2
+        bills_per_page = 3
         
         # A4 dimensions
         A4_WIDTH = 595.28
@@ -2493,13 +2493,13 @@ async def generate_arranged_pdf(
             pix_height = pix.height
             
             # Scale to fit in slot with margin
-            margin = 15
+            margin = 10
             available_width = A4_WIDTH - (2 * margin)
             available_height = slot_height - margin
             
             scale_w = available_width / pix_width
             scale_h = available_height / pix_height
-            scale = min(scale_w, scale_h) * 0.92
+            scale = min(scale_w, scale_h) * 0.95
             
             final_width = pix_width * scale
             final_height = pix_height * scale
