@@ -2459,7 +2459,7 @@ async def generate_arranged_pdf(
         # 2 BILLS PER PAGE - Stack landscape bills vertically on A4 portrait
         # Bills are scaled to fit width, 2 per page for better readability
         #
-        # Source: Landscape 842 x 595 pts
+        # Source: Landscape 842 x 595 pts (may have internal rotation)
         # Target: A4 Portrait (595.28 x 841.89 pts)
         #
         # ┌─────────────────────────┐
@@ -2477,10 +2477,14 @@ async def generate_arranged_pdf(
         A4_WIDTH = 595.28
         A4_HEIGHT = 841.89
         
-        # Get source bill dimensions (landscape)
+        # Get source bill dimensions (considering rotation)
         src_page = src_pdf[0]
-        src_width = src_page.rect.width   # ~842 (landscape width)
-        src_height = src_page.rect.height  # ~595 (landscape height)
+        src_rotation = src_page.rotation  # Check if source has rotation
+        
+        # Get actual visible dimensions (accounting for rotation)
+        src_rect = src_page.rect
+        src_width = src_rect.width   # ~842 (landscape width)
+        src_height = src_rect.height  # ~595 (landscape height)
         
         # Scale to fit A4 width (full width usage)
         scale = A4_WIDTH / src_width  # ~0.707
@@ -2518,8 +2522,14 @@ async def generate_arranged_pdf(
                 y_start + y_offset + scaled_height  # bottom
             )
             
-            # Insert bill - check source orientation and adjust
-            current_page.show_pdf_page(dest_rect, src_pdf, page_num)
+            # Check source page rotation and compensate
+            src_page_rotation = src_pdf[page_num].rotation
+            # If source has 90° rotation, we need to counter-rotate to show upright
+            # rotate parameter: 0, 90, 180, 270
+            counter_rotation = (360 - src_page_rotation) % 360 if src_page_rotation else 0
+            
+            # Insert bill with counter-rotation to display correctly
+            current_page.show_pdf_page(dest_rect, src_pdf, page_num, rotate=counter_rotation)
             
             included_count += 1
             position = (position + 1) % bills_per_page
