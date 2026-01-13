@@ -2498,7 +2498,7 @@ async def generate_arranged_pdf(
             
             scale_w = available_width / pix_width
             scale_h = available_height / pix_height
-            scale = min(scale_w, scale_h) * 1.02  # Slight boost
+            scale = min(scale_w, scale_h) * 1.22  # 20% bigger
             
             final_width = pix_width * scale
             final_height = pix_height * scale
