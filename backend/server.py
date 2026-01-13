@@ -2456,15 +2456,8 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 2 BILLS PER PAGE - Stack bills vertically on A4 portrait
-        # Source PDFs have rotation=90, content appears rotated
-        # We need to counter-rotate while preserving full content
-        #
-        # ┌─────────────────────────┐
-        # │ ═══════════════════════ │  ← Bill 1 (upright, full)
-        # ├─────────────────────────┤
-        # │ ═══════════════════════ │  ← Bill 2 (upright, full)
-        # └─────────────────────────┘
+        # 2 BILLS PER PAGE - Render each bill as image to avoid rotation/clipping issues
+        # This ensures full content is captured without any cropping
         
         bills_per_page = 2
         
@@ -2472,46 +2465,8 @@ async def generate_arranged_pdf(
         A4_WIDTH = 595.28
         A4_HEIGHT = 841.89
         
-        # Get source info
-        src_page = src_pdf[0]
-        src_rotation = src_page.rotation  # 90
-        
-        # Source page rect (before rotation consideration)
-        src_rect = src_page.rect  # 842 x 595
-        
-        # When source has rotation=90:
-        # - The content is stored in landscape (842 x 595)
-        # - To display it upright, we counter-rotate by -90
-        # - After counter-rotation, visible dimensions become 595 x 842 (portrait)
-        
-        # After counter-rotation, content will be portrait: 595 wide x 842 tall
-        if src_rotation == 90:
-            display_width = src_rect.height   # 595
-            display_height = src_rect.width   # 842
-            counter_rotate = -90
-        elif src_rotation == 270:
-            display_width = src_rect.height
-            display_height = src_rect.width
-            counter_rotate = 90
-        else:
-            display_width = src_rect.width
-            display_height = src_rect.height
-            counter_rotate = 0
-        
         # Each slot height on A4
         slot_height = A4_HEIGHT / bills_per_page  # ~420.94
-        
-        # Scale to fit: content is portrait, needs to fit in slot
-        scale_w = A4_WIDTH / display_width      # 595.28 / 595 = ~1.0
-        scale_h = slot_height / display_height  # 420.94 / 842 = ~0.5
-        scale = min(scale_w, scale_h)  # 0.5
-        
-        # Scaled dimensions
-        scaled_width = display_width * scale    # 595 * 0.5 = ~297
-        scaled_height = display_height * scale  # 842 * 0.5 = ~421
-        
-        # Center horizontally
-        x_offset = (A4_WIDTH - scaled_width) / 2
         
         current_page = None
         position = 0
@@ -2524,24 +2479,40 @@ async def generate_arranged_pdf(
             if position == 0:
                 current_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
             
+            # Get source page
+            src_page_obj = src_pdf[page_num]
+            
+            # Render page to pixmap (this correctly handles rotation)
+            # The pixmap will have the content in its displayed orientation
+            pix = src_page_obj.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x resolution for quality
+            
+            # Pixmap dimensions (after rotation is applied)
+            pix_width = pix.width
+            pix_height = pix.height
+            
+            # Scale to fit in slot
+            scale_w = A4_WIDTH / pix_width
+            scale_h = slot_height / pix_height
+            scale = min(scale_w, scale_h) * 2  # multiply by 2 because pixmap is 2x
+            
+            # Actual dimensions on output
+            out_width = pix_width * scale / 2
+            out_height = pix_height * scale / 2
+            
+            # Center
+            x_offset = (A4_WIDTH - out_width) / 2
             y_start = position * slot_height
-            y_offset_center = (slot_height - scaled_height) / 2
+            y_offset = (slot_height - out_height) / 2
             
-            # Destination rectangle for portrait content
-            dest_rect = fitz.Rect(
+            # Insert the pixmap as image
+            rect = fitz.Rect(
                 x_offset,
-                y_start + y_offset_center,
-                x_offset + scaled_width,
-                y_start + y_offset_center + scaled_height
+                y_start + y_offset,
+                x_offset + out_width,
+                y_start + y_offset + out_height
             )
             
-            # Insert with counter-rotation to make content upright
-            current_page.show_pdf_page(
-                dest_rect, 
-                src_pdf, 
-                page_num,
-                rotate=counter_rotate
-            )
+            current_page.insert_image(rect, pixmap=pix)
             
             included_count += 1
             position = (position + 1) % bills_per_page
