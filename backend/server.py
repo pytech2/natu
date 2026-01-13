@@ -2415,7 +2415,7 @@ async def generate_arranged_pdf(
     bills_per_page: int = Form(1),  # 1 = full page, 3 = stacked vertically
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate PDF with invoices. 3 per page = rotated to portrait & stacked vertically."""
+    """Generate PDF with invoices. 3 per page = landscape bills scaled & stacked vertically on A4."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2456,35 +2456,39 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 3 BILLS PER PAGE - Rotate landscape to portrait, then stack vertically
-        # 
-        # Original: Landscape 842 x 595
-        # After rotation: Portrait 595 x 842
-        # 3 stacked: 595 x 2526
+        # 3 BILLS PER PAGE - Stack landscape bills vertically on A4 portrait
+        # NO ROTATION - bills stay landscape, just scaled to fit width
         #
-        # ┌─────────────────┐
-        # │    INVOICE 1    │  ← Rotated 90° CCW
-        # │   (Portrait)    │
-        # ├─────────────────┤
-        # │    INVOICE 2    │  ← Rotated 90° CCW
-        # │   (Portrait)    │
-        # ├─────────────────┤
-        # │    INVOICE 3    │  ← Rotated 90° CCW
-        # │   (Portrait)    │
-        # └─────────────────┘
+        # Source: Landscape 842 x 595 pts
+        # Target: A4 Portrait (595.28 x 841.89 pts)
+        # Each bill scaled to fit A4 width, 3 stacked = fills the height
+        #
+        # ┌─────────────────────────┐
+        # │ ═══════════════════════ │  ← Bill 1 (landscape, scaled)
+        # ├─────────────────────────┤
+        # │ ═══════════════════════ │  ← Bill 2 (landscape, scaled)
+        # ├─────────────────────────┤
+        # │ ═══════════════════════ │  ← Bill 3 (landscape, scaled)
+        # └─────────────────────────┘
         
-        # Get source dimensions
+        # A4 dimensions in points
+        A4_WIDTH = 595.28
+        A4_HEIGHT = 841.89
+        
+        # Get source bill dimensions (landscape)
         src_page = src_pdf[0]
-        src_width = src_page.rect.width   # 842 (landscape)
-        src_height = src_page.rect.height  # 595 (landscape)
+        src_width = src_page.rect.width   # ~842 (landscape width)
+        src_height = src_page.rect.height  # ~595 (landscape height)
         
-        # After 90° rotation: width becomes height, height becomes width
-        rotated_width = src_height   # 595
-        rotated_height = src_width   # 842
+        # Calculate scale to fit A4 width
+        scale = A4_WIDTH / src_width  # scale factor
         
-        # Output page: rotated width, 3x rotated height
-        page_width = rotated_width                    # 595
-        page_height = rotated_height * bills_per_page  # 842 * 3 = 2526
+        # Scaled bill dimensions
+        scaled_width = A4_WIDTH  # fills full width
+        scaled_height = src_height * scale  # proportionally scaled height
+        
+        # Height for each bill slot (A4 height / 3)
+        slot_height = A4_HEIGHT / bills_per_page
         
         current_page = None
         position = 0
@@ -2494,34 +2498,26 @@ async def generate_arranged_pdf(
             if page_num < 0 or page_num >= len(src_pdf):
                 continue
             
-            # Create new page when needed
+            # Create new A4 page when needed
             if position == 0:
-                current_page = output_pdf.new_page(width=page_width, height=page_height)
+                current_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
             
-            # Calculate position for this invoice
-            y_start = position * rotated_height
+            # Calculate Y position - stack from top
+            y_start = position * slot_height
             
-            # Destination rectangle (after rotation)
+            # Center the scaled bill vertically within its slot
+            y_offset = (slot_height - scaled_height) / 2
+            
+            # Destination rectangle - full width, centered in slot
             dest_rect = fitz.Rect(
-                0,                      # left
-                y_start,                # top
-                rotated_width,          # right (595)
-                y_start + rotated_height # bottom (y + 842)
+                0,                              # left
+                y_start + y_offset,             # top (centered in slot)
+                scaled_width,                   # right (full A4 width)
+                y_start + y_offset + scaled_height  # bottom
             )
             
-            # Insert with 90° counter-clockwise rotation
-            # rotate=90 means the content is rotated 90° CCW
-            current_page.show_pdf_page(dest_rect, src_pdf, page_num, rotate=90)
-            
-            # Draw thin separator line between invoices
-            if position < bills_per_page - 1:
-                line_y = (position + 1) * rotated_height
-                current_page.draw_line(
-                    fitz.Point(10, line_y),
-                    fitz.Point(rotated_width - 10, line_y),
-                    color=(0.6, 0.6, 0.6),
-                    width=0.5
-                )
+            # Insert bill WITHOUT rotation - keeps landscape orientation
+            current_page.show_pdf_page(dest_rect, src_pdf, page_num)
             
             included_count += 1
             position = (position + 1) % bills_per_page
