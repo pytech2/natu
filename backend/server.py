@@ -2456,17 +2456,16 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 3 BILLS PER PAGE - Render as image for accurate output
-        # MAXIMIZE bill size to reduce white space
-        
-        bills_per_page = 3
-        
+        # 2 OR 3 BILLS PER PAGE - Render as image for accurate output
         # A4 dimensions
         A4_WIDTH = 595.28
         A4_HEIGHT = 841.89
         
-        # Each slot - use full height
-        slot_height = A4_HEIGHT / bills_per_page
+        # Use the requested bills_per_page (2 or 3)
+        num_bills = bills_per_page if bills_per_page in [2, 3] else 3
+        
+        # Each slot height
+        slot_height = A4_HEIGHT / num_bills
         
         current_page = None
         position = 0
@@ -2486,27 +2485,35 @@ async def generate_arranged_pdf(
             pix = src_page.get_pixmap()
             
             # Convert to JPEG
-            img_bytes = pix.tobytes("jpeg", 80)
+            img_bytes = pix.tobytes("jpeg", 85)
             
             # Pixmap dimensions
             pix_width = pix.width
             pix_height = pix.height
             
-            # MAXIMIZE - use almost full width and height
-            available_width = A4_WIDTH - 4  # Only 2pt margin on each side
-            available_height = slot_height - 2  # Minimal vertical gap
+            # MAXIMIZE - minimal margins, bigger bills
+            if num_bills == 2:
+                # 2 bills per page - more space, bigger bills
+                available_width = A4_WIDTH - 2
+                available_height = slot_height - 1
+                scale_boost = 1.12  # 12% bigger for 2 bills
+            else:
+                # 3 bills per page - tight fit
+                available_width = A4_WIDTH - 2
+                available_height = slot_height - 0.5  # Minimal gap
+                scale_boost = 1.15  # 15% bigger for 3 bills
             
             scale_w = available_width / pix_width
             scale_h = available_height / pix_height
-            scale = min(scale_w, scale_h) * 1.08  # 8% bigger - safe maximum
+            scale = min(scale_w, scale_h) * scale_boost
             
             final_width = pix_width * scale
             final_height = pix_height * scale
             
-            # Center in slot
+            # Center in slot - minimal vertical gap
             x_offset = (A4_WIDTH - final_width) / 2
             y_start = position * slot_height
-            y_offset = (slot_height - final_height) / 2
+            y_offset = (slot_height - final_height) / 2 * 0.3  # Reduce vertical centering gap
             
             rect = fitz.Rect(
                 x_offset,
@@ -2519,7 +2526,7 @@ async def generate_arranged_pdf(
             current_page.insert_image(rect, stream=img_bytes)
             
             included_count += 1
-            position = (position + 1) % bills_per_page
+            position = (position + 1) % num_bills
     
     output_pdf.save(str(output_path))
     output_pdf.close()
