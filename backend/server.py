@@ -2415,7 +2415,7 @@ async def generate_arranged_pdf(
     bills_per_page: int = Form(1),  # 1 = full page, 3 = stacked vertically
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate PDF with invoices. Option for 1 per page or 3 stacked vertically."""
+    """Generate PDF with invoices. 3 per page = stacked vertically like the reference."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2456,18 +2456,26 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 3 BILLS PER PAGE - Stacked vertically on A4 Portrait
-        # Source invoices are landscape (842x595), need to fit on portrait page
-        # We'll use A4 Portrait and scale each invoice to fit full width
+        # 3 BILLS PER PAGE - Stacked vertically (like reference final.pdf)
+        # Each invoice fills full width, 1/3 of page height
+        # 
+        # ┌─────────────────────────────┐
+        # │         INVOICE 1           │  ← 1/3 height, full width
+        # ├─────────────────────────────┤
+        # │         INVOICE 2           │  ← 1/3 height, full width  
+        # ├─────────────────────────────┤
+        # │         INVOICE 3           │  ← 1/3 height, full width
+        # └─────────────────────────────┘
         
-        # A4 Portrait dimensions
-        page_width = 595.276
-        page_height = 841.890
+        # Get source page dimensions
+        src_page = src_pdf[0]
+        src_width = src_page.rect.width   # Original width
+        src_height = src_page.rect.height  # Original height
         
-        # Each section height (3 sections)
-        section_height = page_height / bills_per_page  # ~280 pts
-        margin_x = 10
-        margin_y = 5
+        # Output page: Same width as source, 3x the height (to stack 3 invoices)
+        # This way each invoice keeps its original size, just stacked
+        page_width = src_width
+        page_height = src_height * bills_per_page  # 3 invoices stacked = 3x height
         
         current_page = None
         position = 0
@@ -2477,58 +2485,31 @@ async def generate_arranged_pdf(
             if page_num < 0 or page_num >= len(src_pdf):
                 continue
             
-            src_page = src_pdf[page_num]
-            src_width = src_page.rect.width   # 842 (landscape)
-            src_height = src_page.rect.height  # 595 (landscape)
-            
             # Create new page when needed
             if position == 0:
                 current_page = output_pdf.new_page(width=page_width, height=page_height)
             
-            # Calculate section boundaries
-            section_top = position * section_height + margin_y
-            section_bottom = (position + 1) * section_height - margin_y
-            available_width = page_width - (2 * margin_x)
-            available_height = section_bottom - section_top
+            # Each invoice goes in its section (original size, no scaling)
+            y_start = position * src_height
             
-            # Calculate scale to fit invoice in section
-            # Scale by width (invoice must fit full width)
-            scale = available_width / src_width
-            scaled_height = src_height * scale
+            dest_rect = fitz.Rect(
+                0,                    # left
+                y_start,              # top
+                src_width,            # right (full width)
+                y_start + src_height  # bottom (original height)
+            )
             
-            # If scaled height exceeds available, scale by height instead
-            if scaled_height > available_height:
-                scale = available_height / src_height
-                scaled_width = src_width * scale
-                # Center horizontally
-                x_offset = (available_width - scaled_width) / 2
-                dest_rect = fitz.Rect(
-                    margin_x + x_offset,
-                    section_top,
-                    margin_x + x_offset + scaled_width,
-                    section_top + available_height
-                )
-            else:
-                # Center vertically
-                y_offset = (available_height - scaled_height) / 2
-                dest_rect = fitz.Rect(
-                    margin_x,
-                    section_top + y_offset,
-                    margin_x + available_width,
-                    section_top + y_offset + scaled_height
-                )
-            
-            # Insert the invoice
+            # Insert invoice at original size
             current_page.show_pdf_page(dest_rect, src_pdf, page_num)
             
-            # Draw separator line
+            # Draw thin separator line
             if position < bills_per_page - 1:
-                line_y = (position + 1) * section_height
+                line_y = (position + 1) * src_height
                 current_page.draw_line(
-                    fitz.Point(margin_x, line_y),
-                    fitz.Point(page_width - margin_x, line_y),
-                    color=(0.6, 0.6, 0.6),
-                    width=0.5
+                    fitz.Point(10, line_y),
+                    fitz.Point(src_width - 10, line_y),
+                    color=(0.5, 0.5, 0.5),
+                    width=0.3
                 )
             
             included_count += 1
