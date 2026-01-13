@@ -130,3 +130,30 @@ code {
 a[href*="emergent.sh"] {
     display: none !important;
 }
+
+/* Fix Dialog z-index to appear above Leaflet maps */
+[data-radix-dialog-overlay] {
+    z-index: 9998 !important;
+}
+
+[data-radix-dialog-content] {
+    z-index: 9999 !important;
+}
+
+/* Leaflet map z-index */
+.leaflet-container {
+    z-index: 1 !important;
+}
+
+.leaflet-pane {
+    z-index: 1 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+    z-index: 500 !important;
+}
+
+.leaflet-popup {
+    z-index: 700 !important;
+}
