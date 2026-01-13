@@ -1,139 +1,126 @@
-# NSTU India Private Limited - Property Tax Survey Application
+# NSTU India Private Limited - Property Tax Notice Distribution System
 
 ## Original Problem Statement
-Build a full-stack web application for NSTU India Private Limited to manage property tax notice distribution and surveys. The application requires:
-- Different user roles (Admin, Surveyor, Supervisor, MC Officer)
-- Bulk data upload via Excel and PDF
-- Property assignment to employees (multiple employees can be assigned to same properties)
-- Surveyor mobile interface for data collection (photos with GPS watermarks, signatures)
-- Admin dashboard for progress tracking, review/approval, and data export
+Build a full-stack web application for NSTU India Private Limited to manage property tax notice distribution and surveys. The application requires different user roles (Admin, Surveyor, Supervisor, MC Officer), bulk data upload via Excel and PDF, property assignment, a surveyor mobile interface for data collection (including photos with GPS watermarks and signatures), and an admin dashboard for progress tracking, review/approval, and data export.
 
-## Tech Stack
-- **Backend**: FastAPI, MongoDB (Motor), JWT Authentication
-- **Frontend**: React, React-Leaflet, Tailwind CSS, Shadcn UI
-- **Libraries**: PyMuPDF, pytesseract, pdf2image, reportlab, html2canvas, jspdf
+## User Personas
+1. **Super Admin** - Full system access, user management, data management
+2. **Surveyor** - Field worker collecting property data, photos, signatures
+3. **Supervisor** - Oversees surveyors, reviews submissions
+4. **MC Officer** - Municipal council officer, approval authority
 
-## User Roles & Permissions
-1. **Super Admin**: Full access to all features
-2. **Surveyor**: View assigned properties, submit surveys, mark attendance
-3. **Supervisor**: Manage surveyors in assigned area
-4. **MC Officer**: Review and approve submissions
+## Core Requirements
+- Role-based access control (Admin, Surveyor, Supervisor, MC Officer)
+- Bulk data upload (Excel/PDF)
+- Property assignment to surveyors
+- Mobile-friendly surveyor interface with GPS tracking
+- Photo capture with GPS/timestamp watermark
+- Signature capture
+- Admin dashboard for progress tracking
+- Survey submission review and approval workflow
+- Data export functionality
+- PDF generation with multiple layouts
 
----
+## Technology Stack
+- **Backend:** FastAPI, MongoDB (Motor), JWT authentication
+- **Frontend:** React, React-Leaflet, Tailwind CSS, Shadcn UI
+- **PDF Processing:** PyMuPDF, reportlab, pytesseract, pdf2image
+- **Maps:** Leaflet with Google Satellite tiles
 
 ## What's Been Implemented
 
-### Authentication & Users
-- [x] JWT-based authentication using mobile numbers
-- [x] Password reset functionality
-- [x] Role-based access control
-- [x] Employee management (CRUD)
+### Completed Features (as of Jan 13, 2026)
+1. **Authentication & User Management**
+   - JWT-based login system
+   - Role-based access (Admin, Employee/Surveyor)
+   - User CRUD operations
 
-### Admin Features
-- [x] Dashboard with statistics
-- [x] Property upload via Excel
-- [x] PDF Bill upload with BillSrNo extraction
-- [x] Generate arranged PDFs (original sequence, no numbering overlay)
-- [x] Split PDFs by assigned employee
-- [x] Delete by Colony feature
-- [x] Property Map view (Google Satellite)
-- [x] Submissions review/approval with rejection remarks
-- [x] Multi-employee assignment
-- [x] Export Approved Submissions Only
-- [x] Attendance GPS Tracker
+2. **PDF Bills Management**
+   - PDF upload with batch processing
+   - Bill extraction with serial number detection
+   - GPS-based route optimization
+   - PDF generation: 1 bill per page OR 3 bills per page (FIXED Jan 13)
+   - Split bills by employee
 
-### Employee/Surveyor Features
-- [x] Mobile-optimized dashboard
-- [x] Daily attendance with selfie capture
-- [x] Assigned Properties page with:
-  - [x] Live GPS tracking (optimized for performance)
-  - [x] Nearest-first sorting for pending properties
-  - [x] **Completed properties locked** - show "Done" badge, click shows toast
-  - [x] **Rejected properties highlighted** - show red badge and rejection reason
-  - [x] Stats: Total, Pending, Done, Rejected
-  - [x] Full Size Map modal
-  - [x] Print map as PDF feature
-- [x] Survey submission with:
-  - [x] Photo capture with GPS/timestamp watermark
-  - [x] Optional signature pad
-  - [x] Special Conditions: House Locked / Owner Denied
+3. **Property Management**
+   - Property creation from bills
+   - Assignment to employees
+   - GPS coordinates tracking
+   - Colony/area filtering
 
-### Survey Form Features
-- [x] Property Information display
-- [x] GPS Status with 50m range validation
-- [x] Special Conditions (House Locked / Owner Denied)
-- [x] Self-Certified radio buttons
-- [x] Survey submission to backend
-- [x] Completed survey view (read-only)
+4. **Survey System**
+   - Mobile-friendly survey form
+   - Photo capture with GPS watermark
+   - Signature capture
+   - Special conditions (House Locked, Owner Denied)
+   - Self-certified status
+   - 50m GPS distance check for submission
 
-### Maps & Visualization
-- [x] Google Satellite tiles for all maps
-- [x] Custom markers showing Property ID
-- [x] Pink markers for completed surveys
-- [x] Red markers for rejected surveys
+5. **Admin Dashboard**
+   - Bills management with map view
+   - Property map with satellite imagery
+   - Survey submission review
+   - Photo editing (add/delete) in submissions
+   - Approve/Reject workflow
+   - Export functionality
 
----
+6. **Attendance System**
+   - Daily selfie-based attendance
+   - Admin visibility
 
-## Recent Fixes (January 11, 2026)
+### Bug Fixes (Jan 13, 2026)
+- **PDF Generation Fix:** 3 bills per page now correctly scales and stacks landscape bills on A4 portrait without overlap or cut-off
 
-### Surveyor Performance Issues (Fixed)
-- Reduced GPS tracking frequency from 25m to 50m threshold
-- Added distance calculation caching to prevent constant re-renders
-- GPS watch updates throttled to significant movements only
+## Pending Issues
 
-### Completed Properties Locking (Fixed)
-- Completed/Approved surveys now show lock icon
-- Clicking shows toast instead of reopening survey
-- Visual styling: faded/grayed appearance
+### P1 - High Priority
+1. **Backend Refactoring:** `server.py` is 2800+ lines - needs to be split into FastAPI routers
+2. **Surveyor App Verification:** Need to verify fixes for completed property locking and rejection remarks display
 
-### Rejected Properties Display (Fixed)
-- Red "⚠ Rejected" badge on property cards
-- Rejection reason displayed under property card
-- Stats row now shows 4 columns including Rejected count
-- Backend: Rejection remarks now saved to property record
+### P2 - Medium Priority
+1. **Mobile Photo Watermark Bug:** GPS watermark not applied when taking photos directly from mobile camera (needs real device testing)
 
-### BillSrNo Extraction (Fixed)
-- Enhanced extraction for "BillSrNo. : 112" format
-- Position-aware block detection
-- N/A handling for missing serial numbers
+## Future Tasks / Backlog
+1. **Offline Support:** Enable surveyor app to work offline and sync later
+2. **Download ZIP:** Add feature to download all split-employee PDFs as ZIP
+3. **Remove Single Employee:** UI to remove one employee from multi-assigned property
 
----
+## Key API Endpoints
+- `POST /api/auth/login` - User login
+- `POST /api/admin/bills/generate-pdf` - Generate arranged PDF (1 or 3 per page)
+- `POST /api/admin/bills/split-by-employee` - Split bills by employee
+- `PUT /api/admin/submissions/{id}` - Update submission (with photo editing)
+- `POST /api/employee/survey` - Submit survey data
 
-## Known Issues
-
-### P1: Mobile Photo Watermark
-- Watermark may not apply on some mobile cameras
-- Needs user verification on real device
-
----
-
-## Technical Debt
-
-### High Priority
-1. **Backend Refactoring** - `server.py` is 2800+ lines
-   - Split into modular FastAPI routers
-
----
-
-## Future/Backlog Tasks
-
-1. **Offline Support** - Enable surveyor mobile to work offline
-2. **Download ZIP** - All split-employee PDFs as single ZIP
-3. **Remove Employee** - Option to remove specific employee from assignment
-4. **Push Notifications** - For new assignments
-
----
+## Database Schema (Key Collections)
+- `users` - User accounts with roles
+- `batches` - PDF upload batches
+- `bills` - Individual bills extracted from PDFs
+- `properties` - Properties created from bills
+- `submissions` - Survey submissions
+- `attendance` - Daily attendance records
 
 ## Test Credentials
-- **Admin**: `admin` / `nastu123`
-- **Employee**: `rajeev_gurgaon` / `test123`
+- **Admin:** username: `admin`, password: `nastu123`
+- **Surveyor:** Create via admin panel
 
-## Key Files
-- `/app/backend/server.py` - Main backend
-- `/app/frontend/src/pages/employee/Properties.js` - Surveyor property list (updated)
-- `/app/frontend/src/pages/employee/Survey.js` - Survey form
-- `/app/frontend/src/pages/admin/Bills.js` - PDF bills management
-
----
-
-*Last Updated: January 11, 2026*
+## File Structure
+```
+/app/
+├── backend/
+│   ├── .env
+│   ├── requirements.txt
+│   └── server.py         # Main backend (needs refactoring)
+└── frontend/
+    └── src/
+        ├── pages/
+        │   ├── admin/
+        │   │   ├── Bills.js
+        │   │   ├── BillsMap.js
+        │   │   ├── Map.js
+        │   │   └── Submissions.js
+        │   └── employee/
+        │       ├── Properties.js
+        │       └── Survey.js
+        └── components/ui/  # Shadcn components
+```
