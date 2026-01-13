@@ -895,7 +895,7 @@ export default function BillsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Generate PDF Dialog - Simple, no numbering options */}
+        {/* Generate PDF Dialog - with bills per page option */}
         <Dialog open={generateDialog} onOpenChange={setGenerateDialog}>
           <DialogContent>
             <DialogHeader>
@@ -904,12 +904,33 @@ export default function BillsPage() {
                 Generate PDF in original sequence. Bills without owner name are already skipped.
               </DialogDescription>
             </DialogHeader>
-            <div className="p-4 bg-slate-50 rounded-lg">
-              <p className="text-sm text-slate-600">
-                • PDF will keep original sequence from uploaded file<br/>
-                • Bills with missing owner names are excluded<br/>
-                • Serial numbers are from original PDF (N/A if missing)
-              </p>
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-600">
+                  • PDF will keep original sequence from uploaded file<br/>
+                  • Bills with missing owner names are excluded<br/>
+                  • Serial numbers are from original PDF (N/A if missing)
+                </p>
+              </div>
+              
+              {/* Bills per page option */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Bills per A4 Page</Label>
+                <Select value={pdfOptions.bills_per_page || '1'} onValueChange={(val) => setPdfOptions({...pdfOptions, bills_per_page: val})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 Bill per Page (Full Size - Recommended)</SelectItem>
+                    <SelectItem value="3">3 Bills per Page (Compact)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">
+                  {pdfOptions.bills_per_page === '3' 
+                    ? '3 bills stacked on each A4 Landscape page' 
+                    : 'Each bill on separate A4 Landscape page (full width)'}
+                </p>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setGenerateDialog(false)}>
