@@ -383,6 +383,90 @@ export default function PropertyMap() {
     }
   };
 
+  // View Survey Data for a property
+  const handleViewSurvey = async (property) => {
+    setSelectedProperty(property);
+    setLoadingSurvey(true);
+    setSurveyDialog(true);
+    
+    try {
+      // Fetch submission for this property
+      const response = await axios.get(`${API_URL}/admin/submissions?limit=100`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const submissions = response.data.submissions || [];
+      const submission = submissions.find(s => s.property_record_id === property.id || s.property_id === property.property_id);
+      
+      setSurveyData(submission || null);
+    } catch (error) {
+      toast.error('Failed to load survey data');
+      setSurveyData(null);
+    } finally {
+      setLoadingSurvey(false);
+    }
+  };
+
+  // Approve survey
+  const handleApproveSurvey = async () => {
+    if (!surveyData) return;
+    
+    try {
+      await axios.post(`${API_URL}/admin/submissions/approve`, {
+        submission_id: surveyData.id,
+        action: 'APPROVE'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success('Survey approved');
+      setSurveyDialog(false);
+      fetchProperties();
+    } catch (error) {
+      toast.error('Failed to approve survey');
+    }
+  };
+
+  // Reject survey
+  const handleRejectSurvey = async () => {
+    if (!surveyData || !rejectRemarks.trim()) {
+      toast.error('Please provide rejection remarks');
+      return;
+    }
+    
+    try {
+      await axios.post(`${API_URL}/admin/submissions/approve`, {
+        submission_id: surveyData.id,
+        action: 'REJECT',
+        remarks: rejectRemarks
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success('Survey rejected');
+      setRejectDialog(false);
+      setSurveyDialog(false);
+      setRejectRemarks('');
+      fetchProperties();
+    } catch (error) {
+      toast.error('Failed to reject survey');
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const colors = {
+      'Pending': 'bg-amber-100 text-amber-700',
+      'Completed': 'bg-emerald-100 text-emerald-700',
+      'Approved': 'bg-emerald-100 text-emerald-700',
+      'Rejected': 'bg-red-100 text-red-700'
+    };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${colors[status] || 'bg-slate-100 text-slate-700'}`}>
+        {status || 'Pending'}
+      </span>
+    );
+  };
+
   const getTileLayer = () => {
     if (mapType === 'satellite') {
       return (
