@@ -2456,8 +2456,8 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 2 BILLS PER PAGE - Use show_pdf_page with proper handling
-        # Source has rotation=90, we copy pages and remove rotation first
+        # 2 BILLS PER PAGE - Properly handle rotated source PDFs
+        # Source has rotation=90, we need to derotate first
         
         bills_per_page = 2
         
@@ -2465,23 +2465,55 @@ async def generate_arranged_pdf(
         A4_WIDTH = 595.28
         A4_HEIGHT = 841.89
         
-        # Get source info
-        src_page = src_pdf[0]
-        
-        # Source dimensions (as stored, before rotation)
-        # rect: 842 x 595, rotation: 90
-        # This means content is landscape but displayed as portrait
-        src_width = src_page.rect.width   # 842
-        src_height = src_page.rect.height  # 595
-        
         # Each slot
         slot_height = A4_HEIGHT / bills_per_page  # ~420.94
         
-        # Scale landscape content to fit A4 width
-        scale = A4_WIDTH / src_width  # 595.28 / 842 = 0.707
+        # Create a temporary document with derotated pages
+        temp_pdf = fitz.open()
         
-        scaled_width = src_width * scale   # ~595
-        scaled_height = src_height * scale  # ~420
+        for i in range(len(src_pdf)):
+            src_page = src_pdf[i]
+            
+            # Get the page's rotation
+            rotation = src_page.rotation
+            
+            if rotation != 0:
+                # Create new page with corrected dimensions
+                # If rotation is 90 or 270, swap width/height
+                if rotation in [90, 270]:
+                    new_width = src_page.rect.height
+                    new_height = src_page.rect.width
+                else:
+                    new_width = src_page.rect.width
+                    new_height = src_page.rect.height
+                
+                # Create new page
+                new_page = temp_pdf.new_page(width=new_width, height=new_height)
+                
+                # Copy content with counter-rotation
+                new_page.show_pdf_page(
+                    new_page.rect,
+                    src_pdf,
+                    i,
+                    rotate=-rotation  # Counter-rotate
+                )
+            else:
+                # No rotation, just copy
+                temp_pdf.insert_pdf(src_pdf, from_page=i, to_page=i)
+        
+        # Now use temp_pdf which has properly oriented pages
+        # Get dimensions of derotated page
+        temp_page = temp_pdf[0]
+        src_width = temp_page.rect.width   # Should be 595 (portrait width)
+        src_height = temp_page.rect.height  # Should be 842 (portrait height)
+        
+        # Scale to fit in slot
+        scale_w = A4_WIDTH / src_width
+        scale_h = slot_height / src_height
+        scale = min(scale_w, scale_h)
+        
+        scaled_width = src_width * scale
+        scaled_height = src_height * scale
         
         x_offset = (A4_WIDTH - scaled_width) / 2
         
@@ -2490,7 +2522,7 @@ async def generate_arranged_pdf(
         
         for bill in bills:
             page_num = bill.get("page_number", 1) - 1
-            if page_num < 0 or page_num >= len(src_pdf):
+            if page_num < 0 or page_num >= len(temp_pdf):
                 continue
             
             if position == 0:
@@ -2506,11 +2538,13 @@ async def generate_arranged_pdf(
                 y_start + y_offset_center + scaled_height
             )
             
-            # Simply copy the page content - show_pdf_page handles rotation
-            current_page.show_pdf_page(dest_rect, src_pdf, page_num)
+            # Use derotated temp_pdf
+            current_page.show_pdf_page(dest_rect, temp_pdf, page_num)
             
             included_count += 1
             position = (position + 1) % bills_per_page
+        
+        temp_pdf.close()
     
     output_pdf.save(str(output_path))
     output_pdf.close()
