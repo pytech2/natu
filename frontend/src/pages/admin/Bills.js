@@ -923,7 +923,8 @@ export default function BillsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">1 Bill per Page (Full Size - Recommended)</SelectItem>
+                    <SelectItem value="1">1 Bill per Page (Full Size)</SelectItem>
+                    <SelectItem value="2">2 Bills per Page</SelectItem>
                     <SelectItem value="3">3 Bills per Page (Compact)</SelectItem>
                   </SelectContent>
                 </Select>
