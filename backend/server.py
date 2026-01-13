@@ -2516,8 +2516,8 @@ async def generate_arranged_pdf(
                 y_start + scaled_height         # bottom (fills slot)
             )
             
-            # Insert bill WITHOUT rotation - keeps landscape orientation
-            current_page.show_pdf_page(dest_rect, src_pdf, page_num)
+            # Insert bill with 180° rotation to fix upside-down orientation
+            current_page.show_pdf_page(dest_rect, src_pdf, page_num, rotate=180)
             
             included_count += 1
             position = (position + 1) % bills_per_page
