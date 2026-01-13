@@ -2456,8 +2456,8 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 2 BILLS PER PAGE - Render each bill as image to avoid rotation/clipping issues
-        # This ensures full content is captured without any cropping
+        # 2 BILLS PER PAGE - Use show_pdf_page with proper handling
+        # Source has rotation=90, we copy pages and remove rotation first
         
         bills_per_page = 2
         
@@ -2465,8 +2465,25 @@ async def generate_arranged_pdf(
         A4_WIDTH = 595.28
         A4_HEIGHT = 841.89
         
-        # Each slot height on A4
+        # Get source info
+        src_page = src_pdf[0]
+        
+        # Source dimensions (as stored, before rotation)
+        # rect: 842 x 595, rotation: 90
+        # This means content is landscape but displayed as portrait
+        src_width = src_page.rect.width   # 842
+        src_height = src_page.rect.height  # 595
+        
+        # Each slot
         slot_height = A4_HEIGHT / bills_per_page  # ~420.94
+        
+        # Scale landscape content to fit A4 width
+        scale = A4_WIDTH / src_width  # 595.28 / 842 = 0.707
+        
+        scaled_width = src_width * scale   # ~595
+        scaled_height = src_height * scale  # ~420
+        
+        x_offset = (A4_WIDTH - scaled_width) / 2
         
         current_page = None
         position = 0
@@ -2479,40 +2496,18 @@ async def generate_arranged_pdf(
             if position == 0:
                 current_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
             
-            # Get source page
-            src_page_obj = src_pdf[page_num]
-            
-            # Render page to pixmap (this correctly handles rotation)
-            # The pixmap will have the content in its displayed orientation
-            pix = src_page_obj.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x resolution for quality
-            
-            # Pixmap dimensions (after rotation is applied)
-            pix_width = pix.width
-            pix_height = pix.height
-            
-            # Scale to fit in slot
-            scale_w = A4_WIDTH / pix_width
-            scale_h = slot_height / pix_height
-            scale = min(scale_w, scale_h) * 2  # multiply by 2 because pixmap is 2x
-            
-            # Actual dimensions on output
-            out_width = pix_width * scale / 2
-            out_height = pix_height * scale / 2
-            
-            # Center
-            x_offset = (A4_WIDTH - out_width) / 2
             y_start = position * slot_height
-            y_offset = (slot_height - out_height) / 2
+            y_offset_center = (slot_height - scaled_height) / 2
             
-            # Insert the pixmap as image
-            rect = fitz.Rect(
+            dest_rect = fitz.Rect(
                 x_offset,
-                y_start + y_offset,
-                x_offset + out_width,
-                y_start + y_offset + out_height
+                y_start + y_offset_center,
+                x_offset + scaled_width,
+                y_start + y_offset_center + scaled_height
             )
             
-            current_page.insert_image(rect, pixmap=pix)
+            # Simply copy the page content - show_pdf_page handles rotation
+            current_page.show_pdf_page(dest_rect, src_pdf, page_num)
             
             included_count += 1
             position = (position + 1) % bills_per_page
