@@ -2415,7 +2415,7 @@ async def generate_arranged_pdf(
     bills_per_page: int = Form(3),  # Default 3 bills per A4 page
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate PDF with multiple bills per A4 page - skips bills without owner name. No numbering added."""
+    """Generate PDF with multiple bills per A4 page - handles landscape bills correctly."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2449,16 +2449,26 @@ async def generate_arranged_pdf(
     src_pdf = fitz.open(str(original_pdf_path))
     output_pdf = fitz.open()
     
-    # A4 dimensions in points (595.276 x 841.890)
-    a4_width = 595.276
-    a4_height = 841.890
+    # Check first page to determine if source is landscape
+    first_page = src_pdf[0]
+    src_is_landscape = first_page.rect.width > first_page.rect.height
+    
+    if src_is_landscape:
+        # Source bills are LANDSCAPE - use A4 LANDSCAPE output with 3 bills stacked
+        # A4 Landscape: 841.890 x 595.276 points
+        page_width = 841.890
+        page_height = 595.276
+    else:
+        # Source bills are Portrait - use A4 Portrait
+        page_width = 595.276
+        page_height = 841.890
     
     # Calculate dimensions for 3 bills per page (stacked vertically)
-    bill_height = a4_height / bills_per_page  # ~280 points per bill
-    margin = 5  # Small margin between bills
+    bill_height = page_height / bills_per_page
+    margin = 3  # Small margin
     
     included_count = 0
-    current_a4_page = None
+    current_output_page = None
     bill_position = 0  # 0, 1, 2 for top, middle, bottom
     
     for bill in bills:
@@ -2470,23 +2480,22 @@ async def generate_arranged_pdf(
         src_page = src_pdf[page_num]
         src_rect = src_page.rect
         
-        # Start new A4 page if needed
+        # Start new output page if needed
         if bill_position == 0:
-            current_a4_page = output_pdf.new_page(width=a4_width, height=a4_height)
+            current_output_page = output_pdf.new_page(width=page_width, height=page_height)
         
-        # Calculate destination rectangle for this bill on the A4 page
+        # Calculate destination rectangle for this bill
         y_start = bill_position * bill_height + margin
         y_end = (bill_position + 1) * bill_height - margin
         
-        dest_rect = fitz.Rect(margin, y_start, a4_width - margin, y_end)
+        dest_rect = fitz.Rect(margin, y_start, page_width - margin, y_end)
         
-        # Scale and place the source page into the destination rectangle
-        # Maintain aspect ratio
+        # Calculate scaling to fit the bill into dest_rect while maintaining aspect ratio
         src_aspect = src_rect.width / src_rect.height
         dest_aspect = dest_rect.width / dest_rect.height
         
         if src_aspect > dest_aspect:
-            # Source is wider - fit to width
+            # Source is wider relative to dest - fit to width
             new_width = dest_rect.width
             new_height = new_width / src_aspect
             y_offset = (dest_rect.height - new_height) / 2
@@ -2508,11 +2517,18 @@ async def generate_arranged_pdf(
                 dest_rect.y1
             )
         
-        # Insert the page as an image/xobject
-        current_a4_page.show_pdf_page(final_rect, src_pdf, page_num)
+        # Insert the source page content into the destination rectangle
+        current_output_page.show_pdf_page(final_rect, src_pdf, page_num)
         
-        # Draw a light border around each bill for separation
-        current_a4_page.draw_rect(dest_rect, color=(0.8, 0.8, 0.8), width=0.5)
+        # Draw a light separator line between bills
+        if bill_position < bills_per_page - 1:
+            line_y = (bill_position + 1) * bill_height
+            current_output_page.draw_line(
+                fitz.Point(margin, line_y),
+                fitz.Point(page_width - margin, line_y),
+                color=(0.7, 0.7, 0.7),
+                width=0.5
+            )
         
         included_count += 1
         bill_position = (bill_position + 1) % bills_per_page
@@ -2521,8 +2537,9 @@ async def generate_arranged_pdf(
     output_pdf.close()
     src_pdf.close()
     
+    orientation = "landscape" if src_is_landscape else "portrait"
     return {
-        "message": f"Generated PDF with {included_count} bills ({bills_per_page} per page)",
+        "message": f"Generated PDF with {included_count} bills ({bills_per_page} per page, {orientation})",
         "filename": output_filename,
         "download_url": f"/api/uploads/{output_filename}"
     }
