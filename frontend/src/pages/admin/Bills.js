@@ -87,7 +87,8 @@ export default function BillsPage() {
   const [pdfOptions, setPdfOptions] = useState({
     sn_position: 'top-right',
     sn_font_size: 48,
-    sn_color: 'red'
+    sn_color: 'red',
+    bills_per_page: '1'  // Default: 1 bill per page (full size)
   });
   
   // Split by employee state
