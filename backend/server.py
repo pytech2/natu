@@ -2412,10 +2412,10 @@ async def arrange_bills_by_route(
 async def generate_arranged_pdf(
     batch_id: str = Form(None),
     colony: str = Form(None),
-    bills_per_page: int = Form(3),  # Default 3 bills per A4 page
+    bills_per_page: int = Form(1),  # Default 1 bill per page (full page)
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate PDF with multiple bills per A4 page - handles landscape bills correctly."""
+    """Generate PDF with bills - ONE bill per A4 Landscape page, full width."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2440,7 +2440,6 @@ async def generate_arranged_pdf(
     if not original_pdf_path.exists():
         raise HTTPException(status_code=404, detail="Original PDF file not found")
     
-    # Create new PDF with 3 bills per A4 page
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_filename = f"arranged_{colony or 'all'}_{timestamp}.pdf"
     output_path = UPLOAD_DIR / output_filename
@@ -2449,97 +2448,110 @@ async def generate_arranged_pdf(
     src_pdf = fitz.open(str(original_pdf_path))
     output_pdf = fitz.open()
     
-    # Check first page to determine if source is landscape
-    first_page = src_pdf[0]
-    src_is_landscape = first_page.rect.width > first_page.rect.height
-    
-    if src_is_landscape:
-        # Source bills are LANDSCAPE - use A4 LANDSCAPE output with 3 bills stacked
-        # A4 Landscape: 841.890 x 595.276 points
-        page_width = 841.890
-        page_height = 595.276
-    else:
-        # Source bills are Portrait - use A4 Portrait
-        page_width = 595.276
-        page_height = 841.890
-    
-    # Calculate dimensions for 3 bills per page (stacked vertically)
-    bill_height = page_height / bills_per_page
-    margin = 3  # Small margin
+    # A4 Landscape dimensions: 842 x 595 points (width x height)
+    page_width = 841.890
+    page_height = 595.276
+    margin = 10  # Minimal margin
     
     included_count = 0
-    current_output_page = None
-    bill_position = 0  # 0, 1, 2 for top, middle, bottom
     
-    for bill in bills:
-        page_num = bill.get("page_number", 1) - 1
-        if page_num < 0 or page_num >= len(src_pdf):
-            continue
+    if bills_per_page == 1:
+        # ONE BILL PER PAGE - Full landscape, no stacking
+        for bill in bills:
+            page_num = bill.get("page_number", 1) - 1
+            if page_num < 0 or page_num >= len(src_pdf):
+                continue
+            
+            # Create new A4 Landscape page for each bill
+            output_page = output_pdf.new_page(width=page_width, height=page_height)
+            
+            # Get source page
+            src_page = src_pdf[page_num]
+            src_rect = src_page.rect
+            
+            # Destination: Full page with minimal margins
+            dest_rect = fitz.Rect(margin, margin, page_width - margin, page_height - margin)
+            
+            # Scale source to fill entire destination while maintaining aspect ratio
+            src_aspect = src_rect.width / src_rect.height
+            dest_aspect = dest_rect.width / dest_rect.height
+            
+            if src_aspect > dest_aspect:
+                # Source is wider - fit to width, center vertically
+                new_width = dest_rect.width
+                new_height = new_width / src_aspect
+                y_offset = (dest_rect.height - new_height) / 2
+                final_rect = fitz.Rect(
+                    dest_rect.x0,
+                    dest_rect.y0 + y_offset,
+                    dest_rect.x1,
+                    dest_rect.y0 + y_offset + new_height
+                )
+            else:
+                # Source is taller - fit to height, center horizontally
+                new_height = dest_rect.height
+                new_width = new_height * src_aspect
+                x_offset = (dest_rect.width - new_width) / 2
+                final_rect = fitz.Rect(
+                    dest_rect.x0 + x_offset,
+                    dest_rect.y0,
+                    dest_rect.x0 + x_offset + new_width,
+                    dest_rect.y1
+                )
+            
+            # Insert source page scaled to fill the landscape page
+            output_page.show_pdf_page(final_rect, src_pdf, page_num)
+            included_count += 1
+    else:
+        # Multiple bills per page (stacked vertically)
+        bill_height = page_height / bills_per_page
+        current_output_page = None
+        bill_position = 0
         
-        # Get source page
-        src_page = src_pdf[page_num]
-        src_rect = src_page.rect
-        
-        # Start new output page if needed
-        if bill_position == 0:
-            current_output_page = output_pdf.new_page(width=page_width, height=page_height)
-        
-        # Calculate destination rectangle for this bill
-        y_start = bill_position * bill_height + margin
-        y_end = (bill_position + 1) * bill_height - margin
-        
-        dest_rect = fitz.Rect(margin, y_start, page_width - margin, y_end)
-        
-        # Calculate scaling to fit the bill into dest_rect while maintaining aspect ratio
-        src_aspect = src_rect.width / src_rect.height
-        dest_aspect = dest_rect.width / dest_rect.height
-        
-        if src_aspect > dest_aspect:
-            # Source is wider relative to dest - fit to width
-            new_width = dest_rect.width
-            new_height = new_width / src_aspect
-            y_offset = (dest_rect.height - new_height) / 2
-            final_rect = fitz.Rect(
-                dest_rect.x0,
-                dest_rect.y0 + y_offset,
-                dest_rect.x1,
-                dest_rect.y0 + y_offset + new_height
-            )
-        else:
-            # Source is taller - fit to height
-            new_height = dest_rect.height
-            new_width = new_height * src_aspect
-            x_offset = (dest_rect.width - new_width) / 2
-            final_rect = fitz.Rect(
-                dest_rect.x0 + x_offset,
-                dest_rect.y0,
-                dest_rect.x0 + x_offset + new_width,
-                dest_rect.y1
-            )
-        
-        # Insert the source page content into the destination rectangle
-        current_output_page.show_pdf_page(final_rect, src_pdf, page_num)
-        
-        # Draw a light separator line between bills
-        if bill_position < bills_per_page - 1:
-            line_y = (bill_position + 1) * bill_height
-            current_output_page.draw_line(
-                fitz.Point(margin, line_y),
-                fitz.Point(page_width - margin, line_y),
-                color=(0.7, 0.7, 0.7),
-                width=0.5
-            )
-        
-        included_count += 1
-        bill_position = (bill_position + 1) % bills_per_page
+        for bill in bills:
+            page_num = bill.get("page_number", 1) - 1
+            if page_num < 0 or page_num >= len(src_pdf):
+                continue
+            
+            src_page = src_pdf[page_num]
+            src_rect = src_page.rect
+            
+            if bill_position == 0:
+                current_output_page = output_pdf.new_page(width=page_width, height=page_height)
+            
+            y_start = bill_position * bill_height + 2
+            y_end = (bill_position + 1) * bill_height - 2
+            dest_rect = fitz.Rect(margin, y_start, page_width - margin, y_end)
+            
+            src_aspect = src_rect.width / src_rect.height
+            dest_aspect = dest_rect.width / dest_rect.height
+            
+            if src_aspect > dest_aspect:
+                new_width = dest_rect.width
+                new_height = new_width / src_aspect
+                y_offset = (dest_rect.height - new_height) / 2
+                final_rect = fitz.Rect(dest_rect.x0, dest_rect.y0 + y_offset, dest_rect.x1, dest_rect.y0 + y_offset + new_height)
+            else:
+                new_height = dest_rect.height
+                new_width = new_height * src_aspect
+                x_offset = (dest_rect.width - new_width) / 2
+                final_rect = fitz.Rect(dest_rect.x0 + x_offset, dest_rect.y0, dest_rect.x0 + x_offset + new_width, dest_rect.y1)
+            
+            current_output_page.show_pdf_page(final_rect, src_pdf, page_num)
+            
+            if bill_position < bills_per_page - 1:
+                line_y = (bill_position + 1) * bill_height
+                current_output_page.draw_line(fitz.Point(margin, line_y), fitz.Point(page_width - margin, line_y), color=(0.7, 0.7, 0.7), width=0.5)
+            
+            included_count += 1
+            bill_position = (bill_position + 1) % bills_per_page
     
     output_pdf.save(str(output_path))
     output_pdf.close()
     src_pdf.close()
     
-    orientation = "landscape" if src_is_landscape else "portrait"
     return {
-        "message": f"Generated PDF with {included_count} bills ({bills_per_page} per page, {orientation})",
+        "message": f"Generated PDF with {included_count} bills ({bills_per_page} per page, A4 Landscape)",
         "filename": output_filename,
         "download_url": f"/api/uploads/{output_filename}"
     }
