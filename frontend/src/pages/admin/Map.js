@@ -1052,7 +1052,7 @@ export default function PropertyMap() {
 
         {/* Reject Dialog */}
         <Dialog open={rejectDialog} onOpenChange={setRejectDialog}>
-          <DialogContent>
+          <DialogContent className="z-[10000]" style={{zIndex: 10000}}>
             <DialogHeader>
               <DialogTitle>Reject Survey</DialogTitle>
               <DialogDescription>
