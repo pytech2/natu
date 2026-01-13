@@ -2456,45 +2456,52 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 2 BILLS PER PAGE - Stack landscape bills vertically on A4 portrait
-        # Bills are scaled to fit width, 2 per page for better readability
-        #
-        # Source: Landscape 842 x 595 pts (may have internal rotation)
-        # Target: A4 Portrait (595.28 x 841.89 pts)
+        # 2 BILLS PER PAGE - Stack bills vertically on A4 portrait
+        # Handle source PDF rotation properly
         #
         # ┌─────────────────────────┐
-        # │ ═══════════════════════ │  ← Bill 1 (landscape, scaled to width)
+        # │ ═══════════════════════ │  ← Bill 1
         # │                         │
         # ├─────────────────────────┤
-        # │ ═══════════════════════ │  ← Bill 2 (landscape, scaled to width)
+        # │ ═══════════════════════ │  ← Bill 2
         # │                         │
         # └─────────────────────────┘
         
-        # Force 2 bills per page for proper fit
+        # Force 2 bills per page
         bills_per_page = 2
         
         # A4 dimensions in points
         A4_WIDTH = 595.28
         A4_HEIGHT = 841.89
         
-        # Get source bill dimensions (considering rotation)
+        # Get source page and check rotation
         src_page = src_pdf[0]
-        src_rotation = src_page.rotation  # Check if source has rotation
+        src_rotation = src_page.rotation
         
-        # Get actual visible dimensions (accounting for rotation)
-        src_rect = src_page.rect
-        src_width = src_rect.width   # ~842 (landscape width)
-        src_height = src_rect.height  # ~595 (landscape height)
+        # Get actual DISPLAYED dimensions (accounting for rotation)
+        # When rotation is 90 or 270, width and height are swapped visually
+        if src_rotation in [90, 270]:
+            # Rotated: use mediabox which has correct dimensions
+            src_width = src_page.mediabox.width   # 595 (displayed width)
+            src_height = src_page.mediabox.height  # 842 (displayed height)
+        else:
+            src_width = src_page.rect.width
+            src_height = src_page.rect.height
         
-        # Scale to fit A4 width (full width usage)
-        scale = A4_WIDTH / src_width  # ~0.707
+        # Each bill slot on A4
+        slot_height = A4_HEIGHT / bills_per_page  # ~420.94 pts
+        
+        # Scale to fit: choose the smaller scale to fit both width and height
+        scale_w = A4_WIDTH / src_width
+        scale_h = slot_height / src_height
+        scale = min(scale_w, scale_h)  # Use smaller to ensure full bill fits
         
         # Scaled bill dimensions
-        scaled_width = A4_WIDTH  # full width
-        scaled_height = src_height * scale  # ~420 pts
+        scaled_width = src_width * scale
+        scaled_height = src_height * scale
         
-        # Each bill slot height
-        slot_height = A4_HEIGHT / bills_per_page  # ~420.94 pts
+        # Center horizontally and vertically
+        x_offset = (A4_WIDTH - scaled_width) / 2
         
         current_page = None
         position = 0
@@ -2508,28 +2515,21 @@ async def generate_arranged_pdf(
             if position == 0:
                 current_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
             
-            # Calculate Y position - stack from top
+            # Calculate Y position
             y_start = position * slot_height
-            
-            # Center bill vertically within its slot
             y_offset = (slot_height - scaled_height) / 2
             
-            # Destination rectangle - full width, centered in slot
+            # Destination rectangle - centered
             dest_rect = fitz.Rect(
-                0,                              # left
-                y_start + y_offset,             # top (centered in slot)
-                scaled_width,                   # right (full width)
-                y_start + y_offset + scaled_height  # bottom
+                x_offset,
+                y_start + y_offset,
+                x_offset + scaled_width,
+                y_start + y_offset + scaled_height
             )
             
-            # Check source page rotation and compensate
-            src_page_rotation = src_pdf[page_num].rotation
-            # If source has 90° rotation, we need to counter-rotate to show upright
-            # rotate parameter: 0, 90, 180, 270
-            counter_rotation = (360 - src_page_rotation) % 360 if src_page_rotation else 0
-            
-            # Insert bill with counter-rotation to display correctly
-            current_page.show_pdf_page(dest_rect, src_pdf, page_num, rotate=counter_rotation)
+            # Insert bill - PyMuPDF handles rotation automatically
+            # No need for manual counter-rotation
+            current_page.show_pdf_page(dest_rect, src_pdf, page_num)
             
             included_count += 1
             position = (position + 1) % bills_per_page
