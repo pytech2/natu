@@ -880,6 +880,200 @@ export default function PropertyMap() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Survey View Dialog */}
+        <Dialog open={surveyDialog} onOpenChange={setSurveyDialog}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-heading flex items-center justify-between">
+                <span>Survey Data - {selectedProperty?.property_id}</span>
+                {surveyData && getStatusBadge(surveyData.status)}
+              </DialogTitle>
+            </DialogHeader>
+
+            {loadingSurvey ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              </div>
+            ) : surveyData ? (
+              <div className="space-y-4">
+                {/* Property Info */}
+                <Card className="bg-slate-50">
+                  <CardHeader className="py-2">
+                    <CardTitle className="text-sm text-slate-600 flex items-center gap-2">
+                      <Home className="w-4 h-4" /> Property Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="py-2">
+                    <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-slate-500">Serial #</p>
+                        <p className="font-medium">{selectedProperty?.serial_na ? 'N/A' : selectedProperty?.serial_number || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">Property ID</p>
+                        <p className="font-mono font-medium">{selectedProperty?.property_id}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">Owner</p>
+                        <p className="font-medium">{selectedProperty?.owner_name || '-'}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Special Conditions */}
+                {(surveyData.special_condition || surveyData.self_certified !== undefined) && (
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardContent className="py-3">
+                      <div className="flex items-center gap-4">
+                        {surveyData.special_condition && (
+                          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
+                            surveyData.special_condition === 'house_locked' 
+                              ? 'bg-amber-100 text-amber-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {surveyData.special_condition === 'house_locked' ? (
+                              <><Lock className="w-4 h-4" /> House Locked</>
+                            ) : (
+                              <><UserX className="w-4 h-4" /> Owner Denied</>
+                            )}
+                          </div>
+                        )}
+                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
+                          surveyData.self_certified ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          <Check className="w-4 h-4" />
+                          Self Certified: {surveyData.self_certified ? 'Yes' : 'No'}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Survey Info */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-slate-500">New Owner Name</p>
+                    <p className="font-medium">{surveyData.new_owner_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">New Mobile</p>
+                    <p className="font-mono">{surveyData.new_mobile || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Receiver Name</p>
+                    <p className="font-medium">{surveyData.receiver_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Relation</p>
+                    <p>{surveyData.relation || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Submitted By</p>
+                    <p className="font-medium">{surveyData.employee_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Submitted At</p>
+                    <p>{new Date(surveyData.submitted_at).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                {/* GPS */}
+                <div className="p-3 bg-emerald-50 rounded-lg">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <MapPin className="w-4 h-4" />
+                    <span className="font-mono text-sm">
+                      Lat: {surveyData.latitude?.toFixed(6)}, Long: {surveyData.longitude?.toFixed(6)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Photos */}
+                {surveyData.photos?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-slate-500 mb-2 flex items-center gap-1">
+                      <Camera className="w-3 h-3" /> Photos
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {surveyData.photos.filter((p, i, self) => 
+                        i === self.findIndex(x => x.file_url === p.file_url)
+                      ).map((photo, idx) => (
+                        <img
+                          key={idx}
+                          src={`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`}
+                          alt={photo.photo_type}
+                          className="w-full h-36 object-cover rounded-lg cursor-pointer hover:opacity-90"
+                          onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`, '_blank')}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                {(!surveyData.status || surveyData.status === 'Pending') && (
+                  <div className="flex gap-3 pt-4 border-t">
+                    <Button
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                      onClick={handleApproveSurvey}
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Approve
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={() => setRejectDialog(true)}
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
+                )}
+
+                {/* Show rejection remarks if rejected */}
+                {surveyData.status === 'Rejected' && surveyData.review_remarks && (
+                  <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                    <p className="text-xs text-red-600 font-semibold mb-1">Rejection Reason:</p>
+                    <p className="text-red-700">{surveyData.review_remarks}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-slate-500">
+                <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">No survey data found</p>
+                <p className="text-sm">Survey has not been submitted for this property yet</p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Reject Dialog */}
+        <Dialog open={rejectDialog} onOpenChange={setRejectDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Survey</DialogTitle>
+              <DialogDescription>
+                Please provide a reason for rejection
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              placeholder="Enter rejection remarks..."
+              value={rejectRemarks}
+              onChange={(e) => setRejectRemarks(e.target.value)}
+              rows={4}
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRejectDialog(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleRejectSurvey}>
+                <X className="w-4 h-4 mr-2" />
+                Reject
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
