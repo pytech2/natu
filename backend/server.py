@@ -2415,7 +2415,7 @@ async def generate_arranged_pdf(
     bills_per_page: int = Form(1),  # 1 = full page, 3 = stacked vertically
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate PDF with invoices. 3 per page = stacked vertically like the reference."""
+    """Generate PDF with invoices. 3 per page = rotated to portrait & stacked vertically."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
     
@@ -2456,26 +2456,35 @@ async def generate_arranged_pdf(
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
             included_count += 1
     else:
-        # 3 BILLS PER PAGE - Stacked vertically (like reference final.pdf)
-        # Each invoice fills full width, 1/3 of page height
+        # 3 BILLS PER PAGE - Rotate landscape to portrait, then stack vertically
         # 
-        # ┌─────────────────────────────┐
-        # │         INVOICE 1           │  ← 1/3 height, full width
-        # ├─────────────────────────────┤
-        # │         INVOICE 2           │  ← 1/3 height, full width  
-        # ├─────────────────────────────┤
-        # │         INVOICE 3           │  ← 1/3 height, full width
-        # └─────────────────────────────┘
+        # Original: Landscape 842 x 595
+        # After rotation: Portrait 595 x 842
+        # 3 stacked: 595 x 2526
+        #
+        # ┌─────────────────┐
+        # │    INVOICE 1    │  ← Rotated 90° CCW
+        # │   (Portrait)    │
+        # ├─────────────────┤
+        # │    INVOICE 2    │  ← Rotated 90° CCW
+        # │   (Portrait)    │
+        # ├─────────────────┤
+        # │    INVOICE 3    │  ← Rotated 90° CCW
+        # │   (Portrait)    │
+        # └─────────────────┘
         
-        # Get source page dimensions
+        # Get source dimensions
         src_page = src_pdf[0]
-        src_width = src_page.rect.width   # Original width
-        src_height = src_page.rect.height  # Original height
+        src_width = src_page.rect.width   # 842 (landscape)
+        src_height = src_page.rect.height  # 595 (landscape)
         
-        # Output page: Same width as source, 3x the height (to stack 3 invoices)
-        # This way each invoice keeps its original size, just stacked
-        page_width = src_width
-        page_height = src_height * bills_per_page  # 3 invoices stacked = 3x height
+        # After 90° rotation: width becomes height, height becomes width
+        rotated_width = src_height   # 595
+        rotated_height = src_width   # 842
+        
+        # Output page: rotated width, 3x rotated height
+        page_width = rotated_width                    # 595
+        page_height = rotated_height * bills_per_page  # 842 * 3 = 2526
         
         current_page = None
         position = 0
@@ -2489,27 +2498,29 @@ async def generate_arranged_pdf(
             if position == 0:
                 current_page = output_pdf.new_page(width=page_width, height=page_height)
             
-            # Each invoice goes in its section (original size, no scaling)
-            y_start = position * src_height
+            # Calculate position for this invoice
+            y_start = position * rotated_height
             
+            # Destination rectangle (after rotation)
             dest_rect = fitz.Rect(
-                0,                    # left
-                y_start,              # top
-                src_width,            # right (full width)
-                y_start + src_height  # bottom (original height)
+                0,                      # left
+                y_start,                # top
+                rotated_width,          # right (595)
+                y_start + rotated_height # bottom (y + 842)
             )
             
-            # Insert invoice at original size
-            current_page.show_pdf_page(dest_rect, src_pdf, page_num)
+            # Insert with 90° counter-clockwise rotation
+            # rotate=90 means the content is rotated 90° CCW
+            current_page.show_pdf_page(dest_rect, src_pdf, page_num, rotate=90)
             
-            # Draw thin separator line
+            # Draw thin separator line between invoices
             if position < bills_per_page - 1:
-                line_y = (position + 1) * src_height
+                line_y = (position + 1) * rotated_height
                 current_page.draw_line(
                     fitz.Point(10, line_y),
-                    fitz.Point(src_width - 10, line_y),
-                    color=(0.5, 0.5, 0.5),
-                    width=0.3
+                    fitz.Point(rotated_width - 10, line_y),
+                    color=(0.6, 0.6, 0.6),
+                    width=0.5
                 )
             
             included_count += 1
