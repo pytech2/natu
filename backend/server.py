@@ -2507,15 +2507,17 @@ async def generate_arranged_pdf(
         src_width = temp_page.rect.width   # Should be 595 (portrait width)
         src_height = temp_page.rect.height  # Should be 842 (portrait height)
         
-        # Scale to fit in slot
-        scale_w = A4_WIDTH / src_width
-        scale_h = slot_height / src_height
+        # Scale to fit in slot - use 90% to ensure no cropping
+        scale_w = (A4_WIDTH * 0.90) / src_width
+        scale_h = (slot_height * 0.95) / src_height
         scale = min(scale_w, scale_h)
         
         scaled_width = src_width * scale
         scaled_height = src_height * scale
         
-        x_offset = (A4_WIDTH - scaled_width) / 2
+        # Add left margin to shift content right (5% of A4 width)
+        left_margin = A4_WIDTH * 0.05
+        x_offset = left_margin + (A4_WIDTH - left_margin - scaled_width) / 2
         
         current_page = None
         position = 0
