@@ -3014,32 +3014,11 @@ async def split_bills_by_specific_employees(
 
 @api_router.get("/uploads/{filename}")
 async def serve_upload(filename: str):
-    """Serve file - first check GridFS, then fallback to file system"""
-    # First try to serve from file system (backward compatibility)
+    """Serve file from uploads folder"""
     file_path = UPLOAD_DIR / filename
     if file_path.exists():
         return FileResponse(str(file_path))
-    
-    # Try to find in GridFS by filename
-    try:
-        cursor = fs_bucket.find({"filename": filename})
-        async for grid_out in cursor:
-            content = await fs_bucket.open_download_stream(grid_out._id)
-            file_content = await content.read()
-            content_type = grid_out.metadata.get("content_type", "application/octet-stream") if grid_out.metadata else "application/octet-stream"
-            return Response(content=file_content, media_type=content_type)
-    except Exception:
-        pass
-    
     raise HTTPException(status_code=404, detail="File not found")
-
-@api_router.get("/gridfs/{file_id}")
-async def serve_gridfs_file(file_id: str):
-    """Serve file directly from GridFS by file_id"""
-    content, filename, content_type = await get_file_from_gridfs(file_id)
-    if content is None:
-        raise HTTPException(status_code=404, detail="File not found")
-    return Response(content=content, media_type=content_type, headers={"Content-Disposition": f"inline; filename={filename}"})
 
 # ============== INITIALIZATION ==============
 
