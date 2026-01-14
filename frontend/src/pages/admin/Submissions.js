@@ -141,17 +141,14 @@ export default function Submissions() {
 
   const openEditDialog = (submission) => {
     setSelectedSubmission(submission);
-    // Submission data
+    // Submission data - matching Survey.js fields
     setEditData({
-      new_owner_name: submission.new_owner_name || '',
-      new_mobile: submission.new_mobile || '',
       receiver_name: submission.receiver_name || '',
+      receiver_mobile: submission.receiver_mobile || '',
       relation: submission.relation || '',
-      old_property_id: submission.old_property_id || '',
-      family_id: submission.family_id || '',
-      aadhar_number: submission.aadhar_number || '',
-      ward_number: submission.ward_number || '',
+      correct_colony_name: submission.correct_colony_name || '',
       remarks: submission.remarks || '',
+      self_satisfied: submission.self_satisfied || '',
       latitude: submission.latitude || '',
       longitude: submission.longitude || ''
     });
