@@ -457,10 +457,10 @@ export default function PropertyMap() {
 
   const getStatusBadge = (status) => {
     const colors = {
-      'Pending': 'bg-amber-100 text-amber-700',
-      'In Progress': 'bg-pink-100 text-pink-700',
-      'Completed': 'bg-emerald-100 text-emerald-700',
-      'Approved': 'bg-yellow-100 text-yellow-700',
+      'Pending': 'bg-red-100 text-red-700',
+      'In Progress': 'bg-yellow-100 text-yellow-700',
+      'Completed': 'bg-yellow-100 text-yellow-700',
+      'Approved': 'bg-green-100 text-green-700',
       'Rejected': 'bg-red-100 text-red-700'
     };
     return (
