@@ -136,10 +136,10 @@ const createNumberedIcon = (number, status, isNearest = false, propertyId = null
   
   // Fallback to numbered marker
   const colors = {
-    'Pending': '#22c55e',       // GREEN
-    'Completed': '#ec4899',     // PINK
-    'Approved': '#ec4899',      // PINK
-    'In Progress': '#3b82f6',
+    'Pending': '#ef4444',       // RED
+    'Completed': '#eab308',     // YELLOW
+    'Approved': '#22c55e',      // GREEN
+    'In Progress': '#eab308',
     'Rejected': '#ef4444',
     'default': '#22c55e'
   };
