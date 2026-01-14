@@ -728,6 +728,17 @@ export default function Submissions() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 flex items-center gap-1">
+                          <Phone className="w-3 h-3" /> Receiver Mobile
+                        </Label>
+                        <Input
+                          value={editData.receiver_mobile}
+                          onChange={(e) => setEditData({ ...editData, receiver_mobile: e.target.value })}
+                          className="bg-white font-mono"
+                          maxLength={10}
+                        />
+                      </div>
+                      <div className="space-y-2">
                         <Label className="text-xs text-slate-600">Relation with Owner</Label>
                         <Select
                           value={editData.relation}
@@ -745,44 +756,28 @@ export default function Submissions() {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs text-slate-600 flex items-center gap-1">
-                          <Hash className="w-3 h-3" /> Old Property ID
+                          <Building className="w-3 h-3" /> Correct Colony Name
                         </Label>
                         <Input
-                          value={editData.old_property_id}
-                          onChange={(e) => setEditData({ ...editData, old_property_id: e.target.value })}
+                          value={editData.correct_colony_name}
+                          onChange={(e) => setEditData({ ...editData, correct_colony_name: e.target.value })}
                           className="bg-white"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs text-slate-600 flex items-center gap-1">
-                          <Users className="w-3 h-3" /> Family ID
-                        </Label>
-                        <Input
-                          value={editData.family_id}
-                          onChange={(e) => setEditData({ ...editData, family_id: e.target.value })}
-                          className="bg-white"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs text-slate-600 flex items-center gap-1">
-                          <CreditCard className="w-3 h-3" /> Aadhar Number
-                        </Label>
-                        <Input
-                          value={editData.aadhar_number}
-                          onChange={(e) => setEditData({ ...editData, aadhar_number: e.target.value })}
-                          className="bg-white"
-                          maxLength={12}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs text-slate-600 flex items-center gap-1">
-                          <Building className="w-3 h-3" /> Ward Number
-                        </Label>
-                        <Input
-                          value={editData.ward_number}
-                          onChange={(e) => setEditData({ ...editData, ward_number: e.target.value })}
-                          className="bg-white"
-                        />
+                        <Label className="text-xs text-slate-600">Self Satisfied</Label>
+                        <Select
+                          value={editData.self_satisfied}
+                          onValueChange={(value) => setEditData({ ...editData, self_satisfied: value })}
+                        >
+                          <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Yes">Yes</SelectItem>
+                            <SelectItem value="No">No</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     
