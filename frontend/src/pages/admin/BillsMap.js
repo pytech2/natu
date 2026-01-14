@@ -68,9 +68,9 @@ const spreadOverlappingMarkers = (bills) => {
 // Custom marker showing PROPERTY ID with label (same as Survey Map)
 const createPropertyIdIcon = (propertyId, status) => {
   const colors = {
-    'Pending': '#22c55e',       // GREEN - pending
-    'Completed': '#ec4899',     // PINK - completed
-    'Approved': '#ec4899',      // PINK - approved
+    'Pending': '#ef4444',       // RED - pending
+    'Completed': '#eab308',     // YELLOW - completed
+    'Approved': '#22c55e',      // GREEN - approved
     'Residential': '#22c55e',   // GREEN
     'Commercial': '#f97316',    // Orange
     'Vacant Plot': '#22c55e',   // GREEN
