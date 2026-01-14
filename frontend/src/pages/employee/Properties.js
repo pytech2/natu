@@ -37,10 +37,10 @@ L.Icon.Default.mergeOptions({
 // Custom marker showing PROPERTY ID with label
 const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
   const colors = {
-    'Pending': '#22c55e',       // GREEN - pending (like in image)
-    'Completed': '#ec4899',     // PINK - survey completed
-    'Approved': '#ec4899',      // PINK - survey approved
-    'In Progress': '#3b82f6',   // Blue
+    'Pending': '#ef4444',       // RED - pending (no survey)
+    'Completed': '#eab308',     // YELLOW - survey completed
+    'Approved': '#22c55e',      // GREEN - survey approved
+    'In Progress': '#eab308',   // YELLOW
     'Rejected': '#ef4444',      // Red
     'default': '#22c55e'        // Green default
   };
