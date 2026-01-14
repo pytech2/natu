@@ -1104,8 +1104,8 @@ async def edit_submission(
     
     update_data = {}
     allowed_fields = [
-        "new_owner_name", "new_mobile", "receiver_name", "relation",
-        "old_property_id", "family_id", "aadhar_number", "ward_number",
+        "receiver_name", "receiver_mobile", "relation",
+        "correct_colony_name", "self_satisfied",
         "remarks", "latitude", "longitude"
     ]
     
