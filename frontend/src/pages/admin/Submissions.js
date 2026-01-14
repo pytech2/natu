@@ -405,32 +405,24 @@ export default function Submissions() {
                     <p className="font-medium">{selectedSubmission.new_owner_name || '-'}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">New Mobile</label>
-                    <p className="font-medium font-mono">{selectedSubmission.new_mobile || '-'}</p>
-                  </div>
-                  <div>
                     <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Receiver Name</label>
                     <p className="font-medium">{selectedSubmission.receiver_name || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Receiver Mobile</label>
+                    <p className="font-medium font-mono">{selectedSubmission.receiver_mobile || '-'}</p>
                   </div>
                   <div>
                     <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Relation</label>
                     <p className="font-medium">{selectedSubmission.relation || '-'}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Old Property ID</label>
-                    <p className="font-medium">{selectedSubmission.old_property_id || '-'}</p>
+                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Correct Colony Name</label>
+                    <p className="font-medium">{selectedSubmission.correct_colony_name || '-'}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Family ID</label>
-                    <p className="font-medium">{selectedSubmission.family_id || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Aadhar Number</label>
-                    <p className="font-medium font-mono">{selectedSubmission.aadhar_number || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Ward Number</label>
-                    <p className="font-medium">{selectedSubmission.ward_number || '-'}</p>
+                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Self Satisfied</label>
+                    <p className="font-medium">{selectedSubmission.self_satisfied || '-'}</p>
                   </div>
                   <div>
                     <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Submitted By</label>
