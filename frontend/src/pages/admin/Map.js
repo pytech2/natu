@@ -83,7 +83,8 @@ const spreadOverlappingMarkers = (properties) => {
 const createPropertyIdIcon = (propertyId, status) => {
   const colors = {
     'Pending': '#22c55e',       // GREEN - pending (no survey)
-    'Completed': '#ec4899',     // PINK - survey submitted
+    'In Progress': '#ec4899',   // PINK - survey submitted, pending review
+    'Completed': '#ec4899',     // PINK - survey submitted (legacy)
     'Approved': '#eab308',      // YELLOW - admin approved
     'Rejected': '#ef4444',      // RED - admin rejected
     'Residential': '#22c55e',   // GREEN
