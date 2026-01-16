@@ -1036,7 +1036,7 @@ export default function Submissions() {
                   )}
                 </Button>
               </div>
-              {(!selectedSubmission?.status || selectedSubmission?.status === 'Pending') && (
+              {canApproveReject && (!selectedSubmission?.status || selectedSubmission?.status === 'Pending') && (
                 <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
                   <Button
                     onClick={() => {
