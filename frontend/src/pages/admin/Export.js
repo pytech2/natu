@@ -83,6 +83,9 @@ export default function Export() {
       if (filters.batch_id) params.append('batch_id', filters.batch_id);
       if (filters.employee_id) params.append('employee_id', filters.employee_id);
       if (filters.status) params.append('status', filters.status);
+      if (filters.colony) params.append('colony', filters.colony);
+      if (filters.date_from) params.append('date_from', filters.date_from);
+      if (filters.date_to) params.append('date_to', filters.date_to);
 
       const response = await axios.get(`${API_URL}/admin/export?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -115,6 +118,9 @@ export default function Export() {
       if (filters.batch_id) params.append('batch_id', filters.batch_id);
       if (filters.employee_id) params.append('employee_id', filters.employee_id);
       if (filters.status) params.append('status', filters.status);
+      if (filters.colony) params.append('colony', filters.colony);
+      if (filters.date_from) params.append('date_from', filters.date_from);
+      if (filters.date_to) params.append('date_to', filters.date_to);
 
       const response = await axios.get(`${API_URL}/admin/export-pdf?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
