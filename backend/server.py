@@ -1139,8 +1139,8 @@ async def edit_submission(
     request: Request,
     current_user: dict = Depends(get_current_user)
 ):
-    if current_user["role"] != "ADMIN":
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user["role"] not in SUBMISSION_EDIT_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required for editing submissions")
     
     data = await request.json()
     
@@ -1185,8 +1185,8 @@ async def upload_submission_photo(
     current_user: dict = Depends(get_current_user)
 ):
     """Upload a new photo to a submission (admin only)"""
-    if current_user["role"] != "ADMIN":
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user["role"] not in SUBMISSION_EDIT_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required for editing submissions")
     
     # Save the file
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
