@@ -38,7 +38,7 @@ const RELATION_OPTIONS = [
 ];
 
 export default function Submissions() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [searchParams] = useSearchParams();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +49,11 @@ export default function Submissions() {
   const [editDialog, setEditDialog] = useState(false);
   const [rejectRemarks, setRejectRemarks] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [employeeFilter, setEmployeeFilter] = useState('');
+  const [colonyFilter, setColonyFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [employees, setEmployees] = useState([]);
+  const [colonies, setColonies] = useState([]);
   const [editData, setEditData] = useState({});
   const [editPropertyData, setEditPropertyData] = useState({});
   const [savingEdit, setSavingEdit] = useState(false);
@@ -57,7 +62,32 @@ export default function Submissions() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef(null);
 
+  // Check permissions based on role
+  const canEdit = user?.role === 'ADMIN';
+  const canApproveReject = user?.role === 'ADMIN';
+
   const employeeIdFilter = searchParams.get('employee_id') || '';
+
+  useEffect(() => {
+    fetchFilters();
+  }, []);
+
+  useEffect(() => {
+    fetchSubmissions();
+  }, [pagination.page, statusFilter, employeeFilter, colonyFilter, dateFilter, employeeIdFilter]);
+
+  const fetchFilters = async () => {
+    try {
+      const [empRes, areasRes] = await Promise.all([
+        axios.get(`${API_URL}/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_URL}/admin/wards`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: { wards: [] } }))
+      ]);
+      setEmployees(empRes.data.filter(u => u.role !== 'ADMIN'));
+      setColonies(areasRes.data.wards || []);
+    } catch (error) {
+      console.error('Failed to fetch filters');
+    }
+  };
 
   useEffect(() => {
     fetchSubmissions();
