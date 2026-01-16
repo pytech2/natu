@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 import {
   Select,
   SelectContent,
@@ -23,22 +24,29 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Download, FileSpreadsheet, Archive, Trash2, FolderOpen, FileText, MapPin, Clock, CheckCircle } from 'lucide-react';
+import { Download, FileSpreadsheet, Archive, Trash2, FolderOpen, FileText, MapPin, Clock, CheckCircle, Calendar, Building } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 export default function Export() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [batches, setBatches] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [colonies, setColonies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   
+  // Check if user can manage batches (only ADMIN)
+  const canManageBatches = user?.role === 'ADMIN';
+  
   const [filters, setFilters] = useState({
     batch_id: '',
     employee_id: '',
-    status: 'Approved'  // Default to Approved only
+    status: 'Approved',  // Default to Approved only
+    colony: '',
+    date_from: '',
+    date_to: ''
   });
 
   useEffect(() => {
@@ -47,16 +55,20 @@ export default function Export() {
 
   const fetchData = async () => {
     try {
-      const [batchRes, empRes] = await Promise.all([
+      const [batchRes, empRes, areasRes] = await Promise.all([
         axios.get(`${API_URL}/admin/batches`, {
           headers: { Authorization: `Bearer ${token}` }
-        }),
+        }).catch(() => ({ data: [] })),
         axios.get(`${API_URL}/admin/users`, {
           headers: { Authorization: `Bearer ${token}` }
-        })
+        }),
+        axios.get(`${API_URL}/admin/wards`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => ({ data: { wards: [] } }))
       ]);
-      setBatches(batchRes.data);
-      setEmployees(empRes.data.filter(u => u.role === 'EMPLOYEE'));
+      setBatches(batchRes.data || []);
+      setEmployees(empRes.data.filter(u => u.role !== 'ADMIN'));
+      setColonies(areasRes.data.wards || []);
     } catch (error) {
       console.error('Failed to fetch data');
     } finally {
