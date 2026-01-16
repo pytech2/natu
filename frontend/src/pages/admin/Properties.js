@@ -459,7 +459,21 @@ export default function Properties() {
                   setAssignDialog(true);
                 }}
               >
+                <UserPlus className="w-4 h-4 mr-2" />
                 Bulk Assign by Area
+              </Button>
+
+              <Button
+                variant="outline"
+                data-testid="unassign-employee-btn"
+                onClick={() => {
+                  setSelectedProperties([]);
+                  setUnassignDialog(true);
+                }}
+                className="border-orange-400 text-orange-600 hover:bg-orange-50"
+              >
+                <UserMinus className="w-4 h-4 mr-2" />
+                Unassign Employee
               </Button>
 
               {/* Delete All Button - Always visible when there are properties */}
