@@ -693,6 +693,139 @@ async def bulk_assign_by_ward(data: BulkAssignmentRequest, current_user: dict = 
     new_employee_names = ", ".join([emp["name"] for emp in new_employees])
     return {"message": f"Added {new_employee_names} to {updated_count} properties in {data.area}"}
 
+# ============== UNASSIGN PROPERTIES ==============
+class UnassignRequest(BaseModel):
+    property_ids: List[str]
+    employee_id: Optional[str] = None  # If provided, only unassign this employee. If not, unassign all.
+
+@api_router.post("/admin/unassign")
+async def unassign_properties(data: UnassignRequest, current_user: dict = Depends(get_current_user)):
+    """Unassign employee(s) from properties"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if not data.property_ids:
+        raise HTTPException(status_code=400, detail="No properties selected")
+    
+    updated_count = 0
+    
+    for prop_id in data.property_ids:
+        prop = await db.properties.find_one({"id": prop_id}, {"_id": 0})
+        if not prop:
+            continue
+        
+        if data.employee_id:
+            # Unassign specific employee
+            existing_emp_ids = prop.get("assigned_employee_ids") or []
+            if prop.get("assigned_employee_id"):
+                if prop["assigned_employee_id"] not in existing_emp_ids:
+                    existing_emp_ids.append(prop["assigned_employee_id"])
+            
+            # Remove the specified employee
+            new_emp_ids = [eid for eid in existing_emp_ids if eid != data.employee_id]
+            
+            if new_emp_ids:
+                # Get remaining employee names
+                remaining_employees = await db.users.find({"id": {"$in": new_emp_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(None)
+                remaining_names = ", ".join([emp["name"] for emp in remaining_employees])
+                
+                await db.properties.update_one(
+                    {"id": prop_id},
+                    {"$set": {
+                        "assigned_employee_ids": new_emp_ids,
+                        "assigned_employee_id": new_emp_ids[0],
+                        "assigned_employee_name": remaining_names
+                    }}
+                )
+            else:
+                # No employees left - clear all assignment fields
+                await db.properties.update_one(
+                    {"id": prop_id},
+                    {"$set": {
+                        "assigned_employee_ids": [],
+                        "assigned_employee_id": None,
+                        "assigned_employee_name": None
+                    }}
+                )
+        else:
+            # Unassign ALL employees
+            await db.properties.update_one(
+                {"id": prop_id},
+                {"$set": {
+                    "assigned_employee_ids": [],
+                    "assigned_employee_id": None,
+                    "assigned_employee_name": None
+                }}
+            )
+        
+        updated_count += 1
+    
+    if data.employee_id:
+        emp = await db.users.find_one({"id": data.employee_id}, {"_id": 0, "name": 1})
+        emp_name = emp["name"] if emp else "Employee"
+        return {"message": f"Unassigned {emp_name} from {updated_count} properties"}
+    else:
+        return {"message": f"Unassigned all employees from {updated_count} properties"}
+
+@api_router.post("/admin/unassign-by-employee")
+async def unassign_all_properties_from_employee(
+    employee_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Unassign ALL properties from a specific employee (when they leave)"""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get employee name
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0, "name": 1})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Find all properties assigned to this employee
+    properties = await db.properties.find({
+        "$or": [
+            {"assigned_employee_id": employee_id},
+            {"assigned_employee_ids": employee_id}
+        ]
+    }, {"_id": 0, "id": 1, "assigned_employee_ids": 1, "assigned_employee_id": 1}).to_list(None)
+    
+    updated_count = 0
+    for prop in properties:
+        existing_emp_ids = prop.get("assigned_employee_ids") or []
+        if prop.get("assigned_employee_id") and prop["assigned_employee_id"] not in existing_emp_ids:
+            existing_emp_ids.append(prop["assigned_employee_id"])
+        
+        # Remove the employee
+        new_emp_ids = [eid for eid in existing_emp_ids if eid != employee_id]
+        
+        if new_emp_ids:
+            remaining_employees = await db.users.find({"id": {"$in": new_emp_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(None)
+            remaining_names = ", ".join([emp["name"] for emp in remaining_employees])
+            
+            await db.properties.update_one(
+                {"id": prop["id"]},
+                {"$set": {
+                    "assigned_employee_ids": new_emp_ids,
+                    "assigned_employee_id": new_emp_ids[0],
+                    "assigned_employee_name": remaining_names
+                }}
+            )
+        else:
+            await db.properties.update_one(
+                {"id": prop["id"]},
+                {"$set": {
+                    "assigned_employee_ids": [],
+                    "assigned_employee_id": None,
+                    "assigned_employee_name": None
+                }}
+            )
+        updated_count += 1
+    
+    return {
+        "message": f"Unassigned {employee['name']} from {updated_count} properties",
+        "unassigned_count": updated_count
+    }
+
 class BulkDeleteRequest(BaseModel):
     property_ids: List[str]
 
