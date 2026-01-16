@@ -16,6 +16,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet-rotate';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import 'leaflet/dist/leaflet.css';
