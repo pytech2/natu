@@ -464,24 +464,30 @@ export default function Survey() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="flex items-center px-4 h-14">
+      {/* Header with Serial Number */}
+      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white sticky top-0 z-30">
+        <div className="flex items-center px-4 h-16">
           <button
             onClick={() => navigate('/employee/properties')}
-            className="mr-3 text-slate-500"
+            className="mr-3 text-white/80 hover:text-white"
             data-testid="back-btn"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1">
-            <h1 className="font-heading font-semibold text-slate-900">
-              {isCompleted ? 'View Survey' : 'Survey Form'}
-            </h1>
-            <p className="text-xs text-slate-500">{property?.property_id}</p>
+            <div className="flex items-center gap-2">
+              <h1 className="font-heading font-semibold">
+                {isCompleted ? 'View Survey' : 'Survey Form'}
+              </h1>
+              {/* Serial Number Badge in Header */}
+              <span className="bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full text-xs font-bold">
+                Sr: {property?.serial_na ? 'N/A' : (property?.bill_sr_no || property?.serial_number || '-')}
+              </span>
+            </div>
+            <p className="text-xs text-white/70">{property?.property_id} • {property?.owner_name}</p>
           </div>
           {!isCompleted && (
-            <button onClick={handleFlag} className="text-red-500 p-2" data-testid="flag-btn">
+            <button onClick={handleFlag} className="text-white/80 hover:text-white p-2" data-testid="flag-btn">
               <Flag className="w-5 h-5" />
             </button>
           )}
@@ -490,13 +496,33 @@ export default function Survey() {
 
       <main className="p-4 space-y-4" data-testid="survey-form">
         {/* Property Info Card - Shows all required fields */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-mono uppercase tracking-wider text-slate-500">
-              Property Information
+        <Card className="border-2 border-blue-200">
+          <CardHeader className="pb-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
+            <CardTitle className="text-sm font-mono uppercase tracking-wider flex items-center justify-between">
+              <span>Property Information</span>
+              {/* Bill Serial Number - Prominently displayed */}
+              <div className="bg-white text-blue-600 px-3 py-1 rounded-full font-bold text-lg">
+                Sr. No: {property?.serial_na ? 'N/A' : (property?.bill_sr_no || property?.serial_number || '-')}
+              </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+          <CardContent className="space-y-2 text-sm pt-3">
+            {/* Serial Number Banner */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-amber-700 text-xs font-semibold">BILL SERIAL NUMBER</span>
+                  <p className="text-2xl font-bold text-amber-600">
+                    {property?.serial_na ? 'N/A' : (property?.bill_sr_no || property?.serial_number || '-')}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-500 text-xs">Property ID</span>
+                  <p className="font-mono font-medium text-blue-600">{property?.property_id}</p>
+                </div>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <span className="text-slate-500 text-xs">Property ID</span>
