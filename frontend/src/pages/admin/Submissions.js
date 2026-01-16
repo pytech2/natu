@@ -89,10 +89,6 @@ export default function Submissions() {
     }
   };
 
-  useEffect(() => {
-    fetchSubmissions();
-  }, [pagination.page, statusFilter, employeeIdFilter]);
-
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
@@ -100,7 +96,9 @@ export default function Submissions() {
       params.append('page', pagination.page);
       params.append('limit', 20);
       if (statusFilter) params.append('status', statusFilter);
-      if (employeeIdFilter) params.append('employee_id', employeeIdFilter);
+      if (employeeIdFilter || employeeFilter) params.append('employee_id', employeeIdFilter || employeeFilter);
+      if (colonyFilter) params.append('colony', colonyFilter);
+      if (dateFilter) params.append('date_from', dateFilter);
 
       const response = await axios.get(`${API_URL}/admin/submissions?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
