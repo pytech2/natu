@@ -932,6 +932,118 @@ export default function Properties() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Unassign Dialog */}
+        <Dialog open={unassignDialog} onOpenChange={(open) => {
+          setUnassignDialog(open);
+          if (!open) {
+            setUnassignEmployeeId('');
+          }
+        }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-heading flex items-center gap-2 text-orange-600">
+                <UserMinus className="w-5 h-5" />
+                Unassign Properties
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 mt-4">
+              {selectedProperties.length > 0 ? (
+                <>
+                  <p className="text-sm text-slate-600">
+                    Unassign <strong>{selectedProperties.length}</strong> selected properties.
+                  </p>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Unassign Specific Employee (optional)</label>
+                    <Select
+                      value={unassignEmployeeId}
+                      onValueChange={setUnassignEmployeeId}
+                    >
+                      <SelectTrigger data-testid="unassign-employee-select">
+                        <SelectValue placeholder="All Employees (Clear Assignment)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value=" ">All Employees (Clear Assignment)</SelectItem>
+                        {employees.filter(e => e.role !== 'ADMIN').map(emp => (
+                          <SelectItem key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.role})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500">
+                      Leave blank to remove all employee assignments from selected properties.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-orange-800 mb-2 flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Unassign All Properties from Employee
+                    </h4>
+                    <p className="text-sm text-orange-700">
+                      Use this when an employee leaves or needs to be removed from all assigned properties.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-red-600">Select Employee to Unassign *</label>
+                    <Select
+                      value={unassignEmployeeId}
+                      onValueChange={setUnassignEmployeeId}
+                    >
+                      <SelectTrigger data-testid="unassign-all-employee-select" className="border-orange-300">
+                        <SelectValue placeholder="Select Employee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.filter(e => e.role !== 'ADMIN').map(emp => (
+                          <SelectItem key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.role})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-red-500">
+                      This will remove this employee from ALL their assigned properties.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <DialogFooter className="mt-6">
+              <Button variant="outline" onClick={() => {
+                setUnassignDialog(false);
+                setUnassignEmployeeId('');
+              }}>
+                Cancel
+              </Button>
+              {selectedProperties.length > 0 ? (
+                <Button 
+                  onClick={handleUnassign}
+                  data-testid="confirm-unassign-btn"
+                  className="bg-orange-600 hover:bg-orange-700"
+                  disabled={unassigning}
+                >
+                  {unassigning ? 'Unassigning...' : `Unassign ${selectedProperties.length} Properties`}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => handleUnassignAllFromEmployee(unassignEmployeeId)}
+                  data-testid="confirm-unassign-employee-btn"
+                  className="bg-orange-600 hover:bg-orange-700"
+                  disabled={unassigning || !unassignEmployeeId}
+                >
+                  {unassigning ? 'Unassigning...' : 'Unassign All Properties'}
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
