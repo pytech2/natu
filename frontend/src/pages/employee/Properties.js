@@ -34,8 +34,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Custom marker showing PROPERTY ID with label
-const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
+// Custom marker showing SERIAL NUMBER prominently with Property ID below
+const createPropertyIdIcon = (propertyId, status, isNearest = false, serialNo = null) => {
   const colors = {
     'Pending': '#ef4444',       // RED - pending (no survey)
     'Completed': '#eab308',     // YELLOW - survey completed
@@ -45,9 +45,10 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
     'default': '#22c55e'        // Green default
   };
   const color = colors[status] || colors['default'];
+  const displaySerial = serialNo || '-';
   
   if (isNearest) {
-    // Nearest property - slightly larger with animation, MINIMAL padding
+    // Nearest property - larger with animation, shows SERIAL NUMBER prominently
     return L.divIcon({
       className: 'property-id-marker-nearest',
       html: `
@@ -59,39 +60,42 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
         ">
           <div style="
             background-color: ${color};
-            padding: 1px 4px;
-            border-radius: 2px;
-            border: 2px solid white;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-            font-size: 10px;
-            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            font-size: 14px;
+            font-weight: 800;
             color: white;
             white-space: nowrap;
-            line-height: 1;
+            line-height: 1.2;
+            text-align: center;
             animation: pulse 1.5s ease-in-out infinite;
-          ">${propertyId}</div>
+          ">
+            <div style="font-size: 16px;">${displaySerial}</div>
+          </div>
           <div style="
             width: 0;
             height: 0;
-            border-left: 4px solid transparent;
-            border-right: 4px solid transparent;
-            border-top: 4px solid ${color};
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid ${color};
             margin-top: -1px;
           "></div>
         </div>
         <style>
           @keyframes pulse {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            50% { transform: scale(1.15); }
           }
         </style>`,
-      iconSize: [70, 18],
-      iconAnchor: [35, 18],
-      popupAnchor: [0, -14]
+      iconSize: [50, 30],
+      iconAnchor: [25, 30],
+      popupAnchor: [0, -26]
     });
   }
   
-  // Regular marker with Property ID label - MINIMAL padding for compact display
+  // Regular marker with Serial Number prominently displayed
   return L.divIcon({
     className: 'property-id-marker',
     html: `
@@ -102,28 +106,29 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false) => {
       ">
         <div style="
           background-color: ${color};
-          padding: 1px 3px;
-          border-radius: 2px;
-          border: 1px solid white;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-          font-size: 9px;
-          font-weight: 600;
+          padding: 1px 4px;
+          border-radius: 3px;
+          border: 2px solid white;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+          font-size: 11px;
+          font-weight: 700;
           color: white;
           white-space: nowrap;
-          line-height: 1;
-        ">${propertyId}</div>
+          line-height: 1.2;
+          text-align: center;
+        ">${displaySerial}</div>
         <div style="
           width: 0;
           height: 0;
-          border-left: 3px solid transparent;
-          border-right: 3px solid transparent;
-          border-top: 3px solid ${color};
+          border-left: 4px solid transparent;
+          border-right: 4px solid transparent;
+          border-top: 4px solid ${color};
           margin-top: -1px;
         "></div>
       </div>`,
-    iconSize: [60, 16],
-    iconAnchor: [30, 16],
-    popupAnchor: [0, -12]
+    iconSize: [40, 22],
+    iconAnchor: [20, 22],
+    popupAnchor: [0, -18]
   });
 };
 
