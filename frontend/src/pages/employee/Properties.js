@@ -930,17 +930,25 @@ export default function Properties() {
                 </Marker>
               )}
               
-              {/* Property markers with PROPERTY ID labels */}
-              {filteredProperties.filter(p => p.latitude && p.longitude).map((property, index) => (
+              {/* Property markers with SERIAL NUMBER labels */}
+              {filteredProperties.filter(p => p.latitude && p.longitude).slice(0, 200).map((property, index) => (
                 <Marker
                   key={property.id}
                   position={[property.latitude, property.longitude]}
-                  icon={createPropertyIdIcon(property.property_id, property.status, index === 0 && userLocation)}
+                  icon={createPropertyIdIcon(
+                    property.property_id, 
+                    property.status, 
+                    index === 0 && userLocation,
+                    property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || index + 1)
+                  )}
                 >
                   <Popup maxWidth={280}>
                     <div className="p-2 min-w-[200px]">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-lg font-bold text-blue-600">{property.property_id}</span>
+                        <div>
+                          <span className="text-xl font-bold text-amber-600">Sr: {property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || '-')}</span>
+                          <p className="text-sm text-blue-600 font-mono">{property.property_id}</p>
+                        </div>
                         {index === 0 && userLocation && (
                           <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full animate-pulse">
                             ⭐ NEAREST
