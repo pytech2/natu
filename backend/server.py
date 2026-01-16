@@ -238,13 +238,27 @@ async def login(data: UserLogin):
 
 @api_router.get("/auth/me")
 async def get_me(current_user: dict = Depends(get_current_user)):
+    # Calculate permissions based on role
+    role = current_user["role"]
+    permissions = {
+        "can_upload": role in UPLOAD_ROLES,
+        "can_export": role in EXPORT_ROLES,
+        "can_edit_submissions": role in SUBMISSION_EDIT_ROLES,
+        "can_manage_users": role == "ADMIN",
+        "can_download_performance": role in PERFORMANCE_DOWNLOAD_ROLES,
+        "can_view_employees": role in ["ADMIN", "MC_OFFICER"],
+        "can_view_attendance": role in ["ADMIN", "MC_OFFICER"],
+        "can_approve_reject": role == "ADMIN"
+    }
+    
     return {
         "id": current_user["id"],
         "username": current_user["username"],
         "name": current_user["name"],
         "role": current_user["role"],
         "assigned_area": current_user.get("assigned_area"),
-        "created_at": current_user["created_at"]
+        "created_at": current_user["created_at"],
+        "permissions": permissions
     }
 
 # ============== ADMIN USER ROUTES ==============
