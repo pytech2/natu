@@ -1058,6 +1058,7 @@ async def list_submissions(
     status: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    colony: Optional[str] = None,  # Colony filter
     page: int = 1,
     limit: int = 50,
     current_user: dict = Depends(get_current_user)
@@ -1079,6 +1080,25 @@ async def list_submissions(
             query["submitted_at"]["$lte"] = date_to
         else:
             query["submitted_at"] = {"$lte": date_to}
+    
+    # If colony filter is provided, first get property IDs in that colony
+    property_ids_in_colony = None
+    if colony and colony.strip():
+        properties_in_colony = await db.properties.find(
+            {"ward": colony}, 
+            {"id": 1, "_id": 0}
+        ).to_list(None)
+        property_ids_in_colony = [p["id"] for p in properties_in_colony]
+        if property_ids_in_colony:
+            query["property_record_id"] = {"$in": property_ids_in_colony}
+        else:
+            # No properties in this colony, return empty
+            return {
+                "submissions": [],
+                "total": 0,
+                "page": page,
+                "pages": 0
+            }
     
     skip = (page - 1) * limit
     total = await db.submissions.count_documents(query)
