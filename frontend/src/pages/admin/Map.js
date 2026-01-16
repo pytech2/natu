@@ -710,12 +710,16 @@ export default function PropertyMap() {
                   {getTileLayer()}
                   <FitBounds properties={filteredProperties} />
                   
-                  {/* Property markers with PROPERTY ID labels */}
-                  {spreadOverlappingMarkers(filteredProperties).map((property) => (
+                  {/* Property markers with SERIAL NUMBER labels - limited for performance */}
+                  {spreadOverlappingMarkers(filteredProperties).slice(0, 200).map((property) => (
                     <Marker
                       key={property.id}
                       position={[property.spreadLat, property.spreadLng]}
-                      icon={createPropertyIdIcon(property.property_id, property.status || property.category)}
+                      icon={createPropertyIdIcon(
+                        property.property_id, 
+                        property.status || property.category,
+                        property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || '-')
+                      )}
                     >
                       <Popup maxWidth={350} className="property-popup">
                         <div className="p-2 min-w-[280px]">
