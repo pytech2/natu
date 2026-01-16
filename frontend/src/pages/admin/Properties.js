@@ -94,6 +94,11 @@ export default function Properties() {
   const [deleteAllDialog, setDeleteAllDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   
+  // Unassign dialog
+  const [unassignDialog, setUnassignDialog] = useState(false);
+  const [unassignEmployeeId, setUnassignEmployeeId] = useState('');
+  const [unassigning, setUnassigning] = useState(false);
+  
   // Property detail dialog
   const [detailDialog, setDetailDialog] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
