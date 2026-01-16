@@ -413,15 +413,17 @@ export default function Submissions() {
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditDialog(sub)}
-                              title="Edit"
-                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
+                            {canEdit && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(sub)}
+                                title="Edit"
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
