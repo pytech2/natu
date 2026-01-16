@@ -239,6 +239,53 @@ export default function Export() {
                 </Select>
               </div>
             </div>
+            
+            {/* Additional Filters Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Building className="w-4 h-4" /> Filter by Colony
+                </label>
+                <Select
+                  value={filters.colony}
+                  onValueChange={(value) => setFilters({ ...filters, colony: value })}
+                >
+                  <SelectTrigger data-testid="export-colony-filter">
+                    <SelectValue placeholder="All Colonies" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=" ">All Colonies</SelectItem>
+                    {colonies.map(colony => (
+                      <SelectItem key={colony} value={colony}>{colony}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Calendar className="w-4 h-4" /> Date From
+                </label>
+                <Input
+                  type="date"
+                  value={filters.date_from}
+                  onChange={(e) => setFilters({ ...filters, date_from: e.target.value })}
+                  data-testid="export-date-from"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Calendar className="w-4 h-4" /> Date To
+                </label>
+                <Input
+                  type="date"
+                  value={filters.date_to}
+                  onChange={(e) => setFilters({ ...filters, date_to: e.target.value })}
+                  data-testid="export-date-to"
+                />
+              </div>
+            </div>
 
             {/* Status Info */}
             <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
