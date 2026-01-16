@@ -1,11 +1,27 @@
 # NSTU India Private Limited - Property Tax Notice Distribution System
 
 ## Original Problem Statement
-Build a full-stack web application for NSTU India Private Limited to manage property tax notice distribution and surveys. The application requires different user roles (Admin, Surveyor, Supervisor, MC Officer), bulk data upload via Excel and PDF, property assignment, a surveyor mobile interface for data collection (including photos with GPS watermarks and signatures), and an admin dashboard for progress tracking, review/approval, and data export.
+Build a full-stack web application for NSTU India Private Limited to manage property tax notice distribution and surveys.
 
 ## Latest Updates (Jan 16, 2026)
 
-### UI/UX Improvements Implemented
+### Property Management - Unassign Feature (NEW)
+Added comprehensive unassign functionality for admin property management:
+
+**Two Unassign Modes:**
+1. **Unassign Selected Properties** - Select properties → Click "Unassign (N)" → Choose specific employee or clear all
+2. **Unassign Employee from All Properties** - Click "Unassign Employee" → Select employee → Removes them from ALL their assigned properties
+
+**Use Cases:**
+- Employee leaves the organization → Unassign all their properties at once
+- Employee completes survey in an area → Unassign them from that area
+- Reassignment needed → Unassign first, then assign to new employee
+
+**Backend Endpoints:**
+- `POST /api/admin/unassign` - Unassign selected properties
+- `POST /api/admin/unassign-by-employee` - Unassign ALL properties from an employee
+
+### UI/UX Improvements
 1. **Serial Number Display** - Bill serial numbers now shown prominently:
    - Survey form header has amber badge with serial number
    - Property cards show "Sr: X" badge before property ID
@@ -14,18 +30,13 @@ Build a full-stack web application for NSTU India Private Limited to manage prop
 
 2. **Map Performance Optimization**
    - Limited markers to 100 (regular) / 200 (fullscreen) for better performance
-   - Only recalculates distances when user moves >50m
-   - Reduced GPS update frequency to prevent constant re-renders
 
 3. **Map 360° Rotation**
    - Added `leaflet-rotate` library for map rotation
-   - Rotation controls available on both surveyor and admin maps
    - Touch rotation enabled for mobile devices
 
 4. **PWA Desktop Icon**
    - Created manifest.json with app icons
-   - App can be installed on desktop/mobile home screen
-   - Theme color: #2563eb (blue)
 
 ### Role-Based Access Control (RBAC)
 | Feature | Admin | Supervisor | MC Officer | Surveyor |
@@ -34,6 +45,7 @@ Build a full-stack web application for NSTU India Private Limited to manage prop
 | View Employees | ✅ | ❌ | ✅ | ❌ |
 | Upload Data/Bills | ✅ | ✅ | ❌ | ❌ |
 | View Properties | ✅ | ✅ | ✅ | ✅ (own) |
+| **Unassign Properties** | ✅ | ✅ | ❌ | ❌ |
 | Edit Submissions | ✅ | ❌ | ❌ | ❌ |
 | Export (PDF/Excel) | ✅ | ❌ | ✅ | ❌ |
 
@@ -46,6 +58,7 @@ Build a full-stack web application for NSTU India Private Limited to manage prop
 ## Key Features
 - Multi-role authentication (Admin, Supervisor, MC Officer, Surveyor)
 - Property tax bill upload and extraction from PDF
+- **Property Assignment & Unassignment Management**
 - GPS-based route optimization
 - Survey submission with photo (GPS watermark) and signature
 - Admin review and approval workflow
@@ -56,33 +69,18 @@ Build a full-stack web application for NSTU India Private Limited to manage prop
 - **P2:** Mobile photo watermark bug (needs real device testing)
 - **P3:** Backend refactoring - split server.py into modular routes
 
-## Future Tasks
-- Offline support for surveyor app
-- Download ZIP for split-employee PDFs
-- Remove single employee from multi-assigned property
-
 ## Test Credentials
 - **Admin:** `admin` / `nastu123`
 - **MC Officer:** `1234567890` / `test123`
 - **Supervisor:** `a` / `test123`
-- **Surveyor:** Create via admin panel or reset password for existing users
 
 ## File Structure
 ```
 /app/
 ├── backend/
-│   └── server.py         # Main backend with RBAC
+│   └── server.py         # Added /admin/unassign and /admin/unassign-by-employee
 └── frontend/
-    ├── public/
-    │   └── manifest.json  # PWA manifest for desktop icon
     └── src/
-        ├── pages/
-        │   ├── admin/
-        │   │   ├── Map.js       # With serial numbers, rotation
-        │   │   └── ...
-        │   └── employee/
-        │       ├── Properties.js # With serial numbers, rotation
-        │       └── Survey.js     # Serial number in header
-        └── components/
-            └── AdminLayout.js    # Role-based navigation
+        └── pages/admin/
+            └── Properties.js   # Added Unassign dialog and functionality
 ```
