@@ -522,6 +522,14 @@ async def delete_batch(batch_id: str, current_user: dict = Depends(get_current_u
 ADMIN_ROLES = ["ADMIN", "SUPERVISOR"]
 # Roles that can view admin dashboard (including MC_OFFICER with limited access)
 ADMIN_VIEW_ROLES = ["ADMIN", "SUPERVISOR", "MC_OFFICER"]
+# Roles that can export data (PDF/Excel)
+EXPORT_ROLES = ["ADMIN", "MC_OFFICER"]
+# Roles that can upload data
+UPLOAD_ROLES = ["ADMIN", "SUPERVISOR"]
+# Roles that can edit submissions
+SUBMISSION_EDIT_ROLES = ["ADMIN"]
+# Roles that can download employee performance
+PERFORMANCE_DOWNLOAD_ROLES = ["ADMIN"]
 
 # ============== PROPERTY ROUTES ==============
 
@@ -1241,10 +1249,13 @@ async def export_data(
     batch_id: Optional[str] = None,
     employee_id: Optional[str] = None,
     status: Optional[str] = "Approved",  # Default to Approved
+    colony: Optional[str] = None,  # Colony filter
+    date_from: Optional[str] = None,  # Date filter
+    date_to: Optional[str] = None,  # Date filter
     current_user: dict = Depends(get_current_user)
 ):
-    if current_user["role"] != "ADMIN":
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user["role"] not in EXPORT_ROLES:
+        raise HTTPException(status_code=403, detail="Export access required (Admin or MC Officer)")
     
     # Build query for properties
     prop_query = {}
@@ -1430,10 +1441,13 @@ async def export_pdf(
     batch_id: Optional[str] = None,
     employee_id: Optional[str] = None,
     status: Optional[str] = "Approved",  # Default to Approved
+    colony: Optional[str] = None,  # Colony filter
+    date_from: Optional[str] = None,  # Date filter
+    date_to: Optional[str] = None,  # Date filter
     current_user: dict = Depends(get_current_user)
 ):
-    if current_user["role"] != "ADMIN":
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user["role"] not in EXPORT_ROLES:
+        raise HTTPException(status_code=403, detail="Export access required (Admin or MC Officer)")
     
     # Get submissions with the specified status (default: Approved)
     submission_query = {"status": status if status and status.strip() else "Approved"}
