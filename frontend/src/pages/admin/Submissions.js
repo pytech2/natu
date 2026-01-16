@@ -589,18 +589,20 @@ export default function Submissions() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setDetailDialog(false);
-                      openEditDialog(selectedSubmission);
-                    }}
-                    className="flex-1"
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit Details
-                  </Button>
-                  {(!selectedSubmission.status || selectedSubmission.status === 'Pending') && (
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setDetailDialog(false);
+                        openEditDialog(selectedSubmission);
+                      }}
+                      className="flex-1"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Details
+                    </Button>
+                  )}
+                  {canApproveReject && (!selectedSubmission.status || selectedSubmission.status === 'Pending') && (
                     <>
                       <Button
                         onClick={() => handleApprove(selectedSubmission.id)}
