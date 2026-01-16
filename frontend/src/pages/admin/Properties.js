@@ -273,6 +273,56 @@ export default function Properties() {
     }
   };
 
+  // Unassign properties
+  const handleUnassign = async () => {
+    if (selectedProperties.length === 0) {
+      toast.error('No properties selected');
+      return;
+    }
+
+    setUnassigning(true);
+    try {
+      const response = await axios.post(`${API_URL}/admin/unassign`, {
+        property_ids: selectedProperties,
+        employee_id: unassignEmployeeId || null  // null = unassign all
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(response.data.message);
+      setUnassignDialog(false);
+      setSelectedProperties([]);
+      setUnassignEmployeeId('');
+      fetchProperties();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to unassign properties');
+    } finally {
+      setUnassigning(false);
+    }
+  };
+
+  // Unassign all properties from an employee (when they leave)
+  const handleUnassignAllFromEmployee = async (employeeId) => {
+    if (!employeeId) {
+      toast.error('Please select an employee');
+      return;
+    }
+
+    setUnassigning(true);
+    try {
+      const response = await axios.post(`${API_URL}/admin/unassign-by-employee?employee_id=${employeeId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(response.data.message);
+      setUnassignDialog(false);
+      setUnassignEmployeeId('');
+      fetchProperties();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to unassign properties');
+    } finally {
+      setUnassigning(false);
+    }
+  };
+
   const toggleSelect = (id) => {
     setSelectedProperties(prev => 
       prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
