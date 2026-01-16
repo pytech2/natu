@@ -707,6 +707,12 @@ export default function PropertyMap() {
                   maxBoundsViscosity={1.0}
                   style={{ height: '100%', width: '100%' }}
                   scrollWheelZoom={true}
+                  rotate={true}
+                  rotateControl={{
+                    closeOnZeroBearing: false,
+                    position: 'topleft'
+                  }}
+                  touchRotate={true}
                 >
                   {getTileLayer()}
                   <FitBounds properties={filteredProperties} />
