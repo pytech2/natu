@@ -285,24 +285,71 @@ export default function Submissions() {
         {/* Filters */}
         <Card>
           <CardContent className="py-4">
-            <div className="flex gap-4 items-center">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value=" ">All Status</SelectItem>
-                  <SelectItem value="Pending">Pending Review</SelectItem>
-                  <SelectItem value="Approved">Approved</SelectItem>
-                  <SelectItem value="Rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-              {employeeIdFilter && (
-                <span className="text-sm text-slate-500">Filtered by employee</span>
-              )}
-              <span className="text-sm text-slate-500 ml-auto">
-                Total: {pagination.total} submissions
-              </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+              {/* Employee Filter */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-500">Employee</label>
+                <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Employees" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=" ">All Employees</SelectItem>
+                    {employees.map(emp => (
+                      <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Status Filter */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-500">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=" ">All Status</SelectItem>
+                    <SelectItem value="Pending">Pending Review</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Colony Filter */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-500">Colony</label>
+                <Select value={colonyFilter} onValueChange={setColonyFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Colonies" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value=" ">All Colonies</SelectItem>
+                    {colonies.map(colony => (
+                      <SelectItem key={colony} value={colony}>{colony}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Date Filter */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-500">Date</label>
+                <Input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="h-10"
+                />
+              </div>
+              
+              {/* Total Count */}
+              <div className="text-sm text-slate-500 flex items-center">
+                Total: <span className="font-semibold ml-1">{pagination.total}</span> submissions
+                {employeeIdFilter && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Filtered by employee</span>}
+              </div>
             </div>
           </CardContent>
         </Card>
