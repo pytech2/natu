@@ -724,14 +724,13 @@ export default function PropertyMap() {
                       <Popup maxWidth={350} className="property-popup">
                         <div className="p-2 min-w-[280px]">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="font-mono text-sm font-bold text-blue-600">
-                              {property.serial_na ? (
-                                <span className="bg-amber-100 text-amber-700 px-1 rounded text-xs mr-1">N/A</span>
-                              ) : (
-                                <span>#{property.serial_number || 0} - </span>
-                              )}
-                              {property.property_id}
-                            </span>
+                            <div>
+                              {/* Serial Number prominently */}
+                              <span className="text-xl font-bold text-amber-600">
+                                Sr: {property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || '-')}
+                              </span>
+                              <p className="font-mono text-sm text-blue-600">{property.property_id}</p>
+                            </div>
                             {getStatusBadge(property.status)}
                           </div>
                           
