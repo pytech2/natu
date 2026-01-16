@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 
-// Full navigation for ADMIN and SUPERVISOR
-const fullNavItems = [
+// Full navigation for ADMIN
+const adminNavItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/admin/employees', icon: Users, label: 'Employees' },
   { path: '/admin/attendance', icon: Calendar, label: 'Attendance' },
@@ -30,13 +30,27 @@ const fullNavItems = [
   { path: '/admin/export', icon: Download, label: 'Export' },
 ];
 
-// Limited navigation for MC_OFFICER (view-only)
-const mcOfficerNavItems = [
+// Navigation for SUPERVISOR (can upload but cannot export)
+const supervisorNavItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/admin/attendance', icon: Calendar, label: 'Attendance' },
+  { path: '/admin/upload', icon: Upload, label: 'Upload Data' },
   { path: '/admin/bills', icon: FileText, label: 'PDF Bills' },
   { path: '/admin/properties', icon: FileSpreadsheet, label: 'Properties' },
   { path: '/admin/map', icon: Map, label: 'Property Map' },
   { path: '/admin/submissions', icon: ClipboardCheck, label: 'Submissions' },
+];
+
+// Navigation for MC_OFFICER (can view and export but cannot upload or edit)
+const mcOfficerNavItems = [
+  { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/admin/employees', icon: Users, label: 'Employees' },
+  { path: '/admin/attendance', icon: Calendar, label: 'Attendance' },
+  { path: '/admin/bills', icon: FileText, label: 'PDF Bills' },
+  { path: '/admin/properties', icon: FileSpreadsheet, label: 'Properties' },
+  { path: '/admin/map', icon: Map, label: 'Property Map' },
+  { path: '/admin/submissions', icon: ClipboardCheck, label: 'Submissions' },
+  { path: '/admin/export', icon: Download, label: 'Export' },
 ];
 
 const ROLE_DISPLAY = {
