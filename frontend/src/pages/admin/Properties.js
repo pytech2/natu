@@ -431,6 +431,15 @@ export default function Properties() {
                     Assign ({selectedProperties.length})
                   </Button>
                   <Button
+                    data-testid="unassign-selected-btn"
+                    onClick={() => setUnassignDialog(true)}
+                    variant="outline"
+                    className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                  >
+                    <UserMinus className="w-4 h-4 mr-2" />
+                    Unassign ({selectedProperties.length})
+                  </Button>
+                  <Button
                     data-testid="delete-selected-btn"
                     onClick={() => setDeleteDialog(true)}
                     variant="destructive"
