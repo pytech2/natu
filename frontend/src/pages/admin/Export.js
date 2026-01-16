@@ -371,91 +371,93 @@ export default function Export() {
           </CardContent>
         </Card>
 
-        {/* Batch Management */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-heading flex items-center gap-2">
-              <FolderOpen className="w-5 h-5" />
-              Dataset Batches
-            </CardTitle>
-            <CardDescription>
-              Archive or delete completed batches
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="py-8 text-center text-slate-500">Loading...</div>
-            ) : batches.length === 0 ? (
-              <div className="py-8 text-center text-slate-500">
-                No batches found. Upload a dataset to get started.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {batches.map(batch => (
-                  <div key={batch.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                    <div>
-                      <h4 className="font-medium text-slate-900">{batch.name}</h4>
-                      <p className="text-sm text-slate-500">
-                        {batch.total_records} properties • Uploaded {new Date(batch.uploaded_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        batch.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' :
-                        batch.status === 'ARCHIVED' ? 'bg-slate-100 text-slate-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {batch.status}
-                      </span>
-                      
-                      {batch.status === 'ACTIVE' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleArchive(batch.id)}
-                          data-testid={`archive-batch-${batch.id}`}
-                        >
-                          <Archive className="w-4 h-4 mr-1" />
-                          Archive
-                        </Button>
-                      )}
-
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
+        {/* Batch Management - Admin Only */}
+        {canManageBatches && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-heading flex items-center gap-2">
+                <FolderOpen className="w-5 h-5" />
+                Dataset Batches
+              </CardTitle>
+              <CardDescription>
+                Archive or delete completed batches
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="py-8 text-center text-slate-500">Loading...</div>
+              ) : batches.length === 0 ? (
+                <div className="py-8 text-center text-slate-500">
+                  No batches found. Upload a dataset to get started.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {batches.map(batch => (
+                    <div key={batch.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                      <div>
+                        <h4 className="font-medium text-slate-900">{batch.name}</h4>
+                        <p className="text-sm text-slate-500">
+                          {batch.total_records} properties • Uploaded {new Date(batch.uploaded_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          batch.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' :
+                          batch.status === 'ARCHIVED' ? 'bg-slate-100 text-slate-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {batch.status}
+                        </span>
+                        
+                        {batch.status === 'ACTIVE' && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            data-testid={`delete-batch-${batch.id}`}
+                            onClick={() => handleArchive(batch.id)}
+                            data-testid={`archive-batch-${batch.id}`}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Archive className="w-4 h-4 mr-1" />
+                            Archive
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Batch?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete the batch "{batch.name}" and all {batch.total_records} properties and their submissions. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(batch.id)}
-                              className="bg-red-600 hover:bg-red-700"
+                        )}
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              data-testid={`delete-batch-${batch.id}`}
                             >
-                              Delete Permanently
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Batch?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete the batch "{batch.name}" and all {batch.total_records} properties and their submissions. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(batch.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Delete Permanently
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AdminLayout>
   );
