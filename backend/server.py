@@ -1297,11 +1297,23 @@ async def export_data(
         prop_query["batch_id"] = batch_id
     if employee_id and employee_id.strip():
         prop_query["assigned_employee_id"] = employee_id
+    if colony and colony.strip():
+        prop_query["ward"] = colony
     
-    # If status filter is set, only get properties with submissions matching that status
+    # Build submission query for status and date filters
+    submission_query = {}
     if status and status.strip():
-        # Get submission IDs that match the status
-        submission_query = {"status": status}
+        submission_query["status"] = status
+    if date_from:
+        submission_query["submitted_at"] = {"$gte": date_from}
+    if date_to:
+        if "submitted_at" in submission_query:
+            submission_query["submitted_at"]["$lte"] = date_to
+        else:
+            submission_query["submitted_at"] = {"$lte": date_to}
+    
+    # If we have submission filters, get property IDs from matching submissions
+    if submission_query:
         submissions = await db.submissions.find(submission_query, {"property_record_id": 1, "_id": 0}).to_list(100000)
         property_ids = [s["property_record_id"] for s in submissions]
         
@@ -1310,7 +1322,7 @@ async def export_data(
             wb = Workbook()
             ws = wb.active
             ws.title = "Approved Survey Data"
-            ws.cell(row=1, column=1, value="No approved submissions found")
+            ws.cell(row=1, column=1, value="No submissions found matching the filters")
             export_path = UPLOAD_DIR / f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             wb.save(export_path)
             return FileResponse(
@@ -1319,7 +1331,12 @@ async def export_data(
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         
-        prop_query["id"] = {"$in": property_ids}
+        if "id" in prop_query:
+            # Intersect with existing property_ids filter
+            existing_ids = set(prop_query["id"]["$in"]) if isinstance(prop_query["id"], dict) else {prop_query["id"]}
+            prop_query["id"] = {"$in": list(existing_ids.intersection(set(property_ids)))}
+        else:
+            prop_query["id"] = {"$in": property_ids}
     
     properties = await db.properties.find(prop_query, {"_id": 0}).to_list(100000)
     
