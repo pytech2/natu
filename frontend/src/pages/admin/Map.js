@@ -80,7 +80,7 @@ const spreadOverlappingMarkers = (properties) => {
   return spreadProperties;
 };
 
-// Custom marker showing SERIAL NUMBER prominently (same as Survey Map)
+// Custom marker showing SERIAL NUMBER - Small circular 3D pins (same as Survey Map)
 const createPropertyIdIcon = (propertyId, status, serialNo = null) => {
   const colors = {
     'Pending': '#ef4444',       // RED - pending (no survey)
@@ -97,7 +97,7 @@ const createPropertyIdIcon = (propertyId, status, serialNo = null) => {
   const color = colors[status] || colors['default'];
   const displaySerial = serialNo || '-';
   
-  // Marker with Serial Number prominently displayed
+  // Small circular marker with 3D effect
   return L.divIcon({
     className: 'property-id-marker',
     html: `
@@ -107,30 +107,33 @@ const createPropertyIdIcon = (propertyId, status, serialNo = null) => {
         align-items: center;
       ">
         <div style="
-          background-color: ${color};
-          padding: 2px 5px;
-          border-radius: 3px;
+          width: 22px;
+          height: 22px;
+          background: radial-gradient(circle at 30% 30%, ${color}, ${color}cc);
+          border-radius: 50%;
           border: 2px solid white;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-          font-size: 11px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2), inset 0 -2px 3px rgba(0,0,0,0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 9px;
           font-weight: 700;
           color: white;
-          white-space: nowrap;
-          line-height: 1.2;
-          text-align: center;
+          text-shadow: 0 1px 1px rgba(0,0,0,0.4);
         ">${displaySerial}</div>
         <div style="
           width: 0;
           height: 0;
           border-left: 4px solid transparent;
           border-right: 4px solid transparent;
-          border-top: 4px solid ${color};
-          margin-top: -1px;
+          border-top: 5px solid ${color};
+          margin-top: -2px;
+          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
         "></div>
       </div>`,
-    iconSize: [40, 24],
-    iconAnchor: [20, 24],
-    popupAnchor: [0, -20]
+    iconSize: [22, 29],
+    iconAnchor: [11, 29],
+    popupAnchor: [0, -25]
   });
 };
 

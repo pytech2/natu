@@ -35,7 +35,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Custom marker showing SERIAL NUMBER prominently with Property ID below
+// Custom marker showing SERIAL NUMBER - Small circular 3D pins
 const createPropertyIdIcon = (propertyId, status, isNearest = false, serialNo = null) => {
   const colors = {
     'Pending': '#ef4444',       // RED - pending (no survey)
@@ -49,7 +49,7 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false, serialNo = 
   const displaySerial = serialNo || '-';
   
   if (isNearest) {
-    // Nearest property - larger with animation, shows SERIAL NUMBER prominently
+    // Nearest property - slightly larger with pulse animation
     return L.divIcon({
       className: 'property-id-marker-nearest',
       html: `
@@ -60,28 +60,29 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false, serialNo = 
           align-items: center;
         ">
           <div style="
-            background-color: ${color};
-            padding: 2px 6px;
-            border-radius: 4px;
-            border: 3px solid white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-            font-size: 14px;
+            width: 28px;
+            height: 28px;
+            background: radial-gradient(circle at 30% 30%, ${color}, ${color}dd);
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3), inset 0 -2px 4px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
             font-weight: 800;
             color: white;
-            white-space: nowrap;
-            line-height: 1.2;
-            text-align: center;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
             animation: pulse 1.5s ease-in-out infinite;
-          ">
-            <div style="font-size: 16px;">${displaySerial}</div>
-          </div>
+          ">${displaySerial}</div>
           <div style="
             width: 0;
             height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
             border-top: 6px solid ${color};
-            margin-top: -1px;
+            margin-top: -2px;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
           "></div>
         </div>
         <style>
@@ -90,13 +91,13 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false, serialNo = 
             50% { transform: scale(1.15); }
           }
         </style>`,
-      iconSize: [50, 30],
-      iconAnchor: [25, 30],
-      popupAnchor: [0, -26]
+      iconSize: [28, 36],
+      iconAnchor: [14, 36],
+      popupAnchor: [0, -32]
     });
   }
   
-  // Regular marker with Serial Number prominently displayed
+  // Regular small circular marker with 3D effect
   return L.divIcon({
     className: 'property-id-marker',
     html: `
@@ -106,30 +107,33 @@ const createPropertyIdIcon = (propertyId, status, isNearest = false, serialNo = 
         align-items: center;
       ">
         <div style="
-          background-color: ${color};
-          padding: 1px 4px;
-          border-radius: 3px;
+          width: 22px;
+          height: 22px;
+          background: radial-gradient(circle at 30% 30%, ${color}, ${color}cc);
+          border-radius: 50%;
           border: 2px solid white;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-          font-size: 11px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2), inset 0 -2px 3px rgba(0,0,0,0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 9px;
           font-weight: 700;
           color: white;
-          white-space: nowrap;
-          line-height: 1.2;
-          text-align: center;
+          text-shadow: 0 1px 1px rgba(0,0,0,0.4);
         ">${displaySerial}</div>
         <div style="
           width: 0;
           height: 0;
           border-left: 4px solid transparent;
           border-right: 4px solid transparent;
-          border-top: 4px solid ${color};
-          margin-top: -1px;
+          border-top: 5px solid ${color};
+          margin-top: -2px;
+          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
         "></div>
       </div>`,
-    iconSize: [40, 22],
-    iconAnchor: [20, 22],
-    popupAnchor: [0, -18]
+    iconSize: [22, 29],
+    iconAnchor: [11, 29],
+    popupAnchor: [0, -25]
   });
 };
 
