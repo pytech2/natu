@@ -925,6 +925,12 @@ export default function Properties() {
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom={true}
               zoomControl={true}
+              rotate={true}
+              rotateControl={{
+                closeOnZeroBearing: false,
+                position: 'topleft'
+              }}
+              touchRotate={true}
             >
               {/* Google Satellite - High quality max zoom */}
               <TileLayer 
