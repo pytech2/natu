@@ -826,6 +826,10 @@ export default function Properties() {
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
+                          {/* Serial Number prominently */}
+                          <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-sm font-bold">
+                            Sr: {property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || '-')}
+                          </span>
                           <span className="font-mono text-xs text-blue-600">{property.property_id}</span>
                           {isNearestPending && (
                             <span className="nearest-badge-green text-xs text-white px-2 py-0.5 rounded-full font-bold shadow-lg">
