@@ -71,7 +71,20 @@ export default function AdminLayout({ children, title }) {
   };
 
   // Determine which nav items to show based on role
-  const navItems = user?.role === 'MC_OFFICER' ? mcOfficerNavItems : fullNavItems;
+  const getNavItems = () => {
+    switch (user?.role) {
+      case 'ADMIN':
+        return adminNavItems;
+      case 'SUPERVISOR':
+        return supervisorNavItems;
+      case 'MC_OFFICER':
+        return mcOfficerNavItems;
+      default:
+        return adminNavItems;
+    }
+  };
+  
+  const navItems = getNavItems();
 
   return (
     <div className="min-h-screen bg-slate-50">
