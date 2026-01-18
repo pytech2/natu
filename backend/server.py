@@ -2450,8 +2450,10 @@ async def upload_pdf_bills(
             bill_data["batch_id"] = batch_id
             
             # Use Bill Serial Number from PDF (bill_sr_no field)
-            # If missing/blank, set to "N-X" format where X is the previous valid serial
+            # If missing/blank, set to colony abbreviation + previous serial format
             pdf_serial = bill_data.get("bill_sr_no", "").strip()
+            colony_name = bill_data.get("colony", "NA")[:3].upper()  # First 3 letters of colony
+            
             if pdf_serial and pdf_serial.isdigit():
                 bill_data["serial_number"] = int(pdf_serial)
                 bill_data["serial_na"] = False
@@ -2460,8 +2462,8 @@ async def upload_pdf_bills(
             else:
                 bill_data["serial_number"] = 0  # Use 0 for sorting purposes
                 bill_data["serial_na"] = True   # Mark as N/A for ordering
-                # Use N-X format where X is the previous valid serial
-                bill_data["bill_sr_no"] = f"N-{last_valid_serial}" if last_valid_serial > 0 else "N-0"
+                # Use COLONY-X format where COLONY is abbreviation and X is the previous valid serial
+                bill_data["bill_sr_no"] = f"{colony_name}-{last_valid_serial}" if last_valid_serial > 0 else f"{colony_name}-0"
                 na_serial_count += 1
             
             bill_data["created_at"] = datetime.now(timezone.utc).isoformat()
