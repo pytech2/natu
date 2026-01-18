@@ -816,7 +816,7 @@ export default function Properties() {
                       {/* Serial Number Circle - shows BillSrNo from PDF or N-X format */}
                       {property.serial_na ? (
                         <div className="w-10 h-10 rounded-full flex items-center justify-center bg-amber-500 text-white font-bold text-xs flex-shrink-0">
-                          {property.bill_sr_no || `N-${property.serial_number || 0}`}
+                          {property.bill_sr_no || property.serial_number}
                         </div>
                       ) : (
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
