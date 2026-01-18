@@ -24,7 +24,6 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet-rotate';
 import 'leaflet/dist/leaflet.css';
 import { 
   Map as MapIcon, Search, Filter, Home, User, Phone, 
