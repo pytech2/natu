@@ -2999,7 +2999,7 @@ async def copy_bills_to_properties(
     colony: str = Form(None),
     current_user: dict = Depends(get_current_user)
 ):
-    """Copy bill data to properties collection"""
+    """Copy bill data to properties collection - SKIPS DUPLICATES"""
     if current_user["role"] not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
@@ -3015,6 +3015,17 @@ async def copy_bills_to_properties(
     if not bills:
         raise HTTPException(status_code=404, detail="No bills found to copy")
     
+    # Get existing property_ids to check for duplicates
+    existing_properties = await db.properties.find({}, {"property_id": 1, "owner_name": 1, "mobile": 1, "_id": 0}).to_list(None)
+    existing_property_ids = set(p.get("property_id", "") for p in existing_properties)
+    # Also create a key based on owner_name + mobile for better duplicate detection
+    existing_keys = set()
+    for p in existing_properties:
+        owner = (p.get("owner_name") or "").strip().upper()
+        mobile = (p.get("mobile") or "").strip()
+        if owner and mobile:
+            existing_keys.add(f"{owner}_{mobile}")
+    
     # Create a new batch for properties
     prop_batch_id = str(uuid.uuid4())
     prop_batch_name = f"Bills Import {colony or 'All'} - {datetime.now().strftime('%d/%m/%Y %H:%M')}"
@@ -3025,25 +3036,53 @@ async def copy_bills_to_properties(
         "uploaded_by": current_user["id"],
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "status": "ACTIVE",
-        "total_records": len(bills),
+        "total_records": 0,  # Will update after filtering duplicates
         "source": "PDF_BILLS"
     }
-    await db.batches.insert_one(prop_batch_doc)
     
-    # Convert bills to properties
+    # Convert bills to properties - SKIP DUPLICATES
     properties = []
+    skipped_duplicates = 0
+    last_valid_serial = 0  # Track last valid serial for N-X format
+    
     for i, bill in enumerate(bills):
+        # Check for duplicate by property_id
+        bill_prop_id = bill.get("property_id", "")
+        if bill_prop_id and bill_prop_id in existing_property_ids:
+            skipped_duplicates += 1
+            continue
+        
+        # Check for duplicate by owner_name + mobile
+        owner = (bill.get("owner_name") or "").strip().upper()
+        mobile = (bill.get("mobile") or "").strip()
+        if owner and mobile:
+            key = f"{owner}_{mobile}"
+            if key in existing_keys:
+                skipped_duplicates += 1
+                continue
+            existing_keys.add(key)  # Add to set for subsequent checks
+        
         # Use the actual BillSrNo from PDF, or mark as N/A
         bill_serial = bill.get("serial_number", 0)
         is_serial_na = bill.get("serial_na", False) or bill_serial == 0
+        
+        # Update last_valid_serial if this bill has a valid serial
+        if not is_serial_na and bill_serial > 0:
+            last_valid_serial = bill_serial
+        
+        # Format N/A serials as N-X where X is the previous valid serial
+        if is_serial_na:
+            bill_sr_no_display = f"N-{last_valid_serial}" if last_valid_serial > 0 else "N-0"
+        else:
+            bill_sr_no_display = str(bill_serial)
         
         prop = {
             "id": str(uuid.uuid4()),
             "batch_id": prop_batch_id,
             "serial_number": bill_serial if not is_serial_na else 0,
             "serial_na": is_serial_na,
-            "bill_sr_no": bill.get("bill_sr_no", "N/A") if is_serial_na else str(bill_serial),
-            "property_id": bill.get("property_id", str(uuid.uuid4())[:8].upper()),
+            "bill_sr_no": bill_sr_no_display,
+            "property_id": bill_prop_id if bill_prop_id else str(uuid.uuid4())[:8].upper(),
             "old_property_id": bill.get("old_property_id", ""),
             "owner_name": bill.get("owner_name", "Unknown"),
             "mobile": bill.get("mobile", ""),
@@ -3063,16 +3102,25 @@ async def copy_bills_to_properties(
             "source_bill_id": bill.get("id")  # Reference to original bill
         }
         properties.append(prop)
+        
+        # Add to existing set to prevent duplicates within same batch
+        if bill_prop_id:
+            existing_property_ids.add(bill_prop_id)
     
     # Insert properties
     if properties:
         await db.properties.insert_many(properties)
+        prop_batch_doc["total_records"] = len(properties)
+        await db.batches.update_one({"id": prop_batch_id}, {"$set": {"total_records": len(properties)}})
+    
+    await db.batches.insert_one(prop_batch_doc)
     
     return {
-        "message": f"Successfully added {len(properties)} bills to properties",
+        "message": f"Successfully added {len(properties)} bills to properties. Skipped {skipped_duplicates} duplicates.",
         "batch_id": prop_batch_id,
         "batch_name": prop_batch_name,
-        "total_added": len(properties)
+        "total_added": len(properties),
+        "skipped_duplicates": skipped_duplicates
     }
 
 @api_router.post("/admin/bills/split-by-employees")
