@@ -719,15 +719,15 @@ export default function PropertyMap() {
                   {getTileLayer()}
                   <FitBounds properties={filteredProperties} />
                   
-                  {/* Property markers with SERIAL NUMBER labels - limited for performance */}
-                  {spreadOverlappingMarkers(filteredProperties).slice(0, 200).map((property) => (
+                  {/* Property markers with SERIAL NUMBER labels - show ALL for selected colony */}
+                  {spreadOverlappingMarkers(filteredProperties).map((property) => (
                     <Marker
                       key={property.id}
                       position={[property.spreadLat, property.spreadLng]}
                       icon={createPropertyIdIcon(
                         property.property_id, 
                         property.status || property.category,
-                        property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || '-')
+                        property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || '-'
                       )}
                     >
                       <Popup maxWidth={350} className="property-popup">
@@ -736,7 +736,7 @@ export default function PropertyMap() {
                             <div>
                               {/* Serial Number prominently */}
                               <span className="text-xl font-bold text-amber-600">
-                                Sr: {property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || '-')}
+                                Sr: {property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || '-'}
                               </span>
                               <p className="font-mono text-sm text-blue-600">{property.property_id}</p>
                             </div>
