@@ -2450,9 +2450,8 @@ async def upload_pdf_bills(
             bill_data["batch_id"] = batch_id
             
             # Use Bill Serial Number from PDF (bill_sr_no field)
-            # If missing/blank, set to colony abbreviation + previous serial format
+            # If missing/blank, set to N-X format where X is the previous valid serial
             pdf_serial = bill_data.get("bill_sr_no", "").strip()
-            colony_name = bill_data.get("colony", "NA")[:3].upper()  # First 3 letters of colony
             
             if pdf_serial and pdf_serial.isdigit():
                 bill_data["serial_number"] = int(pdf_serial)
@@ -2462,8 +2461,8 @@ async def upload_pdf_bills(
             else:
                 bill_data["serial_number"] = 0  # Use 0 for sorting purposes
                 bill_data["serial_na"] = True   # Mark as N/A for ordering
-                # Use COLONY-X format where COLONY is abbreviation and X is the previous valid serial
-                bill_data["bill_sr_no"] = f"{colony_name}-{last_valid_serial}" if last_valid_serial > 0 else f"{colony_name}-0"
+                # Use N-X format where X is the nearest/previous valid serial number
+                bill_data["bill_sr_no"] = f"N-{last_valid_serial}" if last_valid_serial > 0 else "N-0"
                 na_serial_count += 1
             
             bill_data["created_at"] = datetime.now(timezone.utc).isoformat()
@@ -3072,15 +3071,14 @@ async def copy_bills_to_properties(
         # Use the actual BillSrNo from PDF, or mark as N/A
         bill_serial = bill.get("serial_number", 0)
         is_serial_na = bill.get("serial_na", False) or bill_serial == 0
-        colony_abbrev = (bill.get("colony", "NA") or "NA")[:3].upper()  # First 3 letters of colony
         
         # Update last_valid_serial if this bill has a valid serial
         if not is_serial_na and bill_serial > 0:
             last_valid_serial = bill_serial
         
-        # Format N/A serials as COLONY-X where X is the previous valid serial
+        # Format N/A serials as N-X where X is the nearest/previous valid serial
         if is_serial_na:
-            bill_sr_no_display = f"{colony_abbrev}-{last_valid_serial}" if last_valid_serial > 0 else f"{colony_abbrev}-0"
+            bill_sr_no_display = f"N-{last_valid_serial}" if last_valid_serial > 0 else "N-0"
         else:
             bill_sr_no_display = str(bill_serial)
         
