@@ -2429,6 +2429,8 @@ async def upload_pdf_bills(
     bills = []
     skipped_count = 0
     na_serial_count = 0
+    last_valid_serial = 0  # Track last valid serial for N-X format
+    
     try:
         pdf_doc = fitz.open(str(pdf_path))
         
@@ -2448,15 +2450,18 @@ async def upload_pdf_bills(
             bill_data["batch_id"] = batch_id
             
             # Use Bill Serial Number from PDF (bill_sr_no field)
-            # If missing/blank, set to "N/A" and mark as skipped for ordering
+            # If missing/blank, set to "N-X" format where X is the previous valid serial
             pdf_serial = bill_data.get("bill_sr_no", "").strip()
             if pdf_serial and pdf_serial.isdigit():
                 bill_data["serial_number"] = int(pdf_serial)
                 bill_data["serial_na"] = False
+                last_valid_serial = int(pdf_serial)  # Update last valid
+                bill_data["bill_sr_no"] = pdf_serial
             else:
                 bill_data["serial_number"] = 0  # Use 0 for sorting purposes
                 bill_data["serial_na"] = True   # Mark as N/A for ordering
-                bill_data["bill_sr_no"] = "N/A"
+                # Use N-X format where X is the previous valid serial
+                bill_data["bill_sr_no"] = f"N-{last_valid_serial}" if last_valid_serial > 0 else "N-0"
                 na_serial_count += 1
             
             bill_data["created_at"] = datetime.now(timezone.utc).isoformat()
