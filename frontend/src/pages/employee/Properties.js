@@ -668,11 +668,6 @@ export default function Properties() {
                 maxZoom={21}
                 style={{ height: '100%', width: '100%' }}
                 scrollWheelZoom={true}
-                rotate={true}
-                rotateControl={{
-                  closeOnZeroBearing: false
-                }}
-                touchRotate={true}
               >
                 {/* Google Satellite - High quality */}
                 <TileLayer 
@@ -692,8 +687,8 @@ export default function Properties() {
                   </Marker>
                 )}
                 
-                {/* Property markers with SERIAL NUMBER labels */}
-                {filteredProperties.filter(p => p.latitude && p.longitude).slice(0, 100).map((property, index) => (
+                {/* Property markers with SERIAL NUMBER labels - show ALL */}
+                {filteredProperties.filter(p => p.latitude && p.longitude).map((property, index) => (
                   <Marker
                     key={property.id}
                     position={[property.latitude, property.longitude]}
@@ -701,7 +696,7 @@ export default function Properties() {
                       property.property_id, 
                       property.status, 
                       index === 0 && userLocation,
-                      property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || index + 1)
+                      property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || (index + 1)
                     )}
                   >
                     <Popup maxWidth={220}>
