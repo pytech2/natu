@@ -549,15 +549,6 @@ export default function BillsPage() {
                 <Users className="w-4 h-4 mr-2" />
                 Split by Employee
               </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => window.open('/admin/bills-map', '_self')}
-                disabled={pagination.total === 0}
-              >
-                <Map className="w-4 h-4 mr-2" />
-                View Map
-              </Button>
             </div>
 
             {/* Second row of actions */}
