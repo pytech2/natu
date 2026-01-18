@@ -813,10 +813,10 @@ export default function Properties() {
                 >
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">
-                      {/* Serial Number Circle - shows BillSrNo from PDF or N/A */}
+                      {/* Serial Number Circle - shows BillSrNo from PDF or N-X format */}
                       {property.serial_na ? (
                         <div className="w-10 h-10 rounded-full flex items-center justify-center bg-amber-500 text-white font-bold text-xs flex-shrink-0">
-                          N/A
+                          {property.bill_sr_no || `N-${property.serial_number || 0}`}
                         </div>
                       ) : (
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
@@ -825,14 +825,14 @@ export default function Properties() {
                           isCompleted ? 'bg-pink-500' : 
                           isPending ? 'bg-orange-500' : 'bg-slate-500'
                         }`}>
-                          {isCompleted ? '✓' : isRejected ? '!' : (property.serial_number || property.bill_sr_no || '-')}
+                          {isCompleted ? '✓' : isRejected ? '!' : (property.bill_sr_no || property.serial_number || '-')}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           {/* Serial Number prominently */}
                           <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-sm font-bold">
-                            Sr: {property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || '-')}
+                            Sr: {property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || '-'}
                           </span>
                           <span className="font-mono text-xs text-blue-600">{property.property_id}</span>
                           {isNearestPending && (
