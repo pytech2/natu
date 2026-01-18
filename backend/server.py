@@ -2429,11 +2429,11 @@ async def upload_pdf_bills(
     bills = []
     skipped_count = 0
     na_serial_count = 0
-    last_valid_serial = 0  # Track last valid serial for N-X format
     
     try:
         pdf_doc = fitz.open(str(pdf_path))
         
+        # First pass: Extract all bill data
         for page_num in range(len(pdf_doc)):
             page = pdf_doc[page_num]
             text = page.get_text()
@@ -2448,30 +2448,46 @@ async def upload_pdf_bills(
             
             bill_data["id"] = str(uuid.uuid4())
             bill_data["batch_id"] = batch_id
+            bill_data["page_num"] = page_num + 1  # Store original page number
             
-            # Use Bill Serial Number from PDF (bill_sr_no field)
-            # If missing/blank, set to N-X format where X is the previous valid serial
+            # Check if serial number is valid
             pdf_serial = bill_data.get("bill_sr_no", "").strip()
-            
             if pdf_serial and pdf_serial.isdigit():
                 bill_data["serial_number"] = int(pdf_serial)
                 bill_data["serial_na"] = False
-                last_valid_serial = int(pdf_serial)  # Update last valid
                 bill_data["bill_sr_no"] = pdf_serial
             else:
-                bill_data["serial_number"] = 0  # Use 0 for sorting purposes
-                bill_data["serial_na"] = True   # Mark as N/A for ordering
-                # Use N-X format where X is the nearest/previous valid serial number
-                bill_data["bill_sr_no"] = f"N-{last_valid_serial}" if last_valid_serial > 0 else "N-0"
+                bill_data["serial_number"] = 0
+                bill_data["serial_na"] = True
+                bill_data["bill_sr_no"] = "N-0"  # Temporary, will be updated in second pass
                 na_serial_count += 1
             
             bill_data["created_at"] = datetime.now(timezone.utc).isoformat()
             bill_data["status"] = "Pending"
-            bill_data["gps_arranged"] = False  # Not GPS arranged by default
+            bill_data["gps_arranged"] = False
             
             bills.append(bill_data)
         
         pdf_doc.close()
+        
+        # Second pass: Fix N/A serials to use nearest valid serial
+        # Get all valid serial numbers in order
+        valid_serials = [(i, b["serial_number"]) for i, b in enumerate(bills) if not b["serial_na"]]
+        
+        if valid_serials:
+            for i, bill in enumerate(bills):
+                if bill["serial_na"]:
+                    # Find the nearest valid serial based on position
+                    nearest_serial = 0
+                    min_distance = float('inf')
+                    
+                    for idx, serial in valid_serials:
+                        distance = abs(idx - i)
+                        if distance < min_distance:
+                            min_distance = distance
+                            nearest_serial = serial
+                    
+                    bill["bill_sr_no"] = f"N-{nearest_serial}"
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
