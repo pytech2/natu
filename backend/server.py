@@ -3072,14 +3072,15 @@ async def copy_bills_to_properties(
         # Use the actual BillSrNo from PDF, or mark as N/A
         bill_serial = bill.get("serial_number", 0)
         is_serial_na = bill.get("serial_na", False) or bill_serial == 0
+        colony_abbrev = (bill.get("colony", "NA") or "NA")[:3].upper()  # First 3 letters of colony
         
         # Update last_valid_serial if this bill has a valid serial
         if not is_serial_na and bill_serial > 0:
             last_valid_serial = bill_serial
         
-        # Format N/A serials as N-X where X is the previous valid serial
+        # Format N/A serials as COLONY-X where X is the previous valid serial
         if is_serial_na:
-            bill_sr_no_display = f"N-{last_valid_serial}" if last_valid_serial > 0 else "N-0"
+            bill_sr_no_display = f"{colony_abbrev}-{last_valid_serial}" if last_valid_serial > 0 else f"{colony_abbrev}-0"
         else:
             bill_sr_no_display = str(bill_serial)
         
