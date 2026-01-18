@@ -413,7 +413,7 @@ export default function Properties() {
 
   const fetchProperties = async () => {
     try {
-      const response = await axios.get(`${API_URL}/employee/properties?limit=1000`, {
+      const response = await axios.get(`${API_URL}/employee/properties?limit=100000`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const props = response.data.properties || [];
