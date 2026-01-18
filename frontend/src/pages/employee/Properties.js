@@ -703,7 +703,7 @@ export default function Properties() {
                       <div className="p-1 min-w-[160px]">
                         <div className="flex items-center justify-between mb-1">
                           <div>
-                            <span className="text-lg font-bold text-amber-600">Sr: {property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || '-')}</span>
+                            <span className="text-lg font-bold text-amber-600">Sr: {property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || '-'}</span>
                             <p className="text-xs text-blue-600 font-mono">{property.property_id}</p>
                           </div>
                           {index === 0 && userLocation && <span className="text-xs bg-green-500 text-white px-1 rounded animate-pulse">Nearest</span>}
