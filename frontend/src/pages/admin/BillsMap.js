@@ -375,28 +375,35 @@ export default function BillsMapPage() {
                   
                   <FitBounds bills={bills} />
                   
-                  {/* Property markers with PROPERTY ID labels */}
+                  {/* Property markers with SERIAL NUMBER labels - circular 3D */}
                   {spreadOverlappingMarkers(bills).map((bill) => (
                     <Marker
                       key={bill.id}
                       position={[bill.spreadLat, bill.spreadLng]}
-                      icon={createPropertyIdIcon(bill.property_id, bill.category)}
+                      icon={createPropertyIdIcon(
+                        bill.bill_sr_no || (bill.serial_na ? `N-${bill.serial_number || 0}` : bill.serial_number) || '-',
+                        bill.category
+                      )}
                     >
                       <Popup maxWidth={350}>
                         <div className="p-2 min-w-[250px]">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-700 font-bold rounded-full text-lg">
-                              {bill.serial_number}
-                            </span>
-                            <span className="font-mono text-sm text-slate-600">
-                              {bill.property_id}
-                            </span>
+                            <div>
+                              <span className="text-xl font-bold text-amber-600">
+                                Sr: {bill.bill_sr_no || (bill.serial_na ? `N-${bill.serial_number || 0}` : bill.serial_number) || '-'}
+                              </span>
+                              <p className="font-mono text-sm text-blue-600">{bill.property_id}</p>
+                            </div>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              bill.category === 'Residential' ? 'bg-green-100 text-green-700' :
+                              bill.category === 'Commercial' ? 'bg-orange-100 text-orange-700' :
+                              'bg-slate-100 text-slate-700'
+                            }`}>{bill.category || 'N/A'}</span>
                           </div>
                           <div className="space-y-1 text-sm">
                             <p><strong>Owner:</strong> {bill.owner_name || '-'}</p>
                             <p><strong>Mobile:</strong> {bill.mobile || '-'}</p>
                             <p><strong>Colony:</strong> {bill.colony || '-'}</p>
-                            <p><strong>Category:</strong> {bill.category || '-'}</p>
                             <p><strong>Outstanding:</strong> ₹{bill.total_outstanding || '0'}</p>
                             <p className="text-xs text-slate-500">
                               GPS: {bill.latitude?.toFixed(6)}, {bill.longitude?.toFixed(6)}
