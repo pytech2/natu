@@ -2459,7 +2459,7 @@ async def upload_pdf_bills(
             else:
                 bill_data["serial_number"] = 0
                 bill_data["serial_na"] = True
-                bill_data["bill_sr_no"] = "N-0"  # Temporary, will be updated in second pass
+                bill_data["bill_sr_no"] = "N0"  # Temporary, will be updated in second pass
                 na_serial_count += 1
             
             bill_data["created_at"] = datetime.now(timezone.utc).isoformat()
@@ -2498,10 +2498,10 @@ async def upload_pdf_bills(
                             min_distance = dist
                             nearest_serial = vs["serial"]
                     
-                    bill["bill_sr_no"] = f"N-{nearest_serial}"
+                    bill["bill_sr_no"] = f"N{nearest_serial}"
                 elif bill["serial_na"]:
                     # No GPS, use first valid serial as fallback
-                    bill["bill_sr_no"] = f"N-{valid_serials_with_gps[0]['serial'] if valid_serials_with_gps else 0}"
+                    bill["bill_sr_no"] = f"N{valid_serials_with_gps[0]['serial'] if valid_serials_with_gps else 0}"
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
@@ -3127,7 +3127,7 @@ async def copy_bills_to_properties(
             elif valid_serials_with_gps:
                 nearest_serial = valid_serials_with_gps[0]["serial"]
             
-            bill_sr_no_display = f"N-{nearest_serial}"
+            bill_sr_no_display = f"N{nearest_serial}"
         else:
             bill_sr_no_display = str(bill_serial)
         
