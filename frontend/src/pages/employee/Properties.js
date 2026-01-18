@@ -923,12 +923,6 @@ export default function Properties() {
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom={true}
               zoomControl={true}
-              rotate={true}
-              rotateControl={{
-                closeOnZeroBearing: false,
-                position: 'topleft'
-              }}
-              touchRotate={true}
             >
               {/* Google Satellite - High quality max zoom */}
               <TileLayer 
@@ -944,8 +938,8 @@ export default function Properties() {
                 </Marker>
               )}
               
-              {/* Property markers with SERIAL NUMBER labels */}
-              {filteredProperties.filter(p => p.latitude && p.longitude).slice(0, 200).map((property, index) => (
+              {/* Property markers with SERIAL NUMBER labels - show ALL */}
+              {filteredProperties.filter(p => p.latitude && p.longitude).map((property, index) => (
                 <Marker
                   key={property.id}
                   position={[property.latitude, property.longitude]}
@@ -953,14 +947,14 @@ export default function Properties() {
                     property.property_id, 
                     property.status, 
                     index === 0 && userLocation,
-                    property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || index + 1)
+                    property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || (index + 1)
                   )}
                 >
                   <Popup maxWidth={280}>
                     <div className="p-2 min-w-[200px]">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <span className="text-xl font-bold text-amber-600">Sr: {property.serial_na ? 'N/A' : (property.bill_sr_no || property.serial_number || '-')}</span>
+                          <span className="text-xl font-bold text-amber-600">Sr: {property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || '-'}</span>
                           <p className="text-sm text-blue-600 font-mono">{property.property_id}</p>
                         </div>
                         {index === 0 && userLocation && (
