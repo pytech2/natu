@@ -2470,24 +2470,38 @@ async def upload_pdf_bills(
         
         pdf_doc.close()
         
-        # Second pass: Fix N/A serials to use nearest valid serial
-        # Get all valid serial numbers in order
-        valid_serials = [(i, b["serial_number"]) for i, b in enumerate(bills) if not b["serial_na"]]
+        # Second pass: Fix N/A serials to use nearest valid serial BY GPS LOCATION
+        # Get all valid serial numbers with their GPS coordinates
+        valid_serials_with_gps = []
+        for i, b in enumerate(bills):
+            if not b["serial_na"] and b.get("latitude") and b.get("longitude"):
+                valid_serials_with_gps.append({
+                    "serial": b["serial_number"],
+                    "lat": b["latitude"],
+                    "lng": b["longitude"]
+                })
         
-        if valid_serials:
+        if valid_serials_with_gps:
             for i, bill in enumerate(bills):
-                if bill["serial_na"]:
-                    # Find the nearest valid serial based on position
+                if bill["serial_na"] and bill.get("latitude") and bill.get("longitude"):
+                    # Find the nearest valid serial based on GPS distance
                     nearest_serial = 0
                     min_distance = float('inf')
                     
-                    for idx, serial in valid_serials:
-                        distance = abs(idx - i)
-                        if distance < min_distance:
-                            min_distance = distance
-                            nearest_serial = serial
+                    bill_lat = bill["latitude"]
+                    bill_lng = bill["longitude"]
+                    
+                    for vs in valid_serials_with_gps:
+                        # Calculate simple Euclidean distance (good enough for nearby points)
+                        dist = ((vs["lat"] - bill_lat) ** 2 + (vs["lng"] - bill_lng) ** 2) ** 0.5
+                        if dist < min_distance:
+                            min_distance = dist
+                            nearest_serial = vs["serial"]
                     
                     bill["bill_sr_no"] = f"N-{nearest_serial}"
+                elif bill["serial_na"]:
+                    # No GPS, use first valid serial as fallback
+                    bill["bill_sr_no"] = f"N-{valid_serials_with_gps[0]['serial'] if valid_serials_with_gps else 0}"
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
