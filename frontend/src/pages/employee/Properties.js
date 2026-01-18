@@ -696,14 +696,14 @@ export default function Properties() {
                       property.property_id, 
                       property.status, 
                       index === 0 && userLocation,
-                      property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || (index + 1)
+                      property.bill_sr_no || property.serial_number || (index + 1)
                     )}
                   >
                     <Popup maxWidth={220}>
                       <div className="p-1 min-w-[160px]">
                         <div className="flex items-center justify-between mb-1">
                           <div>
-                            <span className="text-lg font-bold text-amber-600">Sr: {property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || '-'}</span>
+                            <span className="text-lg font-bold text-amber-600">Sr: {property.bill_sr_no || property.serial_number || '-'}</span>
                             <p className="text-xs text-blue-600 font-mono">{property.property_id}</p>
                           </div>
                           {index === 0 && userLocation && <span className="text-xs bg-green-500 text-white px-1 rounded animate-pulse">Nearest</span>}
@@ -832,7 +832,7 @@ export default function Properties() {
                         <div className="flex items-center gap-2 flex-wrap">
                           {/* Serial Number prominently */}
                           <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-sm font-bold">
-                            Sr: {property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || '-'}
+                            Sr: {property.bill_sr_no || property.serial_number || '-'}
                           </span>
                           <span className="font-mono text-xs text-blue-600">{property.property_id}</span>
                           {isNearestPending && (
@@ -947,14 +947,14 @@ export default function Properties() {
                     property.property_id, 
                     property.status, 
                     index === 0 && userLocation,
-                    property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || (index + 1)
+                    property.bill_sr_no || property.serial_number || (index + 1)
                   )}
                 >
                   <Popup maxWidth={280}>
                     <div className="p-2 min-w-[200px]">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <span className="text-xl font-bold text-amber-600">Sr: {property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || '-'}</span>
+                          <span className="text-xl font-bold text-amber-600">Sr: {property.bill_sr_no || property.serial_number || '-'}</span>
                           <p className="text-sm text-blue-600 font-mono">{property.property_id}</p>
                         </div>
                         {index === 0 && userLocation && (

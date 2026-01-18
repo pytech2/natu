@@ -722,7 +722,7 @@ export default function PropertyMap() {
                       icon={createPropertyIdIcon(
                         property.property_id, 
                         property.status || property.category,
-                        property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || '-'
+                        property.bill_sr_no || property.serial_number || '-'
                       )}
                     >
                       <Popup maxWidth={350} className="property-popup">
@@ -731,7 +731,7 @@ export default function PropertyMap() {
                             <div>
                               {/* Serial Number prominently */}
                               <span className="text-xl font-bold text-amber-600">
-                                Sr: {property.bill_sr_no || (property.serial_na ? `N-${property.serial_number || 0}` : property.serial_number) || '-'}
+                                Sr: {property.bill_sr_no || property.serial_number || '-'}
                               </span>
                               <p className="font-mono text-sm text-blue-600">{property.property_id}</p>
                             </div>

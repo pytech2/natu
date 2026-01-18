@@ -381,7 +381,7 @@ export default function BillsMapPage() {
                       key={bill.id}
                       position={[bill.spreadLat, bill.spreadLng]}
                       icon={createPropertyIdIcon(
-                        bill.bill_sr_no || (bill.serial_na ? `N-${bill.serial_number || 0}` : bill.serial_number) || '-',
+                        bill.bill_sr_no || bill.serial_number || '-',
                         bill.category
                       )}
                     >
@@ -390,7 +390,7 @@ export default function BillsMapPage() {
                           <div className="flex items-center justify-between mb-2">
                             <div>
                               <span className="text-xl font-bold text-amber-600">
-                                Sr: {bill.bill_sr_no || (bill.serial_na ? `N-${bill.serial_number || 0}` : bill.serial_number) || '-'}
+                                Sr: {bill.bill_sr_no || bill.serial_number || '-'}
                               </span>
                               <p className="font-mono text-sm text-blue-600">{bill.property_id}</p>
                             </div>
