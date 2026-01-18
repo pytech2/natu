@@ -3076,9 +3076,15 @@ async def copy_bills_to_properties(
         "source": "PDF_BILLS"
     }
     
-    # First, get all valid serial numbers from bills for nearest-serial lookup
-    valid_serials = [(i, b.get("serial_number", 0)) for i, b in enumerate(bills) 
-                     if not b.get("serial_na", False) and b.get("serial_number", 0) > 0]
+    # First, get all valid serial numbers with GPS from bills for nearest-serial lookup
+    valid_serials_with_gps = []
+    for i, b in enumerate(bills):
+        if not b.get("serial_na", False) and b.get("serial_number", 0) > 0 and b.get("latitude") and b.get("longitude"):
+            valid_serials_with_gps.append({
+                "serial": b["serial_number"],
+                "lat": b["latitude"],
+                "lng": b["longitude"]
+            })
     
     # Convert bills to properties - SKIP DUPLICATES
     properties = []
@@ -3105,17 +3111,22 @@ async def copy_bills_to_properties(
         bill_serial = bill.get("serial_number", 0)
         is_serial_na = bill.get("serial_na", False) or bill_serial == 0
         
-        # Format N/A serials as N-X where X is the nearest valid serial
+        # Format N/A serials as N-X where X is the nearest valid serial BY GPS
         if is_serial_na:
-            # Find nearest valid serial based on position
             nearest_serial = 0
-            if valid_serials:
+            if valid_serials_with_gps and bill.get("latitude") and bill.get("longitude"):
                 min_distance = float('inf')
-                for idx, serial in valid_serials:
-                    distance = abs(idx - i)
-                    if distance < min_distance:
-                        min_distance = distance
-                        nearest_serial = serial
+                bill_lat = bill["latitude"]
+                bill_lng = bill["longitude"]
+                
+                for vs in valid_serials_with_gps:
+                    dist = ((vs["lat"] - bill_lat) ** 2 + (vs["lng"] - bill_lng) ** 2) ** 0.5
+                    if dist < min_distance:
+                        min_distance = dist
+                        nearest_serial = vs["serial"]
+            elif valid_serials_with_gps:
+                nearest_serial = valid_serials_with_gps[0]["serial"]
+            
             bill_sr_no_display = f"N-{nearest_serial}"
         else:
             bill_sr_no_display = str(bill_serial)
