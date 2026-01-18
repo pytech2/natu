@@ -3062,10 +3062,13 @@ async def copy_bills_to_properties(
         "source": "PDF_BILLS"
     }
     
+    # First, get all valid serial numbers from bills for nearest-serial lookup
+    valid_serials = [(i, b.get("serial_number", 0)) for i, b in enumerate(bills) 
+                     if not b.get("serial_na", False) and b.get("serial_number", 0) > 0]
+    
     # Convert bills to properties - SKIP DUPLICATES
     properties = []
     skipped_duplicates = 0
-    last_valid_serial = 0  # Track last valid serial for N-X format
     
     for i, bill in enumerate(bills):
         # Check for duplicate by property_id
@@ -3088,13 +3091,18 @@ async def copy_bills_to_properties(
         bill_serial = bill.get("serial_number", 0)
         is_serial_na = bill.get("serial_na", False) or bill_serial == 0
         
-        # Update last_valid_serial if this bill has a valid serial
-        if not is_serial_na and bill_serial > 0:
-            last_valid_serial = bill_serial
-        
-        # Format N/A serials as N-X where X is the nearest/previous valid serial
+        # Format N/A serials as N-X where X is the nearest valid serial
         if is_serial_na:
-            bill_sr_no_display = f"N-{last_valid_serial}" if last_valid_serial > 0 else "N-0"
+            # Find nearest valid serial based on position
+            nearest_serial = 0
+            if valid_serials:
+                min_distance = float('inf')
+                for idx, serial in valid_serials:
+                    distance = abs(idx - i)
+                    if distance < min_distance:
+                        min_distance = distance
+                        nearest_serial = serial
+            bill_sr_no_display = f"N-{nearest_serial}"
         else:
             bill_sr_no_display = str(bill_serial)
         
