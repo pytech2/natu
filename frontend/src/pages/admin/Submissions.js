@@ -1014,7 +1014,6 @@ export default function Submissions() {
                             >
                               <ExternalLink className="w-3 h-3 mr-1" /> View Full
                             </Button>
-                            </Button>
                           </div>
                         ))}
                       </div>
