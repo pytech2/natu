@@ -276,8 +276,11 @@ export default function Submissions() {
     
     setUploadingPhoto(true);
     try {
+      // Compress image before upload
+      const compressedFile = await compressImage(file, 1200, 0.7);
+      
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressedFile);
       formData.append('submission_id', selectedSubmission.id);
       formData.append('photo_type', 'HOUSE');
       
@@ -291,6 +294,7 @@ export default function Submissions() {
       // Add new photo to list
       const newPhoto = {
         file_url: response.data.file_url,
+        file_id: response.data.file_id,
         photo_type: 'HOUSE'
       };
       setEditPhotos([...editPhotos, newPhoto]);
