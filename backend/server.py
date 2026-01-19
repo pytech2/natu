@@ -111,6 +111,12 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 # Create the main app
 app = FastAPI(title="NSTU Property Tax Manager")
 
+# Startup event to create indexes
+@app.on_event("startup")
+async def startup_event():
+    await create_indexes()
+    logging.info("Application started with optimized database indexes")
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
