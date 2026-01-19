@@ -486,6 +486,30 @@ export default function Survey() {
       </header>
 
       <main className="p-4 space-y-4" data-testid="survey-form">
+        {/* Attendance Lock Screen */}
+        {checkingAttendance ? (
+          <Card className="border-2 border-blue-200">
+            <CardContent className="py-8 text-center">
+              <Loader2 className="w-8 h-8 mx-auto animate-spin text-blue-500 mb-2" />
+              <p className="text-slate-600">Checking attendance status...</p>
+            </CardContent>
+          </Card>
+        ) : !attendanceMarked && !isCompleted ? (
+          <Card className="border-2 border-red-300 bg-red-50">
+            <CardContent className="py-8 text-center">
+              <Lock className="w-12 h-12 mx-auto text-red-500 mb-4" />
+              <h3 className="text-lg font-bold text-red-700 mb-2">Survey Locked</h3>
+              <p className="text-red-600 mb-4">Please mark your attendance before starting survey</p>
+              <Button 
+                onClick={() => navigate('/employee/attendance')}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Mark Attendance
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
         {/* Property Info Card - Shows all required fields */}
         <Card className="border-2 border-blue-200">
           <CardHeader className="pb-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
