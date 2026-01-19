@@ -97,20 +97,41 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 const formatDistance = (meters) => meters < 1000 ? `${Math.round(meters)}m` : `${(meters/1000).toFixed(1)}km`;
 
-// Simple Map Controller
-function MapController({ center, zoom }) {
+// Simple Map Controller - Saves position to localStorage for stability
+function MapController({ center, zoom, onPositionChange }) {
   const map = useMap();
+  
   useEffect(() => {
     if (center) {
-      map.setView(center, zoom || 17, { animate: true });
+      map.setView(center, zoom || 17, { animate: false }); // No animation for stability
     }
   }, [center, zoom, map]);
+  
+  // Save map position when it changes
+  useEffect(() => {
+    const handleMoveEnd = () => {
+      const newCenter = map.getCenter();
+      const newZoom = map.getZoom();
+      localStorage.setItem('surveyor_map_position', JSON.stringify({
+        lat: newCenter.lat,
+        lng: newCenter.lng,
+        zoom: newZoom
+      }));
+      if (onPositionChange) {
+        onPositionChange([newCenter.lat, newCenter.lng], newZoom);
+      }
+    };
+    
+    map.on('moveend', handleMoveEnd);
+    return () => map.off('moveend', handleMoveEnd);
+  }, [map, onPositionChange]);
+  
   return null;
 }
 
 // Constants for lazy loading
-const INITIAL_LOAD = 50;  // Load 50 properties first
-const LOAD_MORE = 30;     // Load 30 more on scroll
+const INITIAL_LOAD = 100;  // Load 100 properties first for better coverage
+const LOAD_MORE = 50;      // Load 50 more on scroll
 
 export default function Properties() {
   const navigate = useNavigate();
@@ -134,6 +155,21 @@ export default function Properties() {
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0, rejected: 0 });
   const [fullscreenMap, setFullscreenMap] = useState(false);
   const [mapCenter, setMapCenter] = useState(null);
+  const [mapZoom, setMapZoom] = useState(17);
+
+  // Restore saved map position on mount
+  useEffect(() => {
+    const savedPosition = localStorage.getItem('surveyor_map_position');
+    if (savedPosition) {
+      try {
+        const { lat, lng, zoom } = JSON.parse(savedPosition);
+        setMapCenter([lat, lng]);
+        setMapZoom(zoom || 17);
+      } catch (e) {
+        console.log('Could not restore map position');
+      }
+    }
+  }, []);
 
   // Fetch properties on mount
   useEffect(() => {
