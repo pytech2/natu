@@ -1956,48 +1956,99 @@ async def export_pdf(
             for photo in photos:
                 photo_url = photo.get("file_url", "")
                 photo_type = photo.get("photo_type", "PHOTO")
+                file_id = photo.get("file_id")
                 
-                if photo_url.startswith("/api/uploads/"):
+                temp_photo_path = None
+                
+                # Handle GridFS files (new format)
+                if file_id or photo_url.startswith("/api/file/"):
+                    try:
+                        grid_file_id = file_id or photo_url.replace("/api/file/", "")
+                        content, filename, _ = await get_file_from_gridfs(grid_file_id)
+                        if content:
+                            temp_photo_path = UPLOAD_DIR / f"temp_pdf_{uuid.uuid4()}{Path(filename).suffix}"
+                            async with aiofiles.open(temp_photo_path, 'wb') as f:
+                                await f.write(content)
+                    except Exception as e:
+                        logger.error(f"Error fetching GridFS photo: {e}")
+                
+                # Handle legacy local files
+                elif photo_url.startswith("/api/uploads/"):
                     filename = photo_url.replace("/api/uploads/", "")
                     photo_path = UPLOAD_DIR / filename
-                    
                     if photo_path.exists():
-                        watermarked_path = add_watermark_to_photo(
-                            str(photo_path),
-                            submission.get("latitude"),
-                            submission.get("longitude"),
-                            submission.get("submitted_at")
-                        )
-                        
-                        try:
-                            img = RLImage(watermarked_path, width=80*mm, height=60*mm)
-                            story.append(Paragraph(f"<b>{photo_type}</b>", normal_style))
-                            story.append(img)
-                            story.append(Spacer(1, 10))
-                        except Exception as e:
-                            logger.error(f"Error adding photo to PDF: {e}")
+                        temp_photo_path = photo_path
+                
+                if temp_photo_path and temp_photo_path.exists():
+                    watermarked_path = add_watermark_to_photo(
+                        str(temp_photo_path),
+                        submission.get("latitude"),
+                        submission.get("longitude"),
+                        submission.get("submitted_at")
+                    )
+                    
+                    try:
+                        img = RLImage(watermarked_path, width=80*mm, height=60*mm)
+                        story.append(Paragraph(f"<b>{photo_type}</b>", normal_style))
+                        story.append(img)
+                        story.append(Spacer(1, 10))
+                    except Exception as e:
+                        logger.error(f"Error adding photo to PDF: {e}")
+                    finally:
+                        # Cleanup temp files from GridFS
+                        if file_id or photo_url.startswith("/api/file/"):
+                            try:
+                                if temp_photo_path.exists():
+                                    temp_photo_path.unlink()
+                            except:
+                                pass
         
         signature_url = submission.get("signature_url")
         if signature_url:
             story.append(Paragraph("Property Holder Signature", heading_style))
             
-            if signature_url.startswith("/api/uploads/"):
+            temp_sig_path = None
+            
+            # Handle GridFS signature (new format)
+            if signature_url.startswith("/api/file/"):
+                try:
+                    sig_file_id = signature_url.replace("/api/file/", "")
+                    content, filename, _ = await get_file_from_gridfs(sig_file_id)
+                    if content:
+                        temp_sig_path = UPLOAD_DIR / f"temp_sig_{uuid.uuid4()}.png"
+                        async with aiofiles.open(temp_sig_path, 'wb') as f:
+                            await f.write(content)
+                except Exception as e:
+                    logger.error(f"Error fetching GridFS signature: {e}")
+            
+            # Handle legacy local files
+            elif signature_url.startswith("/api/uploads/"):
                 sig_filename = signature_url.replace("/api/uploads/", "")
                 sig_path = UPLOAD_DIR / sig_filename
-                
                 if sig_path.exists():
-                    try:
-                        sig_img = RLImage(str(sig_path), width=60*mm, height=30*mm)
-                        sig_table = Table([[sig_img]], colWidths=[170*mm])
-                        sig_table.setStyle(TableStyle([
-                            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
-                            ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                            ('PADDING', (0, 0), (-1, -1), 10),
-                        ]))
-                        story.append(sig_table)
-                    except Exception as e:
-                        logger.error(f"Error adding signature to PDF: {e}")
+                    temp_sig_path = sig_path
+            
+            if temp_sig_path and temp_sig_path.exists():
+                try:
+                    sig_img = RLImage(str(temp_sig_path), width=60*mm, height=30*mm)
+                    sig_table = Table([[sig_img]], colWidths=[170*mm])
+                    sig_table.setStyle(TableStyle([
+                        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
+                        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('PADDING', (0, 0), (-1, -1), 10),
+                    ]))
+                    story.append(sig_table)
+                except Exception as e:
+                    logger.error(f"Error adding signature to PDF: {e}")
+                finally:
+                    # Cleanup temp files from GridFS
+                    if signature_url.startswith("/api/file/"):
+                        try:
+                            if temp_sig_path.exists():
+                                temp_sig_path.unlink()
+                        except:
+                            pass
         
         story.append(PageBreak())
     
