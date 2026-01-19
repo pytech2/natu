@@ -510,7 +510,17 @@ export default function Properties() {
               className={`cursor-pointer hover:shadow-md transition-shadow ${
                 index === 0 && userLocation ? 'border-2 border-green-500 bg-green-50' : ''
               }`}
-              onClick={() => navigate(`/employee/survey/${property.id}`)}
+              onClick={() => {
+                // Save property location before navigating
+                if (property.latitude && property.longitude) {
+                  localStorage.setItem('surveyor_map_position', JSON.stringify({
+                    lat: property.latitude,
+                    lng: property.longitude,
+                    zoom: 18
+                  }));
+                }
+                navigate(`/employee/survey/${property.id}`);
+              }}
             >
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
