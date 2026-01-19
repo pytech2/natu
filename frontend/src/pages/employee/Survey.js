@@ -208,7 +208,24 @@ export default function Survey() {
   useEffect(() => {
     fetchProperty();
     getLocation();
+    checkTodayAttendance();
   }, [propertyId]);
+
+  // Check if attendance is marked for today
+  const checkTodayAttendance = async () => {
+    setCheckingAttendance(true);
+    try {
+      const response = await axios.get(`${API_URL}/employee/attendance/today`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAttendanceMarked(response.data.marked || false);
+    } catch (error) {
+      // If endpoint doesn't exist or error, assume attendance not required
+      setAttendanceMarked(true);
+    } finally {
+      setCheckingAttendance(false);
+    }
+  };
 
   useEffect(() => {
     if (location.latitude && location.longitude && property?.latitude && property?.longitude) {
