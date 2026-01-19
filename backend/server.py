@@ -3344,11 +3344,15 @@ async def delete_all_bills(
 async def copy_bills_to_properties(
     batch_id: str = Form(None),
     colony: str = Form(None),
+    skip_duplicates: str = Form("false"),  # NEW: Option to skip or include duplicates
     current_user: dict = Depends(get_current_user)
 ):
-    """Copy bill data to properties collection - SKIPS DUPLICATES"""
+    """Copy bill data to properties collection"""
     if current_user["role"] not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Parse skip_duplicates option
+    should_skip_duplicates = skip_duplicates.lower() == "true"
     
     query = {}
     if batch_id and batch_id.strip():
@@ -3362,16 +3366,18 @@ async def copy_bills_to_properties(
     if not bills:
         raise HTTPException(status_code=404, detail="No bills found to copy")
     
-    # Get existing property_ids to check for duplicates
-    existing_properties = await db.properties.find({}, {"property_id": 1, "owner_name": 1, "mobile": 1, "_id": 0}).to_list(None)
-    existing_property_ids = set(p.get("property_id", "") for p in existing_properties)
-    # Also create a key based on owner_name + mobile for better duplicate detection
+    # Get existing property_ids to check for duplicates (only if skip_duplicates is true)
+    existing_property_ids = set()
     existing_keys = set()
-    for p in existing_properties:
-        owner = (p.get("owner_name") or "").strip().upper()
-        mobile = (p.get("mobile") or "").strip()
-        if owner and mobile:
-            existing_keys.add(f"{owner}_{mobile}")
+    
+    if should_skip_duplicates:
+        existing_properties = await db.properties.find({}, {"property_id": 1, "owner_name": 1, "mobile": 1, "_id": 0}).to_list(None)
+        existing_property_ids = set(p.get("property_id", "") for p in existing_properties)
+        for p in existing_properties:
+            owner = (p.get("owner_name") or "").strip().upper()
+            mobile = (p.get("mobile") or "").strip()
+            if owner and mobile:
+                existing_keys.add(f"{owner}_{mobile}")
     
     # Create a new batch for properties
     prop_batch_id = str(uuid.uuid4())
@@ -3383,7 +3389,7 @@ async def copy_bills_to_properties(
         "uploaded_by": current_user["id"],
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "status": "ACTIVE",
-        "total_records": 0,  # Will update after filtering duplicates
+        "total_records": 0,
         "source": "PDF_BILLS"
     }
     
@@ -3397,26 +3403,29 @@ async def copy_bills_to_properties(
                 "lng": b["longitude"]
             })
     
-    # Convert bills to properties - SKIP DUPLICATES
+    # Convert bills to properties
     properties = []
     skipped_duplicates = 0
     
     for i, bill in enumerate(bills):
-        # Check for duplicate by property_id
         bill_prop_id = bill.get("property_id", "")
-        if bill_prop_id and bill_prop_id in existing_property_ids:
-            skipped_duplicates += 1
-            continue
         
-        # Check for duplicate by owner_name + mobile
-        owner = (bill.get("owner_name") or "").strip().upper()
-        mobile = (bill.get("mobile") or "").strip()
-        if owner and mobile:
-            key = f"{owner}_{mobile}"
-            if key in existing_keys:
+        # Only check duplicates if option is enabled
+        if should_skip_duplicates:
+            # Check for duplicate by property_id
+            if bill_prop_id and bill_prop_id in existing_property_ids:
                 skipped_duplicates += 1
                 continue
-            existing_keys.add(key)  # Add to set for subsequent checks
+            
+            # Check for duplicate by owner_name + mobile
+            owner = (bill.get("owner_name") or "").strip().upper()
+            mobile = (bill.get("mobile") or "").strip()
+            if owner and mobile:
+                key = f"{owner}_{mobile}"
+                if key in existing_keys:
+                    skipped_duplicates += 1
+                    continue
+                existing_keys.add(key)
         
         # Use the actual BillSrNo from PDF, or mark as N/A
         bill_serial = bill.get("serial_number", 0)
