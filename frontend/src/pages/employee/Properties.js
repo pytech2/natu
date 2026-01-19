@@ -615,7 +615,16 @@ export default function Properties() {
                         <Button 
                           size="sm" 
                           className="flex-1 h-8 bg-blue-600"
-                          onClick={() => { setFullscreenMap(false); navigate(`/employee/survey/${property.id}`); }}
+                          onClick={() => { 
+                            // Save property location before navigating
+                            localStorage.setItem('surveyor_map_position', JSON.stringify({
+                              lat: property.latitude,
+                              lng: property.longitude,
+                              zoom: mapZoom || 18
+                            }));
+                            setFullscreenMap(false); 
+                            navigate(`/employee/survey/${property.id}`); 
+                          }}
                         >
                           <FileText className="w-3 h-3 mr-1" /> Survey
                         </Button>
