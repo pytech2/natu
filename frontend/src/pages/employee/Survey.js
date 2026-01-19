@@ -344,26 +344,17 @@ export default function Survey() {
     }
   };
 
-  const clearSignature = () => {
-    signatureRef.current?.clear();
-    setSignatureData(null);
-  };
-
-  const saveSignature = () => {
-    if (signatureRef.current?.isEmpty()) {
-      toast.error('Please provide a signature');
-      return;
-    }
-    const data = signatureRef.current.toDataURL('image/png');
-    setSignatureData(data);
-    toast.success('Signature saved!');
-  };
-
   const validateMobile = (mobile) => {
     return /^\d{10}$/.test(mobile);
   };
 
   const handleSubmit = async () => {
+    // Check attendance first
+    if (!attendanceMarked) {
+      toast.error('Please mark your attendance before starting survey');
+      return;
+    }
+    
     // Validations - GPS check still required
     if (withinRange === false) {
       toast.error('You must be within 50 meters of the property to submit');
