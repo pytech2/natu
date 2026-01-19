@@ -343,6 +343,93 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         "permissions": permissions
     }
 
+# ============== FAST MAP ENDPOINTS ==============
+
+@api_router.get("/map/properties")
+async def get_map_properties(
+    colony: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 500,
+    current_user: dict = Depends(get_current_user)
+):
+    """Fast lightweight endpoint for map markers - returns only essential fields"""
+    query = {"latitude": {"$ne": None}, "longitude": {"$ne": None}}
+    
+    if colony and colony.strip():
+        query["ward"] = colony
+    if status and status.strip():
+        query["status"] = status
+    
+    # For non-admin users, filter by assigned properties
+    if current_user["role"] not in ["ADMIN", "SUPERVISOR", "MC_OFFICER"]:
+        query["$or"] = [
+            {"assigned_employee_id": current_user["id"]},
+            {"assigned_employee_ids": current_user["id"]}
+        ]
+    
+    # Minimal projection for fast map loading
+    projection = {
+        "_id": 0,
+        "id": 1,
+        "latitude": 1,
+        "longitude": 1,
+        "status": 1,
+        "serial_number": 1,
+        "bill_sr_no": 1,
+        "property_id": 1,
+        "owner_name": 1,
+        "colony": 1,
+        "ward": 1
+    }
+    
+    properties = await db.properties.find(query, projection).limit(limit).to_list(limit)
+    
+    return {
+        "properties": properties,
+        "count": len(properties)
+    }
+
+@api_router.get("/map/employee-properties")
+async def get_employee_map_properties(
+    limit: int = 200,
+    current_user: dict = Depends(get_current_user)
+):
+    """Fast lightweight endpoint for surveyor map - minimal fields only"""
+    query = {
+        "$or": [
+            {"assigned_employee_id": current_user["id"]},
+            {"assigned_employee_ids": current_user["id"]}
+        ],
+        "latitude": {"$ne": None},
+        "longitude": {"$ne": None}
+    }
+    
+    # Ultra-minimal projection
+    projection = {
+        "_id": 0,
+        "id": 1,
+        "latitude": 1,
+        "longitude": 1,
+        "status": 1,
+        "serial_number": 1,
+        "bill_sr_no": 1,
+        "property_id": 1,
+        "owner_name": 1,
+        "colony": 1,
+        "mobile": 1
+    }
+    
+    # Sort by status (pending first) then serial number
+    properties = await db.properties.find(query, projection).sort([
+        ("status", 1),
+        ("serial_number", 1)
+    ]).limit(limit).to_list(limit)
+    
+    return {
+        "properties": properties,
+        "count": len(properties)
+    }
+
 # ============== ADMIN USER ROUTES ==============
 
 @api_router.post("/admin/users", response_model=UserResponse)
