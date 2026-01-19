@@ -1111,6 +1111,28 @@ export default function BillsPage() {
                 A new batch will be created for these properties.
               </AlertDialogDescription>
             </AlertDialogHeader>
+            
+            {/* Skip Duplicates Option */}
+            <div className="py-4 border-t border-b">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="skipDuplicates"
+                  checked={skipDuplicates}
+                  onChange={(e) => setSkipDuplicates(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                />
+                <label htmlFor="skipDuplicates" className="text-sm">
+                  <span className="font-medium">Skip duplicate entries</span>
+                  <p className="text-xs text-slate-500">
+                    {skipDuplicates 
+                      ? "Properties with same ID or owner+mobile will be skipped" 
+                      : "All bills will be added (recommended for new colonies)"}
+                  </p>
+                </label>
+              </div>
+            </div>
+            
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
@@ -1126,7 +1148,7 @@ export default function BillsPage() {
                 ) : (
                   <>
                     <Plus className="w-4 h-4 mr-2" />
-                    Add to Properties
+                    Add All to Properties
                   </>
                 )}
               </AlertDialogAction>
