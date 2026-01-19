@@ -1571,24 +1571,24 @@ async def upload_submission_photo(
     photo_type: str = Form("HOUSE"),
     current_user: dict = Depends(get_current_user)
 ):
-    """Upload a new photo to a submission (admin only)"""
+    """Upload a new photo to a submission (admin only) - saves to GridFS"""
     if current_user["role"] not in SUBMISSION_EDIT_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required for editing submissions")
     
-    # Save the file
+    # Read file content
+    content = await file.read()
+    
+    # Save to GridFS
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{submission_id}_{photo_type.lower()}_{timestamp}.jpg"
-    file_path = UPLOAD_DIR / filename
+    file_id = await save_file_to_gridfs(content, filename, file.content_type or "image/jpeg")
     
-    with open(file_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
-    
-    file_url = f"/api/uploads/{filename}"
+    file_url = f"/api/file/{file_id}"
     
     # Add photo to submission
     photo_data = {
         "file_url": file_url,
+        "file_id": file_id,
         "photo_type": photo_type
     }
     
@@ -1597,7 +1597,7 @@ async def upload_submission_photo(
         {"$push": {"photos": photo_data}}
     )
     
-    return {"message": "Photo uploaded", "file_url": file_url}
+    return {"message": "Photo uploaded", "file_url": file_url, "file_id": file_id}
 
 @api_router.put("/admin/properties/{property_id}")
 async def edit_property(
