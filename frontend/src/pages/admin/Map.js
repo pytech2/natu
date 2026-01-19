@@ -236,20 +236,19 @@ export default function PropertyMap() {
     applyFilters();
   }, [properties, filters]);
 
-  // Fetch only colony list for dropdown
+  // Fetch only colony list for dropdown - USES CACHED ENDPOINT
   const fetchColonies = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/map/properties?limit=5000`, {
+      const response = await axios.get(`${API_URL}/map/colonies`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const props = response.data.properties || [];
-      const uniqueColonies = [...new Set(props.map(p => p.colony || p.ward).filter(Boolean))];
-      setColonies(uniqueColonies.sort());
+      const coloniesData = response.data.colonies || [];
+      setColonies(coloniesData.map(c => c.name));
       
       // Set total count
-      setStats(prev => ({ ...prev, total: props.length }));
+      setStats(prev => ({ ...prev, total: response.data.total || 0 }));
     } catch (error) {
       toast.error('Failed to load colonies');
     } finally {
