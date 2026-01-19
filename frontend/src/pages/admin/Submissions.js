@@ -991,22 +991,29 @@ export default function Submissions() {
                             }`}>
                               {photo.photo_type}
                             </span>
-                            {/* Delete Button */}
+                            {/* Delete Button - Always visible with red background */}
                             <Button
                               size="sm"
                               variant="destructive"
-                              className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => handleDeletePhoto(idx)}
+                              className="absolute top-2 right-2 h-8 w-8 p-0 bg-red-600 hover:bg-red-700 shadow-lg"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm('Are you sure you want to delete this photo?')) {
+                                  handleDeletePhoto(idx);
+                                }
+                              }}
+                              title="Delete Photo"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                             <Button
                               size="sm"
                               variant="secondary"
-                              className="absolute bottom-2 right-2 h-7 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute bottom-2 right-2 h-7 text-xs bg-white/90 hover:bg-white shadow"
                               onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}${photo.file_url}`, '_blank')}
                             >
                               <ExternalLink className="w-3 h-3 mr-1" /> View Full
+                            </Button>
                             </Button>
                           </div>
                         ))}
