@@ -408,13 +408,6 @@ export default function Survey() {
       // Photo is compulsory - always append
       formDataObj.append('house_photo', housePhoto);
       
-      // Only append signature if available (now optional)
-      if (signatureData) {
-        const signatureBlob = dataURLtoBlob(signatureData);
-        const signatureFile = new File([signatureBlob], 'signature.png', { type: 'image/png' });
-        formDataObj.append('signature', signatureFile);
-      }
-      
       formDataObj.append('authorization', `Bearer ${token}`);
 
       await axios.post(`${API_URL}/employee/submit/${propertyId}`, formDataObj, {
