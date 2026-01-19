@@ -2432,6 +2432,9 @@ async def submit_survey(
         {"$set": {"status": "In Progress"}}
     )
     
+    # Clear map cache so other users see updated status
+    await clear_map_cache()
+    
     return {"message": "Survey submitted successfully", "submission_id": submission_doc["id"]}
 
 @api_router.post("/employee/reject/{property_id}")
