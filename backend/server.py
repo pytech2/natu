@@ -37,13 +37,68 @@ import base64
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
+# MongoDB connection with optimized settings for performance
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(
+    mongo_url,
+    maxPoolSize=50,  # Increase connection pool
+    minPoolSize=10,
+    maxIdleTimeMS=30000,
+    serverSelectionTimeoutMS=5000
+)
 db = client[os.environ['DB_NAME']]
 
 # GridFS for file storage in database
 fs_bucket = AsyncIOMotorGridFSBucket(db)
+
+# ============== DATABASE INDEXES FOR PERFORMANCE ==============
+async def create_indexes():
+    """Create MongoDB indexes for faster queries"""
+    try:
+        # Properties collection indexes
+        await db.properties.create_index("id", unique=True, background=True)
+        await db.properties.create_index("batch_id", background=True)
+        await db.properties.create_index("ward", background=True)
+        await db.properties.create_index("colony", background=True)
+        await db.properties.create_index("status", background=True)
+        await db.properties.create_index("assigned_employee_id", background=True)
+        await db.properties.create_index([("latitude", 1), ("longitude", 1)], background=True)
+        await db.properties.create_index("serial_number", background=True)
+        await db.properties.create_index("bill_sr_no", background=True)
+        # Compound index for common query patterns
+        await db.properties.create_index([("ward", 1), ("status", 1)], background=True)
+        await db.properties.create_index([("assigned_employee_id", 1), ("status", 1)], background=True)
+        
+        # Users collection indexes
+        await db.users.create_index("id", unique=True, background=True)
+        await db.users.create_index("username", unique=True, background=True)
+        await db.users.create_index("role", background=True)
+        
+        # Submissions collection indexes
+        await db.submissions.create_index("id", unique=True, background=True)
+        await db.submissions.create_index("property_record_id", background=True)
+        await db.submissions.create_index("employee_id", background=True)
+        await db.submissions.create_index("status", background=True)
+        await db.submissions.create_index("submitted_at", background=True)
+        await db.submissions.create_index([("employee_id", 1), ("submitted_at", -1)], background=True)
+        
+        # Bills collection indexes
+        await db.bills.create_index("id", unique=True, background=True)
+        await db.bills.create_index("colony", background=True)
+        await db.bills.create_index("bill_sr_no", background=True)
+        
+        # Attendance collection indexes
+        await db.attendance.create_index("employee_id", background=True)
+        await db.attendance.create_index("date", background=True)
+        await db.attendance.create_index([("employee_id", 1), ("date", 1)], unique=True, background=True)
+        
+        # Batches collection
+        await db.batches.create_index("id", unique=True, background=True)
+        await db.batches.create_index("status", background=True)
+        
+        logging.info("MongoDB indexes created successfully")
+    except Exception as e:
+        logging.warning(f"Index creation warning (may already exist): {e}")
 
 # JWT Configuration
 JWT_SECRET = os.environ.get('JWT_SECRET', 'nstu-property-tax-secret-key-2025')
