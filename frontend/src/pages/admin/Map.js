@@ -855,6 +855,8 @@ export default function PropertyMap() {
             )}
           </CardContent>
         </Card>
+          </>
+        )}
 
         {/* Download PDF Dialog */}
         <Dialog open={pdfDialog} onOpenChange={setPdfDialog}>
