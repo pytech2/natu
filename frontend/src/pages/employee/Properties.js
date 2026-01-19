@@ -424,7 +424,14 @@ export default function Properties() {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   maxZoom={19}
                 />
-                <MapController center={mapCenter} zoom={16} />
+                <MapController 
+                  center={mapCenter} 
+                  zoom={mapZoom} 
+                  onPositionChange={(center, zoom) => {
+                    setMapCenter(center);
+                    setMapZoom(zoom);
+                  }}
+                />
                 
                 {/* User location */}
                 {userLocation && (
@@ -437,7 +444,7 @@ export default function Properties() {
                 {mapProperties.map((property, index) => (
                   <Marker
                     key={property.id}
-                    position={[property.latitude, property.longitude]}
+                    position={[property.latitude, property.longitude]}}
                     icon={createFastMarker(
                       property.bill_sr_no || property.serial_number || (index + 1),
                       property.status,
