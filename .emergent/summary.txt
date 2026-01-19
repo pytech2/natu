@@ -2,160 +2,211 @@
 
 **PRODUCT REQUIREMENTS:**
 - **Roles:** Super Admin, Surveyor, Supervisor, MC Officer with specific permissions.
-- **Admin Workflow:** Login, upload property data (Excel/PDF), manage users, assign properties. A key requirement is processing PDF bills: extracting data (including the bill's own serial number), handling missing serials as N/A, and allowing a manually triggered GPS-based re-arrangement of bills for route optimization. The admin must be able to view properties on a satellite map, track employee attendance/location, review survey submissions, and export Approved data.
-- **Surveyor Workflow:** Login, view assigned properties on a high-quality satellite map that tracks their live location and highlights the nearest property. The map should be printable as a PDF for field use. The survey form must support special conditions like House Locked or Owner Denied, which alter the required fields. A Self-Certified status must be captured via a radio button.
-- **Attendance:** A daily attendance system for surveyors with a selfie, visible on the admin dashboard.
-- **PDF Generation:** The admin needs to generate PDFs of bills. The latest requirement is to render 1, 2, or 3 source bills onto a single A4 page, without cropping or incorrect rotation, and with minimal whitespace.
+- **Admin Workflow:** Login, upload property data (Excel/PDF), manage users, assign/unassign properties, process PDF bills with data extraction and GPS-based route optimization, view properties on a map, track attendance, review submissions, and export data. A key requirement is handling missing bill serial numbers by generating a new serial based on the nearest GPS property (e.g., a missing serial near property #42 becomes N42). Duplicates during PDF bill import should be skipped.
+- **Surveyor Workflow:** Login, view all assigned properties on a map. The survey form must be locked until daily attendance is marked. The form should be simplified by removing signature capture and correct colony name fields, but photo upload must be mandatory in all cases. The map view should be clean, removing the property list and PDF download options.
+- **Map UI:** Map markers should be small, circular, 3D-style pins displaying the property serial number. The map should emulate the look and feel of the  application.
+- **Performance:** The application, especially map loading and form submission, needs to be fast and smooth.
 
 **User's preferred language**: The user communicates in a mix of English and Hindi. The next agent MUST be prepared to understand and respond to instructions in both languages.
 
 **what currently exists?**
 A full-stack application with a FastAPI backend, React frontend, and MongoDB.
-- **Backend:** A monolithic  handles all logic. It features a heavily-modified PDF generation endpoint that can render 1, 2, or 3 bills per page by converting source PDF pages to images and placing them on a new canvas. The file upload strategy was reverted from MongoDB GridFS back to a simpler filesystem approach () to reduce deployment complexity.
-- **Frontend:**
-    - **Admin Panel:** The Generate PDF dialog allows selecting 1, 2, or 3 bills per page. The main map and other property lists have an updated color scheme for property statuses. The submission review dialog's fields are now synchronized with the surveyor's form.
-    - **Live Server (Hostinger VPS):** The application is deployed but is currently in a broken state where newly uploaded images are not loading. The configuration uses Nginx to serve a static frontend build and reverse proxy API calls to the Python backend.
+- **Backend:** A monolithic  that handles all application logic. It includes a comprehensive Role-Based Access Control (RBAC) system, property assignment/unassignment, and a complex algorithm for generating serial numbers for un-numbered properties based on the GPS coordinates of the nearest numbered property.
+- **Frontend:** The application supports four roles (Admin, Supervisor, MC Officer, Surveyor) with distinct UI views and permissions. Key features include a property management page with assign/unassign functionality, advanced filters on submission/export pages, and custom circular 3D map markers. The surveyor's pages (, ) have been heavily modified to simplify the workflow, including an attendance lock.
 
 **Last working item**:
-- **Last item agent was working:** The agent was trying to resolve a critical  error for newly uploaded images on the user's live Hostinger VPS. Despite confirming the image file exists in the correct directory () and updating the Nginx configuration multiple times, Nginx fails to serve the file.
-- **Status:** IN PROGRESS
+- **Last item agent was working:** The agent was implementing a large batch of UI/UX changes for the surveyor pages to simplify the workflow and improve usability. This included adding an attendance lock, removing several form fields and UI elements (signature, property list, download button), and making photo uploads mandatory.
+- **Status:** IN PROGRESS (Implementation is done, but requires testing and user verification).
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** Manual debugging on the VPS. The agent needs to use , check Nginx configuration (), and analyze Nginx logs ().
-- **User Testing Done:** Y (User has confirmed the issue persists on the live server).
+- **Which testing method agent to use?** Frontend testing agent. The changes are extensive and affect the core surveyor workflow. Testing should verify the attendance lock, the simplified survey form, the mandatory photo, and the cleaned-up map view.
+- **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1:** Fix image loading  error on the live Hostinger VPS. (P0)
-- **Issue 2:** User verification for the final PDF generation quality (size, spacing for 2 and 3 bills per page). (P1)
-- **Issue 3:** User verification for the new map marker colors on the live server. (P1)
-- **Issue 4:** User verification for the synced fields on the Admin Submission view page. (P2)
-- **Issue 5:** Surveyor app performance and UI bugs (from previous handoff). (P3)
-- **Issue 6:** Mobile photo watermark bug (recurring issue from previous handoff). (P3)
+- **Issue 1:** Verify the latest surveyor page modifications and attendance lock. (P0)
+- **Issue 2:** The  serial number algorithm was last updated to use GPS, but the user reported it was still not selecting the correct nearest number (e.g., showing  instead of ). The logic was updated again but needs verification. (P1)
+- **Issue 3:** General application performance is slow, especially with loading all properties on the map and submitting forms. (P2)
+- **Issue 4:** User requested that access to a completed colony be removed, but this workflow has not been defined or implemented. (P3)
+- **Issue 5:** Recurring deployment failures on the user's Hostinger VPS, particularly with  dependency conflicts. (P3)
 
 **Issues Detail:**
-- **Issue 1: Fix image loading 404 error on Hostinger VPS**
-    - **Description:** On the live server (), any attempt to access a recently uploaded image via its URL () results in a 404 error. This breaks the survey review workflow. The issue is purely a server configuration problem, likely in Nginx.
-    - **Attempted fixes:**
-        - Confirmed files exist in the target directory ().
-        - Set up a symlink from the app's local  directory to .
-        - Corrected file permissions and ownership ().
-        - Rewrote the Nginx config () to remove duplicate  blocks and ensure a correct  directive for .
-        - Restarted Nginx and the backend service () multiple times.
+- **Issue 1: Verify Surveyor Page Modifications**
+    - **Attempted fixes:** The agent has modified  and  to implement all user requests: removed signature canvas, correct colony field, property list, and download buttons; added an attendance lock screen; and made photo upload mandatory.
     - **Next debug checklist:**
-        1.  Analyze the full Nginx config again () for subtle errors. The last attempt to fix it failed due to a  error, which was then resolved, but the problem persists.
-        2.  Check the Nginx error logs () immediately after trying to access a broken image URL. This is the most crucial next step.
-        3.  Verify the directory permissions recursively for the  user, ensuring it has execute () permissions on , , and .
-        4.  Check for security policies like SELinux or AppArmor that might be blocking Nginx. Run  or check .
-    - **Status:** IN PROGRESS
-    - **Is recurring issue?** Y (Deployment issues are constant).
-    - **Should Test frontend/backend/both after fix?** both (by accessing the live app in a browser).
-    - **Blocked on other issue:** None. This is the primary blocker.
+        1. Log in as a surveyor who has NOT marked attendance. Verify the survey form is locked.
+        2. Mark attendance. Verify the survey form becomes available.
+        3. On the  form, confirm the Signature and Correct Colony Name fields are gone.
+        4. Attempt to submit a survey without a photo for all  types to confirm it's mandatory.
+        5. On the  map page, confirm the text list of properties below the map is gone and the Download PDF button has been removed.
+    - **Status:** TESTING PENDING
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Frontend
+    - **Blocked on other issue:** None
+
+- **Issue 2: GPS-based Serial Number Algorithm ()**
+    - **Attempted fixes:** The algorithm was rewritten multiple times. The final version finds the nearest property with a valid serial number using GPS coordinates to determine the 'X' in 'NX'. The hyphen was also removed per user request.
+    - **Next debug checklist:**
+        1. Process a PDF/batch of properties where some bills are missing a serial number and are physically located near numbered bills.
+        2. Check the database or the UI to verify that the  for the new properties is correctly formatted as  (e.g., ), where 42 is the serial of the nearest property.
+        3. Verify the logic works correctly in both  and  endpoints.
+    - **Status:** USER VERIFICATION PENDING
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** Backend
+    - **Blocked on other issue:** None
 
 **In progress Task List**:
 - None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **Backend Refactoring (P0):** Decompose the monolithic  into a modular structure using FastAPI routers. This is critical for maintainability.
+    - **Performance Optimization (P0):** Investigate and fix backend query bottlenecks and frontend rendering slowness.
+    - **Backend Refactoring (P1):** Decompose the monolithic  into a modular structure using FastAPI routers. Extract the duplicated GPS serial algorithm into a shared utility function.
 - **Future Tasks:**
-    - **Offline Support:** Enable the surveyor's mobile interface to work offline and sync data later.
-    - **Download ZIP:** Add a feature to download all split-employee PDFs as a single ZIP file.
-    - **Remove Employee:** Add a UI feature to remove a single employee from a property that is assigned to multiple people.
+    - Implement Completed Colony access restrictions.
+    - Offline support for the surveyor's mobile interface.
+    - Add a feature to download all split-employee PDFs as a single ZIP file.
+    - Add a UI feature to remove a single employee from a property assigned to multiple people.
+    - Add a shortcut to open the survey form by clicking a map marker.
 
 **Completed work in this session**
-- **PDF Generation Overhaul:**
-    - Resolved persistent cropping, rotation, and whitespace issues by implementing a new strategy: rendering source PDF pages as images and placing them on a clean A4 canvas.
-    - Added UI and backend logic to allow users to generate PDFs with 1, 2, or 3 bills per page.
-    - Iteratively adjusted bill size and spacing based on direct user feedback.
-- **Map and UI Color Scheme Update:**
-    - Changed the property status colors across the application (Admin Map, Employee pages) to a new scheme: Red (Pending/Rejected), Yellow (Submitted/In Progress), Green (Approved).
-- **Admin Form Synchronization:**
-    - The Admin's View/Edit Submission dialog now shows the same fields as the Surveyor's form, removing outdated fields and adding missing ones for consistency.
-- **Extensive Live Server (VPS) Troubleshooting:**
-    - Resolved MongoDB crashes by cleaning up disk space.
-    - Identified the correct  service name () for managing the backend process.
-    - Reverted the file storage strategy from MongoDB GridFS back to the simpler filesystem model to resolve deployment friction.
-    - Performed multiple rounds of debugging on the Nginx configuration and file permissions.
+- **Role-Based Access Control (RBAC):** Implemented a full permission system for Admin, Supervisor, and MC Officer roles.
+- **Property Unassign Feature:** Added backend and frontend logic for admins to unassign properties from employees.
+- **UI/UX Overhaul:**
+    - Redesigned map markers to be circular and 3D.
+    - Removed the 1000-property limit on maps.
+    - Implemented a GPS-based nearest-neighbor algorithm for generating  serial numbers (e.g., ).
+    - Added extensive filters (Colony, Date) to Submissions and Export pages.
+    - Overhauled the surveyor pages to add an attendance lock and simplify the UI based on user feedback.
+- **Bug Fixes:**
+    - Added logic to prevent duplicate properties from being created during bill import.
+    - Removed the View Map button from the Bills page.
+    - Addressed multiple deployment issues by removing the  package.
 
 **Earlier issues found/mentioned but not fixed**
-- The surveyor app performance issues and the mobile photo watermark bug are long-standing issues that have been deprioritized to handle the critical PDF generation and deployment blockers.
+- **Issue 1: General App Slowness**
+    - **Debug checklist:** Check MongoDB query performance and add indexes if needed. Analyze frontend component rendering time, especially for maps with many markers.
+    - **Why to solve this issue and what will be achieved with this?** A faster app improves user experience and surveyor efficiency.
+    - **Should Test frontend/backend/both after fix:** both
+    - **Is recurring issue?** Y
+- **Issue 2: Completed Colony Access**
+    - **Debug checklist:** Discuss requirements with the user to define completed. Implement backend filters and frontend UI to restrict access.
+    - **Why to solve this issue and what will be achieved with this?** Prevents surveyors from accidentally working in areas that are already finished.
+    - **Should Test frontend/backend/both after fix:** both
+    - **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
-- **Issue:** Mobile Photo Watermark Bug
-- **Recurrence count:** 2+
-- **Status:** USER VERIFICATION PENDING
+- **Issue recurrence in previous fork:** Deployment/Build failures on Hostinger VPS.
+- **Recurrence count:** 3+
+- **Status:** NOT RESOLVED (A workaround was applied by removing a package, but the underlying dependency conflict issue on the user's server likely remains).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, MongoDB (Motor), PyMuPDF, reportlab.
-- **Frontend:** React, React-Leaflet, Tailwind CSS, Shadcn UI.
-- **Deployment:** Nginx, , Linux file permissions, symlinks. The agent has extensive hands-on experience debugging a live Linux environment.
+- **Backend:** FastAPI, MongoDB (Motor), PyMuPDF, reportlab, Haversine formula for GPS distance calculation.
+- **Frontend:** React, React-Leaflet, Tailwind CSS, Shadcn UI, .
+- **Deployment:** Nginx,  on a Hostinger VPS. Prone to npm <command>
+
+Usage:
+
+npm install        install all the dependencies in your project
+npm install <foo>  add the <foo> dependency to your project
+npm test           run this project's tests
+npm run <foo>      run the script named <foo>
+npm <command> -h   quick help on <command>
+npm -l             display usage info for all commands
+npm help <term>    search for help on <term>
+npm help npm       more involved overview
+
+All commands:
+
+    access, adduser, audit, bugs, cache, ci, completion,
+    config, dedupe, deprecate, diff, dist-tag, docs, doctor,
+    edit, exec, explain, explore, find-dupes, fund, get, help,
+    help-search, hook, init, install, install-ci-test,
+    install-test, link, ll, login, logout, ls, org, outdated,
+    owner, pack, ping, pkg, prefix, profile, prune, publish,
+    query, rebuild, repo, restart, root, run-script, sbom,
+    search, set, shrinkwrap, star, stars, start, stop, team,
+    test, token, uninstall, unpublish, unstar, update, version,
+    view, whoami
+
+Specify configs in the ini-formatted file:
+    /root/.npmrc
+or on the command line via: npm <command> --key=value
+
+More configuration info: npm help config
+Configuration fields: npm help 7 config
+
+npm@10.8.2 /usr/lib/node_modules/npm dependency issues.
 
 **key DB schema**
-- No new schema changes. A data migration was performed to update  with status  to .
+- **users:**  field added and used for RBAC (ADMIN, SURVEYOR, SUPERVISOR, MC_OFFICER).
+- **properties:**  stores the GPS-calculated serial number (e.g., N70).  (array) is used for multi-assignment.
+- **attendance:** Used to check if a surveyor has marked attendance for the day.
 
 **changes in tech stack**
-- The use of MongoDB GridFS for file storage was implemented and then **reverted** in favor of a simpler filesystem approach due to deployment complexity.
+- The  package was added and subsequently removed to resolve a critical build failure on the user's deployment server.
 
 **All files of reference**
-- : Major changes to the  function. Logic for file upload/serving was simplified to rely on filesystem paths served by Nginx.
-- : UI updated with a dropdown for 1, 2, or 3 bills per page.
-- , : Updated with the new color-coding logic.
-- : Overhauled the view/edit dialog to match the surveyor's form.
+- : Major changes for RBAC, unassign feature, duplicate property checks, and the GPS-based nearest-serial algorithm.
+- : Overhauled to add an attendance lock and remove signature, colony, and other UI elements.
+- : Overhauled to remove the property list, download button, and apply new map marker styles.
+- : Modified to add the Unassign Employee feature.
+- : Updated with 3D markers and removal of the hard-coded property limit.
+- : Updated with 3D markers.
 
 **Areas that need refactoring**:
-- **:** This remains the highest priority for refactoring. The PDF generation function, after many iterations, is likely complex and could be cleaned up.
+- **:** This is the highest priority. The complex GPS-based nearest-neighbor algorithm is duplicated in  and  and should be extracted into a single, reusable function. The entire file should be broken into FastAPI routers for maintainability.
 
 **key api endpoints**
-- : The heavily modified endpoint for creating multi-bill PDFs.
-- : This is not a direct FastAPI endpoint but is supposed to be served by Nginx. It is the source of the current P0 issue on the live server.
+- : New endpoint to unassign single or multiple properties from an employee.
+- : Returns current user info and role-based permissions.
+- : Checks if the logged-in surveyor has marked attendance.
+- : Updated with GPS-based serial generation.
+- : Updated with duplicate checks and GPS-based serial generation.
+- : Limit increased to fetch all assigned properties for the map view.
 
 **Critical Info for New Agent**
-- **Your immediate and highest priority task is to fix the image loading  error on the user's Hostinger VPS.** The live application is broken. This is an Nginx configuration issue, not an application code issue.
-- **Focus your debugging on the VPS.** Scrutinize the Nginx config (), Nginx error logs (), and directory permissions from the root path down to the file (). The  user must be able to traverse the entire path.
-- The file storage strategy is simple: the FastAPI backend writes files to a directory, and Nginx is supposed to serve them. Do not attempt to re-introduce database storage (GridFS), as this was abandoned to simplify deployment.
-- The user is frustrated with the recurring deployment issues. Provide a final, definitive fix for the Nginx configuration.
-- After fixing the deployment issue, you must get user verification on the other completed work: PDF quality and map colors.
+- Your first task is to **test and verify** the latest batch of changes on the surveyor pages (, ). The user has not seen these yet.
+- The **GPS-based serial number algorithm is a critical and complex piece of business logic**. The user is very particular about how it works ( followed by the nearest property's serial, with no hyphen). You must ensure it is functioning correctly.
+- **Application performance is a major user concern**. Be prepared to investigate and optimize slow database queries and frontend rendering.
+- **Deployment to the user's Hostinger VPS is fragile**. The  package was removed as a workaround for  failures. Avoid adding new frontend dependencies unless necessary, and be prepared to guide the user through deployment troubleshooting.
 
 **documents and test reports created in this job**
-- 
+-  (updated frequently)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1. **LATEST:** User confirms they are unable to fix the Nginx config issue.
-2. User asks for the command to restart services.
-3. User shares a screenshot of the Nginx config test failing with a duplicate location error.
-4. User confirms they need to restart services.
-5. User states the image loading issue is not fixed ().
-6. User reports the backend service is failing to start on the VPS.
-7. User provides a screenshot of the 404 error for an image on the live server, stating that it works on the preview environment but not on their VPS. This is the core of the current problem.
-8. User asks for a single, final command to update the entire codebase on the VPS and make it work like the preview environment.
-9. User reports that on the VPS, today's uploaded images are not showing, and new uploads are not working, while yesterday's images are fine.
-10. User reports that backend                          RUNNING   pid 48, uptime 0:00:03
-code-server                      STOPPED   Not started
-frontend                         STOPPED   Jan 16 08:35 AM
-mongodb                          RUNNING   pid 50, uptime 0:00:03
-nginx-code-proxy                 RUNNING   pid 47, uptime 0:00:03
-supervisor>  is not found and asks for the correct restart command.
+10. User requested to change  to  (remove the dash).
+9. User reported the GPS serial algorithm was incorrect (showing N-0 instead of N-70) and requested other fixes (remove View Map from Bills, ensure surveyor sees all data).
+8. User requested to change the  serial algorithm to use colony name instead of a number. (This was later reverted).
+7. User reported several issues: no survey data on map, 1000 property limit, map not updated in Bills, duplicate properties being added, and proposed a new algorithm for 'NA' serials.
+6. User requested a final deployment solution that doesn't lose data, after facing  module corruption.
+5. User reported  failed with dependency conflicts after trying to add .
+4. User confirmed deployment of new features (RBAC, unassign, etc.) and requested to make map markers circular and 3D.
+3. User requested a Property Management feature to unassign employees from properties.
+2. User reported multiple new issues and feature requests, including app slowness, map rotation, adding serial numbers to the UI, and creating a PWA icon.
+1. User confirmed the initial Nginx image loading issue was resolved and provided a large feature request for a Role-Based Access Control (RBAC) system.
 
 **Project Health Check:**
-- **Broken:** The live application on the Hostinger VPS is critically impacted. The inability to view newly uploaded survey images makes the core workflow unusable.
+- **Broken:** While functional in the preview environment, the application is suffering from severe performance issues and has a history of failed deployments on the user's live server, making its production status unreliable.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- **Leaflet & React-Leaflet:** Used for all interactive maps.
-- **PyMuPDF, reportlab:** Backend dependencies for PDF processing.
-- **Nginx:** Used as a reverse proxy and static file server on the live VPS.
+- **Leaflet & React-Leaflet:** Used for interactive maps.
+- **PyMuPDF, reportlab:** Used for backend PDF processing.
+- **Nginx:** Used as a reverse proxy on the user's VPS.
 
 **Testing status**
 - **Testing agent used after significant changes:** NO
 - **Troubleshoot agent used after agent stuck in loop:** NO
 - **Test files created:** None.
-- **Known regressions:** The image loading functionality is regressed on the live server due to a deployment/configuration issue.
+- **Known regressions:** The map rotation feature () was removed to fix a deployment issue.
 
 **Credentials to test flow:**
 - **Admin:**  / 
-- **Employee/Surveyor:** Create via the admin panel.
+- **Employee/Surveyor/Supervisor/MC Officer:** Create/manage via the admin panel. Passwords can be reset via the agent if needed.
 
 **What agent forgot to execute**
-- All secondary tasks (refactoring, older bugs) were justifiably postponed to address the P0 PDF generation and deployment crises. The agent was entirely focused on the user's immediate blockers.</analysis>
+- The root cause of the  failures on the user's VPS was never fully diagnosed; a package was simply removed as a workaround.
+- The user's broader complaint about application slowness has not been systematically investigated.
+- The user's request to restrict access to completed colonies has not been addressed.</analysis>
