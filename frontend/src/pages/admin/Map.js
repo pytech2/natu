@@ -252,8 +252,8 @@ export default function PropertyMap() {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      // Fetch ALL properties (no limit)
-      const response = await axios.get(`${API_URL}/admin/properties?limit=100000`, {
+      // Fetch properties with reasonable limit - backend optimized with projections
+      const response = await axios.get(`${API_URL}/admin/properties?limit=10000`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
