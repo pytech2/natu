@@ -290,16 +290,9 @@ export default function PropertyMap() {
   };
 
   const applyFilters = () => {
-    let filtered = [...properties];;
-    }
-  };
-
-  const applyFilters = () => {
     let filtered = [...properties];
     
-    if (filters.colony) {
-      filtered = filtered.filter(p => p.colony === filters.colony);
-    }
+    // Colony filter already applied in fetchPropertiesByColony
     
     if (filters.category) {
       filtered = filtered.filter(p => p.category === filters.category);
@@ -326,6 +319,9 @@ export default function PropertyMap() {
 
   const clearFilters = () => {
     setFilters({ colony: '', category: '', search: '' });
+    setShowMap(false);
+    setProperties([]);
+    setFilteredProperties([]);
   };
 
   // Arrange properties by GPS route
