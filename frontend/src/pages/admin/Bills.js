@@ -109,6 +109,7 @@ export default function BillsPage() {
   // Copy to properties state
   const [copyDialog, setCopyDialog] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [skipDuplicates, setSkipDuplicates] = useState(false); // NEW: Option to skip or add all
 
   // GPS Arrangement confirmation dialog
   const [gpsArrangeDialog, setGpsArrangeDialog] = useState(false);
