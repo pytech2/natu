@@ -146,8 +146,8 @@ export default function Properties() {
 
   const fetchProperties = async () => {
     try {
-      // Fetch all assigned properties (backend now optimized)
-      const response = await axios.get(`${API_URL}/employee/properties?limit=2000`, {
+      // Use FAST map endpoint - returns only essential fields
+      const response = await axios.get(`${API_URL}/map/employee-properties?limit=500`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const props = response.data.properties || [];
