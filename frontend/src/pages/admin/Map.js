@@ -377,15 +377,12 @@ export default function PropertyMap() {
     setSurveyDialog(true);
     
     try {
-      // Fetch submission for this property
-      const response = await axios.get(`${API_URL}/admin/submissions?limit=100`, {
+      // Direct fetch submission for this property
+      const response = await axios.get(`${API_URL}/submission/by-property/${property.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const submissions = response.data.submissions || [];
-      const submission = submissions.find(s => s.property_record_id === property.id || s.property_id === property.property_id);
-      
-      setSurveyData(submission || null);
+      setSurveyData(response.data.submission || null);
     } catch (error) {
       toast.error('Failed to load survey data');
       setSurveyData(null);
