@@ -79,60 +79,39 @@ const spreadOverlappingMarkers = (properties) => {
   return spreadProperties;
 };
 
-// Custom marker showing SERIAL NUMBER - Small circular 3D pins (same as Survey Map)
+// FAST Simple marker - no gradients or shadows for better performance
 const createPropertyIdIcon = (propertyId, status, serialNo = null) => {
   const colors = {
-    'Pending': '#ef4444',       // RED - pending (no survey)
-    'In Progress': '#eab308',   // YELLOW - survey submitted, pending review
-    'Completed': '#eab308',     // YELLOW - survey submitted (legacy)
-    'Approved': '#22c55e',      // GREEN - admin approved
-    'Rejected': '#ef4444',      // RED - admin rejected
-    'Residential': '#ef4444',   // RED
-    'Commercial': '#ef4444',    // RED
-    'Vacant Plot': '#ef4444',   // RED
-    'Mix Use': '#ef4444',       // RED
-    'default': '#ef4444'        // RED default
+    'Pending': '#ef4444',       // RED
+    'In Progress': '#eab308',   // YELLOW
+    'Completed': '#eab308',     // YELLOW
+    'Approved': '#22c55e',      // GREEN
+    'Rejected': '#f97316',      // ORANGE
+    'default': '#ef4444'        // RED
   };
   const color = colors[status] || colors['default'];
   const displaySerial = serialNo || '-';
   
-  // Small circular marker with 3D effect
+  // Simple fast circular marker
   return L.divIcon({
-    className: 'property-id-marker',
-    html: `
-      <div style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      ">
-        <div style="
-          width: 22px;
-          height: 22px;
-          background: radial-gradient(circle at 30% 30%, ${color}, ${color}cc);
-          border-radius: 50%;
-          border: 2px solid white;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2), inset 0 -2px 3px rgba(0,0,0,0.15);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 9px;
-          font-weight: 700;
-          color: white;
-          text-shadow: 0 1px 1px rgba(0,0,0,0.4);
-        ">${displaySerial}</div>
-        <div style="
-          width: 0;
-          height: 0;
-          border-left: 4px solid transparent;
-          border-right: 4px solid transparent;
-          border-top: 5px solid ${color};
-          margin-top: -2px;
-          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
-        "></div>
-      </div>`,
-    iconSize: [22, 29],
-    iconAnchor: [11, 29],
-    popupAnchor: [0, -25]
+    className: 'fast-marker',
+    html: `<div style="
+      width:20px;
+      height:20px;
+      background:${color};
+      border-radius:50%;
+      border:2px solid white;
+      box-shadow:0 2px 4px rgba(0,0,0,0.3);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:9px;
+      font-weight:700;
+      color:white;
+    ">${displaySerial}</div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10]
   });
 };
 
