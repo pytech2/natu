@@ -181,6 +181,7 @@ export default function PropertyMap() {
   const [colonies, setColonies] = useState([]);
   const [categories, setCategories] = useState([]);
   const [mapType, setMapType] = useState('satellite');
+  const [showMap, setShowMap] = useState(false); // NEW: Don't show map until colony selected
   
   // Filters
   const [filters, setFilters] = useState({
@@ -221,12 +222,72 @@ export default function PropertyMap() {
   const defaultCenter = [29.9506, 76.8378];
 
   useEffect(() => {
-    fetchProperties();
+    fetchColonies(); // Only fetch colonies first
   }, []);
+
+  useEffect(() => {
+    if (filters.colony) {
+      fetchPropertiesByColony(filters.colony);
+      setShowMap(true);
+    }
+  }, [filters.colony]);
 
   useEffect(() => {
     applyFilters();
   }, [properties, filters]);
+
+  // Fetch only colony list for dropdown
+  const fetchColonies = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/map/properties?limit=5000`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const props = response.data.properties || [];
+      const uniqueColonies = [...new Set(props.map(p => p.colony || p.ward).filter(Boolean))];
+      setColonies(uniqueColonies.sort());
+      
+      // Set total count
+      setStats(prev => ({ ...prev, total: props.length }));
+    } catch (error) {
+      toast.error('Failed to load colonies');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch properties for selected colony only
+  const fetchPropertiesByColony = async (colony) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/map/properties?colony=${encodeURIComponent(colony)}&limit=2000`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      let props = response.data.properties || [];
+      props.sort((a, b) => (a.serial_number || 0) - (b.serial_number || 0));
+      
+      setProperties(props);
+      
+      const uniqueCategories = [...new Set(props.map(p => p.category).filter(Boolean))];
+      setCategories(uniqueCategories.sort());
+      
+      const withGPS = props.filter(p => p.latitude && p.longitude).length;
+      setStats({
+        total: props.length,
+        withGPS,
+        residential: props.filter(p => p.category === 'Residential').length,
+        commercial: props.filter(p => p.category === 'Commercial').length,
+        vacant: props.filter(p => p.category === 'Vacant Plot').length
+      });
+      
+    } catch (error) {
+      toast.error('Failed to load properties');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchProperties = async () => {
     setLoading(true);
