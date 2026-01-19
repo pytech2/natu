@@ -289,45 +289,8 @@ export default function PropertyMap() {
     }
   };
 
-  const fetchProperties = async () => {
-    setLoading(true);
-    try {
-      // Use FAST map endpoint - returns only essential fields for map rendering
-      const response = await axios.get(`${API_URL}/map/properties?limit=2000`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      let props = response.data.properties || [];
-      
-      // Sort by serial_number for consistent sequential numbering (1, 2, 3...)
-      props.sort((a, b) => (a.serial_number || 0) - (b.serial_number || 0));
-      
-      setProperties(props);
-      
-      // Extract unique colonies/wards
-      const uniqueColonies = [...new Set(props.map(p => p.colony || p.ward).filter(Boolean))];
-      const uniqueCategories = [...new Set(props.map(p => p.category).filter(Boolean))];
-      setColonies(uniqueColonies.sort());
-      setCategories(uniqueCategories.sort());
-      
-      // Calculate stats
-      const withGPS = props.filter(p => p.latitude && p.longitude).length;
-      const residential = props.filter(p => p.category === 'Residential').length;
-      const commercial = props.filter(p => p.category === 'Commercial').length;
-      const vacant = props.filter(p => p.category === 'Vacant Plot').length;
-      
-      setStats({
-        total: props.length,
-        withGPS,
-        residential,
-        commercial,
-        vacant
-      });
-      
-    } catch (error) {
-      toast.error('Failed to load properties');
-    } finally {
-      setLoading(false);
+  const applyFilters = () => {
+    let filtered = [...properties];;
     }
   };
 
