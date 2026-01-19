@@ -150,7 +150,7 @@ async def delete_file_from_gridfs(file_id: str) -> bool:
     except Exception:
         return False
 
-# ============== FILE SERVE ENDPOINT ==============
+# ============== FILE SERVE ENDPOINTS ==============
 
 @api_router.get("/file/{file_id}")
 async def serve_file(file_id: str):
@@ -170,6 +170,28 @@ async def serve_file(file_id: str):
         )
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
+
+# Legacy endpoint for backward compatibility with old /api/uploads/ URLs
+@api_router.get("/uploads/{filename}")
+async def serve_legacy_upload(filename: str):
+    """Serve legacy files from UPLOAD_DIR for backward compatibility"""
+    file_path = UPLOAD_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Determine content type
+    suffix = file_path.suffix.lower()
+    content_types = {
+        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+        '.gif': 'image/gif', '.pdf': 'application/pdf', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }
+    content_type = content_types.get(suffix, 'application/octet-stream')
+    
+    return FileResponse(
+        path=str(file_path),
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400"}
+    )
 
 # ============== MODELS ==============
 
