@@ -174,12 +174,15 @@ export default function Survey() {
   const [gpsStatus, setGpsStatus] = useState('idle');
   const [location, setLocation] = useState({ latitude: null, longitude: null });
 
-  // Form State - Simplified as per requirements
+  // Attendance check state
+  const [attendanceMarked, setAttendanceMarked] = useState(false);
+  const [checkingAttendance, setCheckingAttendance] = useState(true);
+
+  // Form State - Simplified (removed correct_colony_name)
   const [formData, setFormData] = useState({
     receiver_name: '',
-    receiver_mobile: '',  // NEW: Receiver mobile with 10-digit validation
+    receiver_mobile: '',  // Receiver mobile with 10-digit validation
     relation: '',
-    correct_colony_name: '', // NEW: Correct colony name field
     remarks: '',
     self_satisfied: ''
   });
@@ -191,19 +194,15 @@ export default function Survey() {
   const [withinRange, setWithinRange] = useState(null);
   const [distanceFromProperty, setDistanceFromProperty] = useState(null);
 
-  // Photo State - Only house photo now
+  // Photo State - Only house photo now (COMPULSORY in all situations)
   const [housePhoto, setHousePhoto] = useState(null);
   const [housePhotoPreview, setHousePhotoPreview] = useState(null);
-
-  // Signature State
-  const signatureRef = useRef(null);
-  const [signatureData, setSignatureData] = useState(null);
 
   // File input refs
   const houseCameraRef = useRef(null);
   const houseGalleryRef = useRef(null);
 
-  // Check if special condition allows skipping required fields
+  // Check if special condition allows skipping required fields (but NOT photo)
   const canSkipRequiredFields = specialCondition === 'house_locked' || specialCondition === 'owner_denied';
 
   useEffect(() => {
