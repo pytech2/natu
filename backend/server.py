@@ -456,6 +456,30 @@ async def get_employee_map_properties(
         "count": len(properties)
     }
 
+# Get submission by property ID
+@api_router.get("/submission/by-property/{property_id}")
+async def get_submission_by_property(
+    property_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get submission data for a specific property"""
+    if current_user["role"] not in ["ADMIN", "SUPERVISOR", "MC_OFFICER"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Search by property_record_id or property_id
+    submission = await db.submissions.find_one(
+        {"$or": [
+            {"property_record_id": property_id},
+            {"property_id": property_id}
+        ]},
+        {"_id": 0}
+    )
+    
+    if not submission:
+        return {"submission": None}
+    
+    return {"submission": submission}
+
 # ============== ADMIN USER ROUTES ==============
 
 @api_router.post("/admin/users", response_model=UserResponse)
