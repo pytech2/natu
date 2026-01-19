@@ -5,92 +5,117 @@ Build a full-stack web application for NSTU India Private Limited to manage prop
 
 ## Latest Updates (Jan 19, 2026)
 
-### Performance Optimization (COMPLETED)
-Major performance improvements implemented:
+### GridFS File Storage (COMPLETED) ✅
+All uploads now stored in MongoDB GridFS instead of local UPLOAD_DIR:
 
-**Backend Optimizations:**
-1. **MongoDB Indexes Created at Startup:**
-   - Properties: id, batch_id, ward, colony, status, assigned_employee_id, GPS coords, serial_number
-   - Users: id, username, role
-   - Submissions: id, property_record_id, employee_id, status, submitted_at
-   - Compound indexes for common query patterns
-   
-2. **Query Projections Optimized:**
-   - `/api/admin/properties` - returns only required fields, sorted by serial_number
-   - `/api/employee/properties` - optimized projection with status-based sorting
-   
-3. **Connection Pool Settings:**
-   - maxPoolSize: 50
-   - minPoolSize: 10
-   - maxIdleTimeMS: 30000
+**Backend Changes:**
+1. **New File Serve Endpoint:** `GET /api/file/{file_id}` - Serves files from GridFS with caching
+2. **Survey Submit:** Photos, signatures saved to GridFS with `file_id` reference
+3. **Attendance:** Selfie photos saved to GridFS
+4. **PDF Export:** Updated to fetch photos from GridFS for embedding in reports
 
-**Frontend Optimizations:**
-1. **GPS Tracking Frequency Reduced:**
-   - Movement threshold: 100m (was 50m)
-   - Max age: 60 seconds (was 30 seconds)
-   - Prevents constant re-renders
-   
-2. **Property Limits Adjusted:**
-   - Employee map: 5000 properties (was 100000)
-   - Admin map: 10000 properties (was 100000)
+**Database Schema Update:**
+```javascript
+// Submission photos now include file_id
+photos: [
+  { photo_type: "HOUSE", file_url: "/api/file/{file_id}", file_id: "{file_id}" }
+]
+signature_url: "/api/file/{file_id}"
 
-**Performance Results:**
-- Properties API: ~0.06s for 500 records
-- Dashboard API: <1s response
-- Map loads 459 markers smoothly with satellite view
+// Attendance record
+selfie_url: "/api/file/{file_id}"
+selfie_file_id: "{file_id}"
+```
 
-### Previous Features
-- **Role-Based Access Control (RBAC):** Admin, Supervisor, MC Officer, Surveyor
-- **Property Unassign Feature:** Unassign single or all employees from properties
-- **Attendance Lock:** Survey form locked until daily attendance marked
-- **Mandatory Photo:** Property photo required in all survey conditions
-- **3D Map Markers:** Circular pins showing serial numbers
-- **GPS Serial Algorithm:** Properties without serial get NX format (nearest neighbor)
+### Fast Map API (COMPLETED) ✅
+New lightweight endpoints for map markers:
 
-## Technology Stack
-- **Backend:** FastAPI, MongoDB (Motor), JWT authentication
-- **Frontend:** React, React-Leaflet, Tailwind CSS, Shadcn UI
-- **Maps:** Leaflet with Google Satellite tiles
-- **PDF Processing:** PyMuPDF, reportlab
+| Endpoint | Purpose | Response Time |
+|----------|---------|---------------|
+| `GET /api/map/properties` | Admin map (500 markers) | ~0.09s |
+| `GET /api/map/employee-properties` | Surveyor map (200 markers) | ~0.05s |
 
-## Key API Endpoints
-- `POST /api/auth/login` - Authentication
+**Optimization Details:**
+- Minimal projection (only id, lat, lng, status, serial, name)
+- No unnecessary joins or lookups
+- Index-optimized queries
+
+### Previous Performance Optimizations (COMPLETED)
+1. **MongoDB Indexes:** 20+ indexes on properties, users, submissions, attendance
+2. **Connection Pool:** maxPoolSize=50, minPoolSize=10
+3. **GPS Frequency:** 200m movement threshold, 60s max age
+
+## API Endpoints Summary
+
+### File APIs
+- `GET /api/file/{file_id}` - Serve file from GridFS (cached 24hrs)
+
+### Map APIs (FAST)
+- `GET /api/map/properties?limit=500` - Admin map markers
+- `GET /api/map/employee-properties?limit=200` - Surveyor map markers
+
+### Auth APIs
+- `POST /api/auth/login` - Login
+- `GET /api/auth/me` - Get current user with permissions
+
+### Admin APIs
 - `GET /api/admin/dashboard` - Dashboard stats
-- `GET /api/admin/properties` - Property list with filters
+- `GET /api/admin/properties` - Property list (full data)
+- `POST /api/admin/bills/upload-pdf` - Upload PDF bills
+- `GET /api/admin/submissions/export` - Export to Excel/PDF
+
+### Employee APIs
 - `GET /api/employee/properties` - Assigned properties
-- `GET /api/employee/attendance/today` - Attendance check
-- `POST /api/employee/submit/{property_id}` - Survey submission
+- `POST /api/employee/submit/{property_id}` - Submit survey (GridFS)
+- `POST /api/employee/attendance` - Mark attendance (GridFS)
+- `GET /api/employee/attendance/today` - Check attendance
 
 ## Test Credentials
 - **Admin:** `admin` / `nastu123`
 - **Surveyor:** `surveyor1` / `test123`
-- **MC Officer:** `1234567890` / `test123`
-- **Supervisor:** `a` / `test123`
 
-## Pending/Future Tasks
-- **P1:** Backend refactoring - split server.py into modular routers
-- **P2:** "Completed Colony" access restrictions
-- **P3:** Offline support for surveyor mobile interface
-- **P3:** ZIP download for split-employee PDFs
+## VPS Deployment Commands
+
+```bash
+# 1. Go to app folder
+cd /var/www/nstu-app
+
+# 2. Pull latest code
+git fetch origin
+git reset --hard origin/main
+
+# 3. Backend update
+cd backend
+source venv/bin/activate
+pip install -r requirements.txt
+pkill -f uvicorn
+nohup python -m uvicorn server:app --host 0.0.0.0 --port 8001 > backend.log 2>&1 &
+cd ..
+
+# 4. Frontend build
+cd frontend
+npm install --legacy-peer-deps
+npm run build
+cd ..
+
+# 5. Restart Nginx
+sudo systemctl reload nginx
+```
 
 ## File Structure
 ```
 /app/
 ├── backend/
-│   ├── server.py         # Main API (3000+ lines, needs modularization)
+│   ├── server.py         # Main API with GridFS, Fast Map endpoints
 │   └── requirements.txt
 └── frontend/
     └── src/
         └── pages/
-            ├── admin/
-            │   ├── Map.js           # Admin property map
-            │   └── Properties.js    # Property management
-            └── employee/
-                ├── Survey.js        # Survey form with attendance lock
-                └── Properties.js    # Surveyor map view
+            ├── admin/Map.js         # Uses /api/map/properties
+            └── employee/Properties.js # Uses /api/map/employee-properties
 ```
 
-## Testing
-- Test file: `/app/tests/test_performance_features.py`
-- Latest test: 14/14 tests passed (100%)
-- Report: `/app/test_reports/iteration_7.json`
+## Pending/Future Tasks
+- **P2:** Backend refactoring - split server.py into routers
+- **P3:** Offline surveyor support
+- **P3:** "Completed Colony" access restrictions
