@@ -638,9 +638,34 @@ async def list_properties(
             {"mobile": {"$regex": search, "$options": "i"}}
         ]
     
+    # Optimized projection for faster queries
+    projection = {
+        "_id": 0,
+        "id": 1,
+        "property_id": 1,
+        "owner_name": 1,
+        "mobile": 1,
+        "address": 1,
+        "colony": 1,
+        "ward": 1,
+        "latitude": 1,
+        "longitude": 1,
+        "status": 1,
+        "serial_number": 1,
+        "bill_sr_no": 1,
+        "amount": 1,
+        "category": 1,
+        "total_area": 1,
+        "assigned_employee_id": 1,
+        "assigned_employee_name": 1,
+        "assigned_employee_ids": 1,
+        "batch_id": 1,
+        "created_at": 1
+    }
+    
     skip = (page - 1) * limit
     total = await db.properties.count_documents(query)
-    properties = await db.properties.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    properties = await db.properties.find(query, projection).sort("serial_number", 1).skip(skip).limit(limit).to_list(limit)
     
     return {
         "properties": properties,
