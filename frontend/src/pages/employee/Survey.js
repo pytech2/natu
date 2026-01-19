@@ -384,13 +384,12 @@ export default function Survey() {
         toast.error('Please select if notice receiver is satisfied');
         return;
       }
+    }
 
-      if (!housePhoto) {
-        toast.error('Property photo is required');
-        return;
-      }
-      
-      // Signature is now optional - removed validation
+    // Photo is ALWAYS compulsory - even for special conditions
+    if (!housePhoto) {
+      toast.error('Property photo is required');
+      return;
     }
 
     setSubmitting(true);
@@ -400,18 +399,14 @@ export default function Survey() {
       formDataObj.append('receiver_name', formData.receiver_name || (specialCondition === 'house_locked' ? 'House Locked' : specialCondition === 'owner_denied' ? 'Owner Denied' : ''));
       formDataObj.append('receiver_mobile', formData.receiver_mobile || '');
       formDataObj.append('relation', formData.relation || (canSkipRequiredFields ? 'N/A' : ''));
-      formDataObj.append('correct_colony_name', formData.correct_colony_name || '');
       formDataObj.append('remarks', formData.remarks || (specialCondition ? `Special Condition: ${specialCondition === 'house_locked' ? 'House Locked' : 'Owner Denied'}` : ''));
       formDataObj.append('self_satisfied', formData.self_satisfied || (canSkipRequiredFields ? 'N/A' : ''));
       formDataObj.append('special_condition', specialCondition || '');
       formDataObj.append('latitude', location.latitude);
       formDataObj.append('longitude', location.longitude);
       
-      // Only append photo if available
-      if (housePhoto) {
-        formDataObj.append('house_photo', housePhoto);
-        // Don't send gate_photo separately - we only take one photo now
-      }
+      // Photo is compulsory - always append
+      formDataObj.append('house_photo', housePhoto);
       
       // Only append signature if available (now optional)
       if (signatureData) {
