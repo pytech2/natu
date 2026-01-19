@@ -336,7 +336,7 @@ export default function PropertyMap() {
       });
       
       toast.success(response.data.message || 'Properties arranged by GPS route');
-      fetchProperties(); // Reload to show new order
+      filters.colony && fetchPropertiesByColony(filters.colony); // Reload to show new order
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to arrange properties');
     } finally {
@@ -356,7 +356,7 @@ export default function PropertyMap() {
       });
       
       toast.success(response.data.message || 'Arranged data saved successfully');
-      fetchProperties();
+      filters.colony && fetchPropertiesByColony(filters.colony);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to save arranged data');
     } finally {
@@ -425,7 +425,7 @@ export default function PropertyMap() {
       
       toast.success('Survey approved');
       setSurveyDialog(false);
-      fetchProperties();
+      filters.colony && fetchPropertiesByColony(filters.colony);
     } catch (error) {
       toast.error('Failed to approve survey');
     }
@@ -451,7 +451,7 @@ export default function PropertyMap() {
       setRejectDialog(false);
       setSurveyDialog(false);
       setRejectRemarks('');
-      fetchProperties();
+      filters.colony && fetchPropertiesByColony(filters.colony);
     } catch (error) {
       toast.error('Failed to reject survey');
     }
