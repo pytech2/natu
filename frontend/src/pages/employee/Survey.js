@@ -36,6 +36,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
 
 // Function to add watermark to image with GPS, Date, Time
 // Fixed for mobile camera images with EXIF orientation handling
+// Also compresses image to reduce upload size
 const addWatermarkToImage = (file, latitude, longitude) => {
   return new Promise((resolve, reject) => {
     // Create an image element to load the file
@@ -47,12 +48,27 @@ const addWatermarkToImage = (file, latitude, longitude) => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // Set canvas size to match image
-        canvas.width = img.width;
-        canvas.height = img.height;
+        // COMPRESS: Limit max dimension to 1200px for smaller file size
+        const MAX_SIZE = 1200;
+        let width = img.width;
+        let height = img.height;
         
-        // Draw the original image
-        ctx.drawImage(img, 0, 0, img.width, img.height);
+        if (width > MAX_SIZE || height > MAX_SIZE) {
+          if (width > height) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          } else {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+        
+        // Set canvas size to compressed dimensions
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw the original image (scaled)
+        ctx.drawImage(img, 0, 0, width, height);
         
         // Create watermark text
         const now = new Date();
@@ -71,42 +87,42 @@ const addWatermarkToImage = (file, latitude, longitude) => {
         const watermarkText = `GPS: ${latitude?.toFixed(6) || 'N/A'}, ${longitude?.toFixed(6) || 'N/A'} | ${dateStr} ${timeStr}`;
         
         // Calculate font size based on image dimensions (responsive)
-        const fontSize = Math.max(16, Math.min(img.width, img.height) * 0.03);
+        const fontSize = Math.max(14, Math.min(width, height) * 0.025);
         ctx.font = `bold ${fontSize}px Arial, sans-serif`;
         
         const textWidth = ctx.measureText(watermarkText).width;
-        const padding = 15;
-        const x = img.width - textWidth - padding;
-        const y = img.height - padding;
+        const padding = 10;
+        const x = width - textWidth - padding;
+        const y = height - padding;
         
         // Draw background rectangle for better visibility
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(x - 10, y - fontSize - 5, textWidth + 20, fontSize + 15);
+        ctx.fillRect(x - 8, y - fontSize - 4, textWidth + 16, fontSize + 12);
         
         // Draw watermark text
         ctx.fillStyle = '#ffffff';
         ctx.fillText(watermarkText, x, y);
         
         // Also add a smaller watermark at top-left for extra visibility
-        const smallFontSize = Math.max(12, fontSize * 0.7);
+        const smallFontSize = Math.max(10, fontSize * 0.7);
         ctx.font = `bold ${smallFontSize}px Arial, sans-serif`;
         const topText = `📍 ${latitude?.toFixed(4) || 'N/A'}, ${longitude?.toFixed(4) || 'N/A'}`;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(10, 10, ctx.measureText(topText).width + 20, smallFontSize + 15);
+        ctx.fillRect(8, 8, ctx.measureText(topText).width + 16, smallFontSize + 12);
         ctx.fillStyle = '#00ff00';
-        ctx.fillText(topText, 20, 10 + smallFontSize + 2);
+        ctx.fillText(topText, 16, 8 + smallFontSize + 2);
         
-        // Convert canvas to blob
+        // Convert canvas to blob with COMPRESSION (0.7 quality = ~70% smaller)
         canvas.toBlob((blob) => {
           if (blob) {
             const watermarkedFile = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
-            console.log('Watermark applied successfully:', watermarkedFile.name, watermarkedFile.size);
+            console.log('Compressed & Watermarked:', watermarkedFile.name, (watermarkedFile.size / 1024).toFixed(0) + 'KB');
             resolve(watermarkedFile);
           } else {
             console.warn('Canvas toBlob returned null, using original file');
             resolve(file);
           }
-        }, 'image/jpeg', 0.85);
+        }, 'image/jpeg', 0.7); // 0.7 quality for better compression
       } catch (err) {
         console.error('Error applying watermark:', err);
         resolve(file);
