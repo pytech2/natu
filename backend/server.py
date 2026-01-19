@@ -404,7 +404,31 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         "permissions": permissions
     }
 
-# ============== FAST MAP ENDPOINTS ==============
+# ============== FAST MAP ENDPOINTS (OPTIMIZED FOR 20+ CONCURRENT USERS) ==============
+
+@api_router.get("/map/colonies")
+async def get_colonies_list(current_user: dict = Depends(get_current_user)):
+    """Fast endpoint to get list of colonies - CACHED"""
+    cache_key = "colonies_list"
+    cached = colonies_cache.get(cache_key)
+    if cached:
+        return cached
+    
+    # Get unique colonies from properties
+    pipeline = [
+        {"$match": {"latitude": {"$ne": None}, "longitude": {"$ne": None}}},
+        {"$group": {"_id": {"$ifNull": ["$colony", "$ward"]}, "count": {"$sum": 1}}},
+        {"$match": {"_id": {"$ne": None}}},
+        {"$sort": {"_id": 1}}
+    ]
+    
+    result = await db.properties.aggregate(pipeline).to_list(None)
+    colonies = [{"name": r["_id"], "count": r["count"]} for r in result if r["_id"]]
+    total = sum(c["count"] for c in colonies)
+    
+    response = {"colonies": colonies, "total": total}
+    colonies_cache.set(cache_key, response)
+    return response
 
 @api_router.get("/map/properties")
 async def get_map_properties(
@@ -413,22 +437,44 @@ async def get_map_properties(
     limit: int = 500,
     current_user: dict = Depends(get_current_user)
 ):
-    """Fast lightweight endpoint for map markers - returns only essential fields"""
+    """Fast lightweight endpoint for map markers - CACHED per colony"""
+    # Build cache key
+    cache_key = f"map_{colony or 'all'}_{status or 'all'}_{current_user['role']}"
+    
+    # Check cache for admin/supervisor (they see all data)
+    if current_user["role"] in ["ADMIN", "SUPERVISOR", "MC_OFFICER"]:
+        cached = map_cache.get(cache_key)
+        if cached:
+            return cached
+    
     query = {"latitude": {"$ne": None}, "longitude": {"$ne": None}}
     
     if colony and colony.strip():
-        query["ward"] = colony
+        # Search in both colony and ward fields
+        query["$or"] = [
+            {"colony": {"$regex": f"^{colony}$", "$options": "i"}},
+            {"ward": {"$regex": f"^{colony}$", "$options": "i"}}
+        ]
     if status and status.strip():
         query["status"] = status
     
     # For non-admin users, filter by assigned properties
     if current_user["role"] not in ["ADMIN", "SUPERVISOR", "MC_OFFICER"]:
-        query["$or"] = [
-            {"assigned_employee_id": current_user["id"]},
-            {"assigned_employee_ids": current_user["id"]}
-        ]
+        if "$or" in query:
+            query["$and"] = [
+                {"$or": query.pop("$or")},
+                {"$or": [
+                    {"assigned_employee_id": current_user["id"]},
+                    {"assigned_employee_ids": current_user["id"]}
+                ]}
+            ]
+        else:
+            query["$or"] = [
+                {"assigned_employee_id": current_user["id"]},
+                {"assigned_employee_ids": current_user["id"]}
+            ]
     
-    # Minimal projection for fast map loading
+    # Ultra-minimal projection for maximum speed
     projection = {
         "_id": 0,
         "id": 1,
@@ -440,22 +486,34 @@ async def get_map_properties(
         "property_id": 1,
         "owner_name": 1,
         "colony": 1,
-        "ward": 1
+        "ward": 1,
+        "mobile": 1
     }
     
     properties = await db.properties.find(query, projection).limit(limit).to_list(limit)
     
-    return {
+    response = {
         "properties": properties,
         "count": len(properties)
     }
+    
+    # Cache for admin users
+    if current_user["role"] in ["ADMIN", "SUPERVISOR", "MC_OFFICER"]:
+        map_cache.set(cache_key, response)
+    
+    return response
 
 @api_router.get("/map/employee-properties")
 async def get_employee_map_properties(
-    limit: int = 200,
+    limit: int = 300,
     current_user: dict = Depends(get_current_user)
 ):
-    """Fast lightweight endpoint for surveyor map - minimal fields only"""
+    """Fast lightweight endpoint for surveyor map - CACHED per employee"""
+    cache_key = f"emp_map_{current_user['id']}"
+    cached = map_cache.get(cache_key)
+    if cached:
+        return cached
+    
     query = {
         "$or": [
             {"assigned_employee_id": current_user["id"]},
@@ -465,7 +523,7 @@ async def get_employee_map_properties(
         "longitude": {"$ne": None}
     }
     
-    # Ultra-minimal projection
+    # Ultra-minimal projection for speed
     projection = {
         "_id": 0,
         "id": 1,
@@ -480,16 +538,25 @@ async def get_employee_map_properties(
         "mobile": 1
     }
     
-    # Sort by status (pending first) then serial number
+    # Sort: pending first, then by serial
     properties = await db.properties.find(query, projection).sort([
         ("status", 1),
         ("serial_number", 1)
     ]).limit(limit).to_list(limit)
     
-    return {
+    response = {
         "properties": properties,
         "count": len(properties)
     }
+    
+    map_cache.set(cache_key, response)
+    return response
+
+# Clear cache when properties are modified
+async def clear_map_cache():
+    """Call this when properties are added/modified"""
+    map_cache.clear()
+    colonies_cache.clear()
 
 # Get submission by property ID
 @api_router.get("/submission/by-property/{property_id}")
