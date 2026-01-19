@@ -231,8 +231,8 @@ export default function PropertyMap() {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      // Fetch properties with reasonable limit - backend optimized with projections
-      const response = await axios.get(`${API_URL}/admin/properties?limit=10000`, {
+      // Use FAST map endpoint - returns only essential fields for map rendering
+      const response = await axios.get(`${API_URL}/map/properties?limit=2000`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -243,8 +243,8 @@ export default function PropertyMap() {
       
       setProperties(props);
       
-      // Extract unique colonies and categories
-      const uniqueColonies = [...new Set(props.map(p => p.colony).filter(Boolean))];
+      // Extract unique colonies/wards
+      const uniqueColonies = [...new Set(props.map(p => p.colony || p.ward).filter(Boolean))];
       const uniqueCategories = [...new Set(props.map(p => p.category).filter(Boolean))];
       setColonies(uniqueColonies.sort());
       setCategories(uniqueCategories.sort());
