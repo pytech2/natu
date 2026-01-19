@@ -559,7 +559,7 @@ export default function Properties() {
           <div className="absolute inset-0 pt-16">
             <MapContainer
               center={getDefaultCenter()}
-              zoom={17}
+              zoom={mapZoom}
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom={true}
             >
@@ -568,7 +568,14 @@ export default function Properties() {
                 url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
                 maxZoom={21}
               />
-              <MapController center={mapCenter} zoom={17} />
+              <MapController 
+                center={mapCenter} 
+                zoom={mapZoom}
+                onPositionChange={(center, zoom) => {
+                  setMapCenter(center);
+                  setMapZoom(zoom);
+                }}
+              />
               
               {userLocation && (
                 <Marker position={[userLocation.latitude, userLocation.longitude]} icon={currentLocationIcon}>
