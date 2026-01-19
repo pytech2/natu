@@ -2107,6 +2107,7 @@ async def check_today_attendance(current_user: dict = Depends(get_current_user))
     }, {"_id": 0})
     
     return {
+        "marked": attendance is not None,
         "has_attendance": attendance is not None,
         "attendance": attendance
     }
