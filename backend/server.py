@@ -2343,15 +2343,12 @@ async def mark_attendance(
     if existing:
         raise HTTPException(status_code=400, detail="Attendance already marked for today")
     
-    # Save selfie
+    # Save selfie TO GRIDFS
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     selfie_filename = f"attendance_{current_user['id']}_{timestamp}{Path(selfie.filename).suffix}"
-    selfie_path = UPLOAD_DIR / selfie_filename
-    async with aiofiles.open(selfie_path, 'wb') as f:
-        content = await selfie.read()
-        await f.write(content)
-    
-    selfie_url = f"/api/uploads/{selfie_filename}"
+    content = await selfie.read()
+    file_id = await save_file_to_gridfs(content, selfie_filename, selfie.content_type or "image/jpeg")
+    selfie_url = f"/api/file/{file_id}"
     
     # Create attendance record
     attendance_doc = {
@@ -2361,6 +2358,7 @@ async def mark_attendance(
         "date": today_date,
         "marked_at": datetime.now(timezone.utc).isoformat(),
         "selfie_url": selfie_url,
+        "selfie_file_id": file_id,
         "latitude": latitude,
         "longitude": longitude
     }
