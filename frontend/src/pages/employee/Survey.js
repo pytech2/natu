@@ -730,16 +730,6 @@ export default function Survey() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Correct Colony Name (if different)</Label>
-                  <Input
-                    value={formData.correct_colony_name}
-                    onChange={(e) => setFormData({ ...formData, correct_colony_name: e.target.value })}
-                    placeholder="Enter correct colony name if different from records"
-                    data-testid="correct-colony-input"
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label>Self Satisfied? *</Label>
                   <div className="flex gap-6 mt-2">
                     <label className="flex items-center gap-2 cursor-pointer">
