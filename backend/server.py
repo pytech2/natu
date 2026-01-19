@@ -147,6 +147,9 @@ app = FastAPI(title="NSTU Property Tax Manager")
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
+# Add GZip compression for faster responses
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 # Startup event to create indexes
 @app.on_event("startup")
 async def startup_event():
