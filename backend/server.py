@@ -1,14 +1,15 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query, Header, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse, Response
+from fastapi.responses import FileResponse, StreamingResponse, Response, JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone, timedelta
 import bcrypt
@@ -33,9 +34,40 @@ import fitz  # PyMuPDF for PDF processing
 import re
 import math
 import base64
+import asyncio
+from functools import lru_cache
+import time
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# ============== SIMPLE IN-MEMORY CACHE ==============
+class SimpleCache:
+    def __init__(self, ttl_seconds=60):
+        self.cache: Dict[str, Any] = {}
+        self.timestamps: Dict[str, float] = {}
+        self.ttl = ttl_seconds
+    
+    def get(self, key: str):
+        if key in self.cache:
+            if time.time() - self.timestamps[key] < self.ttl:
+                return self.cache[key]
+            else:
+                del self.cache[key]
+                del self.timestamps[key]
+        return None
+    
+    def set(self, key: str, value: Any):
+        self.cache[key] = value
+        self.timestamps[key] = time.time()
+    
+    def clear(self):
+        self.cache.clear()
+        self.timestamps.clear()
+
+# Cache instances (60 second TTL for map data)
+map_cache = SimpleCache(ttl_seconds=60)
+colonies_cache = SimpleCache(ttl_seconds=300)  # 5 minutes for colonies list
 
 # MongoDB connection with optimized settings for performance
 mongo_url = os.environ['MONGO_URL']
