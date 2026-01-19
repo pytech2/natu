@@ -892,10 +892,6 @@ export default function Properties() {
                 <p className="text-xs text-slate-500">{filteredProperties.length} properties • Pink = Done • Orange = Pending</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button size="sm" onClick={handlePrintMap} disabled={downloading} className="h-8 bg-blue-600 hover:bg-blue-700 text-white">
-                  {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
-                  Download PDF (100% Zoom)
-                </Button>
                 <Button 
                   size="sm" 
                   variant="outline" 
