@@ -842,60 +842,9 @@ export default function Survey() {
                       onClick={() => houseGalleryRef.current?.click()}
                       disabled={processingPhoto === 'house'}
                     >
-                      <Upload className="w-5 h-5 mr-2" />
                       Gallery
                     </Button>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Signature - Optional */}
-            <Card className={canSkipRequiredFields ? 'opacity-60' : ''}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Pen className="w-4 h-4" />
-                  Signature of Notice Receiver
-                  <span className="text-xs text-slate-500 font-normal">(Optional)</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {signatureData ? (
-                  <div className="relative">
-                    <img src={signatureData} alt="Signature" className="w-full h-32 border rounded-lg bg-white" />
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="absolute top-2 right-2"
-                      onClick={clearSignature}
-                    >
-                      <RotateCcw className="w-4 h-4 mr-1" />
-                      Clear
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="border-2 border-dashed border-slate-300 rounded-lg overflow-hidden bg-white">
-                      <SignatureCanvas
-                        ref={signatureRef}
-                        canvasProps={{
-                          className: 'w-full h-32',
-                          style: { width: '100%', height: '128px' }
-                        }}
-                        backgroundColor="white"
-                      />
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <Button variant="outline" size="sm" onClick={clearSignature}>
-                        <RotateCcw className="w-4 h-4 mr-1" />
-                        Clear
-                      </Button>
-                      <Button size="sm" onClick={saveSignature} className="bg-slate-900">
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Save Signature
-                      </Button>
-                    </div>
-                  </>
                 )}
               </CardContent>
             </Card>
