@@ -15,7 +15,6 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import SignatureCanvas from 'react-signature-canvas';
 import {
   ArrowLeft,
   MapPin,
@@ -28,9 +27,6 @@ import {
   Send,
   Flag,
   Loader2,
-  Pen,
-  RotateCcw,
-  Upload,
   Lock,
   XCircle
 } from 'lucide-react';
