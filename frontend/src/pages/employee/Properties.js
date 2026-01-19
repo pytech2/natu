@@ -413,7 +413,8 @@ export default function Properties() {
 
   const fetchProperties = async () => {
     try {
-      const response = await axios.get(`${API_URL}/employee/properties?limit=100000`, {
+      // Fetch with reasonable limit - backend now optimized with projections
+      const response = await axios.get(`${API_URL}/employee/properties?limit=5000`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const props = response.data.properties || [];
@@ -445,25 +446,25 @@ export default function Properties() {
         setLastUpdate(new Date());
       },
       (err) => console.error('GPS error:', err),
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true, timeout: 15000 }
     );
     
-    // Watch position for continuous updates - REDUCED FREQUENCY to avoid performance issues
-    // Only update every 50m movement or 30 seconds max
+    // Watch position for continuous updates - REDUCED FREQUENCY for better performance
+    // Only update every 100m movement or 60 seconds max age
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         setUserLocation(prev => {
-          // Only update if moved more than 50m to prevent constant re-renders
+          // Only update if moved more than 100m to prevent constant re-renders
           if (prev) {
             const dist = calculateDistance(prev.latitude, prev.longitude, pos.coords.latitude, pos.coords.longitude);
-            if (dist < 50) return prev; // Skip small movements
+            if (dist < 100) return prev; // Skip small movements
           }
           return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
         });
         setLastUpdate(new Date());
       },
       (err) => console.error('GPS watch error:', err),
-      { enableHighAccuracy: true, maximumAge: 30000, timeout: 30000 }
+      { enableHighAccuracy: true, maximumAge: 60000, timeout: 60000 }
     );
   };
 
