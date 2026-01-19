@@ -493,71 +493,129 @@ export default function PropertyMap() {
   return (
     <AdminLayout title="Property Map">
       <div data-testid="property-map-page" className="space-y-4">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 opacity-80" />
-                <span className="text-sm opacity-80">Total</span>
+        
+        {/* Colony Selection Screen - Show first before map */}
+        {!showMap && (
+          <Card className="border-2 border-blue-200 bg-blue-50/30">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-blue-700">
+                <MapPin className="w-5 h-5" />
+                Select Colony to View Map
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-slate-600">Please select a colony/area to load properties on the map. This improves loading speed.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Colony/Area *</Label>
+                  <Select 
+                    value={filters.colony} 
+                    onValueChange={(v) => setFilters({ ...filters, colony: v })}
+                  >
+                    <SelectTrigger className="h-12 text-lg">
+                      <SelectValue placeholder="-- Select Colony --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {colonies.map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-end">
+                  <Button 
+                    onClick={() => filters.colony && setShowMap(true)}
+                    disabled={!filters.colony || loading}
+                    className="h-12 px-8 bg-blue-600 hover:bg-blue-700"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <MapIcon className="w-4 h-4 mr-2" />
+                    )}
+                    Load Map
+                  </Button>
+                </div>
               </div>
-              <p className="text-2xl font-bold mt-1">{stats.total}</p>
+              
+              <div className="pt-4 border-t">
+                <p className="text-sm text-slate-500">
+                  <strong>{colonies.length}</strong> colonies available • <strong>{stats.total}</strong> total properties
+                </p>
+              </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Navigation className="w-5 h-5 opacity-80" />
-                <span className="text-sm opacity-80">With GPS</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">{stats.withGPS}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-blue-400 to-blue-500 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Home className="w-5 h-5 opacity-80" />
-                <span className="text-sm opacity-80">Residential</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">{stats.residential}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Building className="w-5 h-5 opacity-80" />
-                <span className="text-sm opacity-80">Commercial</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">{stats.commercial}</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <AreaChart className="w-5 h-5 opacity-80" />
-                <span className="text-sm opacity-80">Vacant</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">{stats.vacant}</p>
-            </CardContent>
-          </Card>
-        </div>
+        )}
 
-        {/* Filters */}
-        <Card>
-          <CardContent className="py-4">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-              <div className="space-y-2">
-                <Label className="text-xs text-slate-500">Colony/Area</Label>
-                <Select 
-                  value={filters.colony} 
-                  onValueChange={(v) => setFilters({ ...filters, colony: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Colonies" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value=" ">All Colonies</SelectItem>
-                    {colonies.map(c => (
+        {/* Show Map and Filters only after colony is selected */}
+        {showMap && (
+          <>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5 opacity-80" />
+                    <span className="text-sm opacity-80">Total</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{stats.total}</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Navigation className="w-5 h-5 opacity-80" />
+                    <span className="text-sm opacity-80">With GPS</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{stats.withGPS}</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-blue-400 to-blue-500 text-white">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Home className="w-5 h-5 opacity-80" />
+                    <span className="text-sm opacity-80">Residential</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{stats.residential}</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Building className="w-5 h-5 opacity-80" />
+                    <span className="text-sm opacity-80">Commercial</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{stats.commercial}</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <AreaChart className="w-5 h-5 opacity-80" />
+                    <span className="text-sm opacity-80">Vacant</span>
+                  </div>
+                  <p className="text-2xl font-bold mt-1">{stats.vacant}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
+            <Card>
+              <CardContent className="py-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-500">Colony/Area</Label>
+                    <Select 
+                      value={filters.colony} 
+                      onValueChange={(v) => setFilters({ ...filters, colony: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Colonies" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {colonies.map(c => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
                   </SelectContent>
