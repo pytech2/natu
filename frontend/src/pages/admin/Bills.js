@@ -407,6 +407,7 @@ export default function BillsPage() {
       const formData = new FormData();
       if (filters.batch_id) formData.append('batch_id', filters.batch_id);
       if (filters.colony) formData.append('colony', filters.colony);
+      formData.append('skip_duplicates', skipDuplicates.toString()); // Add skip_duplicates option
 
       const response = await axios.post(`${API_URL}/admin/bills/copy-to-properties`, formData, {
         headers: { 
