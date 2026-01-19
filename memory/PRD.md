@@ -3,84 +3,94 @@
 ## Original Problem Statement
 Build a full-stack web application for NSTU India Private Limited to manage property tax notice distribution and surveys.
 
-## Latest Updates (Jan 16, 2026)
+## Latest Updates (Jan 19, 2026)
 
-### Property Management - Unassign Feature (NEW)
-Added comprehensive unassign functionality for admin property management:
+### Performance Optimization (COMPLETED)
+Major performance improvements implemented:
 
-**Two Unassign Modes:**
-1. **Unassign Selected Properties** - Select properties → Click "Unassign (N)" → Choose specific employee or clear all
-2. **Unassign Employee from All Properties** - Click "Unassign Employee" → Select employee → Removes them from ALL their assigned properties
+**Backend Optimizations:**
+1. **MongoDB Indexes Created at Startup:**
+   - Properties: id, batch_id, ward, colony, status, assigned_employee_id, GPS coords, serial_number
+   - Users: id, username, role
+   - Submissions: id, property_record_id, employee_id, status, submitted_at
+   - Compound indexes for common query patterns
+   
+2. **Query Projections Optimized:**
+   - `/api/admin/properties` - returns only required fields, sorted by serial_number
+   - `/api/employee/properties` - optimized projection with status-based sorting
+   
+3. **Connection Pool Settings:**
+   - maxPoolSize: 50
+   - minPoolSize: 10
+   - maxIdleTimeMS: 30000
 
-**Use Cases:**
-- Employee leaves the organization → Unassign all their properties at once
-- Employee completes survey in an area → Unassign them from that area
-- Reassignment needed → Unassign first, then assign to new employee
+**Frontend Optimizations:**
+1. **GPS Tracking Frequency Reduced:**
+   - Movement threshold: 100m (was 50m)
+   - Max age: 60 seconds (was 30 seconds)
+   - Prevents constant re-renders
+   
+2. **Property Limits Adjusted:**
+   - Employee map: 5000 properties (was 100000)
+   - Admin map: 10000 properties (was 100000)
 
-**Backend Endpoints:**
-- `POST /api/admin/unassign` - Unassign selected properties
-- `POST /api/admin/unassign-by-employee` - Unassign ALL properties from an employee
+**Performance Results:**
+- Properties API: ~0.06s for 500 records
+- Dashboard API: <1s response
+- Map loads 459 markers smoothly with satellite view
 
-### UI/UX Improvements
-1. **Serial Number Display** - Bill serial numbers now shown prominently:
-   - Survey form header has amber badge with serial number
-   - Property cards show "Sr: X" badge before property ID
-   - Map markers display serial numbers instead of property IDs
-   - Map popups show serial number prominently with property ID below
-
-2. **Map Performance Optimization**
-   - Limited markers to 100 (regular) / 200 (fullscreen) for better performance
-
-3. **Map 360° Rotation**
-   - Added `leaflet-rotate` library for map rotation
-   - Touch rotation enabled for mobile devices
-
-4. **PWA Desktop Icon**
-   - Created manifest.json with app icons
-
-### Role-Based Access Control (RBAC)
-| Feature | Admin | Supervisor | MC Officer | Surveyor |
-|---------|-------|------------|------------|----------|
-| Dashboard | ✅ | ✅ | ✅ | ✅ (own) |
-| View Employees | ✅ | ❌ | ✅ | ❌ |
-| Upload Data/Bills | ✅ | ✅ | ❌ | ❌ |
-| View Properties | ✅ | ✅ | ✅ | ✅ (own) |
-| **Unassign Properties** | ✅ | ✅ | ❌ | ❌ |
-| Edit Submissions | ✅ | ❌ | ❌ | ❌ |
-| Export (PDF/Excel) | ✅ | ❌ | ✅ | ❌ |
+### Previous Features
+- **Role-Based Access Control (RBAC):** Admin, Supervisor, MC Officer, Surveyor
+- **Property Unassign Feature:** Unassign single or all employees from properties
+- **Attendance Lock:** Survey form locked until daily attendance marked
+- **Mandatory Photo:** Property photo required in all survey conditions
+- **3D Map Markers:** Circular pins showing serial numbers
+- **GPS Serial Algorithm:** Properties without serial get NX format (nearest neighbor)
 
 ## Technology Stack
 - **Backend:** FastAPI, MongoDB (Motor), JWT authentication
 - **Frontend:** React, React-Leaflet, Tailwind CSS, Shadcn UI
-- **Maps:** Leaflet with leaflet-rotate for 360° rotation
+- **Maps:** Leaflet with Google Satellite tiles
 - **PDF Processing:** PyMuPDF, reportlab
 
-## Key Features
-- Multi-role authentication (Admin, Supervisor, MC Officer, Surveyor)
-- Property tax bill upload and extraction from PDF
-- **Property Assignment & Unassignment Management**
-- GPS-based route optimization
-- Survey submission with photo (GPS watermark) and signature
-- Admin review and approval workflow
-- Export to Excel and PDF with filters (date, colony, employee)
-
-## Pending Issues
-- **P1:** Verify serial number matching with bill PDFs on live server
-- **P2:** Mobile photo watermark bug (needs real device testing)
-- **P3:** Backend refactoring - split server.py into modular routes
+## Key API Endpoints
+- `POST /api/auth/login` - Authentication
+- `GET /api/admin/dashboard` - Dashboard stats
+- `GET /api/admin/properties` - Property list with filters
+- `GET /api/employee/properties` - Assigned properties
+- `GET /api/employee/attendance/today` - Attendance check
+- `POST /api/employee/submit/{property_id}` - Survey submission
 
 ## Test Credentials
 - **Admin:** `admin` / `nastu123`
+- **Surveyor:** `surveyor1` / `test123`
 - **MC Officer:** `1234567890` / `test123`
 - **Supervisor:** `a` / `test123`
+
+## Pending/Future Tasks
+- **P1:** Backend refactoring - split server.py into modular routers
+- **P2:** "Completed Colony" access restrictions
+- **P3:** Offline support for surveyor mobile interface
+- **P3:** ZIP download for split-employee PDFs
 
 ## File Structure
 ```
 /app/
 ├── backend/
-│   └── server.py         # Added /admin/unassign and /admin/unassign-by-employee
+│   ├── server.py         # Main API (3000+ lines, needs modularization)
+│   └── requirements.txt
 └── frontend/
     └── src/
-        └── pages/admin/
-            └── Properties.js   # Added Unassign dialog and functionality
+        └── pages/
+            ├── admin/
+            │   ├── Map.js           # Admin property map
+            │   └── Properties.js    # Property management
+            └── employee/
+                ├── Survey.js        # Survey form with attendance lock
+                └── Properties.js    # Surveyor map view
 ```
+
+## Testing
+- Test file: `/app/tests/test_performance_features.py`
+- Latest test: 14/14 tests passed (100%)
+- Report: `/app/test_reports/iteration_7.json`
