@@ -931,10 +931,12 @@ export default function Survey() {
             </CardContent>
           </Card>
         )}
+          </>
+        )}
       </main>
 
       {/* Submit Button */}
-      {!isCompleted && (
+      {!isCompleted && attendanceMarked && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg">
           <Button
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12"
