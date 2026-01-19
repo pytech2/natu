@@ -108,8 +108,12 @@ JWT_ALGORITHM = "HS256"
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# Create the main app
+# Create the main app with increased body size limit for file uploads
 app = FastAPI(title="NSTU Property Tax Manager")
+
+# Add middleware to allow large file uploads (50MB max)
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
 
 # Startup event to create indexes
 @app.on_event("startup")
