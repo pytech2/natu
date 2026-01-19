@@ -1883,7 +1883,7 @@ async def get_employee_properties(
     search: Optional[str] = None,
     status: Optional[str] = None,
     page: int = 1,
-    limit: int = 20,
+    limit: int = 50,  # Increased default for map view
     current_user: dict = Depends(get_current_user)
 ):
     # Check both single assigned_employee_id and array assigned_employee_ids
@@ -1904,9 +1904,34 @@ async def get_employee_properties(
             ]
         }]
     
+    # Optimized projection - only return fields needed for map and list view
+    projection = {
+        "_id": 0,
+        "id": 1,
+        "property_id": 1,
+        "owner_name": 1,
+        "mobile": 1,
+        "address": 1,
+        "colony": 1,
+        "ward": 1,
+        "latitude": 1,
+        "longitude": 1,
+        "status": 1,
+        "serial_number": 1,
+        "bill_sr_no": 1,
+        "amount": 1,
+        "category": 1,
+        "total_area": 1
+    }
+    
     skip = (page - 1) * limit
     total = await db.properties.count_documents(query)
-    properties = await db.properties.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    
+    # Use sort for consistent ordering - pending first, then by serial number
+    properties = await db.properties.find(query, projection).sort([
+        ("status", 1),  # Pending first
+        ("serial_number", 1)
+    ]).skip(skip).limit(limit).to_list(limit)
     
     return {
         "properties": properties,
