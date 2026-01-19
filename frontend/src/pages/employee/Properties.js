@@ -463,7 +463,15 @@ export default function Properties() {
                         <Button 
                           size="sm" 
                           className="w-full mt-2 h-7 text-xs bg-blue-600"
-                          onClick={() => navigate(`/employee/survey/${property.id}`)}
+                          onClick={() => {
+                            // Save current property location as map center before navigating
+                            localStorage.setItem('surveyor_map_position', JSON.stringify({
+                              lat: property.latitude,
+                              lng: property.longitude,
+                              zoom: mapZoom || 18
+                            }));
+                            navigate(`/employee/survey/${property.id}`);
+                          }}
                         >
                           Start Survey
                         </Button>
