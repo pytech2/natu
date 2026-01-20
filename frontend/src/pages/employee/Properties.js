@@ -9,7 +9,7 @@ import Map, { Marker, Popup, NavigationControl, GeolocateControl } from 'react-m
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { 
   MapPin, Navigation, FileText, Loader2, RefreshCw, 
-  Compass, LocateFixed
+  Compass, LocateFixed, Search, X
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -46,6 +46,11 @@ export default function Properties() {
   const [loading, setLoading] = useState(true);
   const [allProperties, setAllProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   
   // GPS & Map state
   const [userLocation, setUserLocation] = useState(null);
