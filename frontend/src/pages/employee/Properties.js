@@ -241,6 +241,63 @@ export default function Properties() {
     toast.info('Reset to North');
   };
 
+  // Search functionality
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    
+    const searchLower = query.toLowerCase().trim();
+    
+    // Search by property_id, bill_sr_no, serial_number, owner_name, mobile
+    const results = allProperties.filter(p => {
+      const propertyId = (p.property_id || '').toLowerCase();
+      const billSrNo = String(p.bill_sr_no || '').toLowerCase();
+      const serialNo = String(p.serial_number || '').toLowerCase();
+      const ownerName = (p.owner_name || '').toLowerCase();
+      const mobile = (p.mobile || '').toLowerCase();
+      
+      return propertyId.includes(searchLower) ||
+             billSrNo.includes(searchLower) ||
+             serialNo.includes(searchLower) ||
+             ownerName.includes(searchLower) ||
+             mobile.includes(searchLower);
+    }).slice(0, 10); // Limit to 10 results
+    
+    setSearchResults(results);
+    setShowSearchResults(results.length > 0);
+  };
+
+  const selectSearchResult = (property) => {
+    // Center map on selected property
+    setViewState(prev => ({
+      ...prev,
+      latitude: property.latitude,
+      longitude: property.longitude,
+      zoom: 19
+    }));
+    
+    // Select the property to show popup
+    setSelectedProperty(property);
+    
+    // Clear search
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+    
+    toast.success(`Found: ${property.owner_name}`);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+  };
+
   // Filter and sort by distance
   const sortedProperties = useMemo(() => {
     let props = [...allProperties].filter(p => p.latitude && p.longitude);
