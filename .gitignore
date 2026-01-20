@@ -280,3 +280,7 @@ backend/uploads/arranged_all_20260113_143017.pdf
 backend/uploads/arranged_T.P.S
 8
 A_20260120_072307.pdf
+-e 
+# Environment files
+*.env
+*.env.*
