@@ -30,25 +30,7 @@ const formatDistance = (meters) => meters < 1000 ? `${Math.round(meters)}m` : `$
 // Map container style - fullscreen
 const mapContainerStyle = {
   width: '100%',
-  height: '100vh',
-};
-
-// Map options for smooth 360-degree rotation
-const mapOptions = {
-  mapTypeId: 'satellite',
-  gestureHandling: 'greedy', // Enable all gestures including rotation
-  disableDefaultUI: true, // Hide default UI for cleaner look
-  zoomControl: false,
-  mapTypeControl: false,
-  scaleControl: false,
-  streetViewControl: false,
-  rotateControl: true, // Enable rotation
-  fullscreenControl: false,
-  tilt: 0, // Start with no tilt
-  heading: 0, // Start facing north
-  minZoom: 10,
-  maxZoom: 21,
-  clickableIcons: false,
+  height: '100%',
 };
 
 // Custom marker SVG creator
@@ -64,7 +46,6 @@ const createMarkerIcon = (serialNo, status, isNearest = false) => {
   const color = colors[status] || colors['default'];
   const size = isNearest ? 40 : 32;
   
-  // Create SVG data URL
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" fill="${color}" stroke="white" stroke-width="3"/>
@@ -91,6 +72,13 @@ const userLocationIcon = {
   anchor: { x: 12, y: 12 },
 };
 
+// Calculate angle between two touch points
+const getAngle = (touch1, touch2) => {
+  const dx = touch2.clientX - touch1.clientX;
+  const dy = touch2.clientY - touch1.clientY;
+  return Math.atan2(dy, dx) * (180 / Math.PI);
+};
+
 export default function Properties() {
   const navigate = useNavigate();
   const { token } = useAuth();
@@ -104,12 +92,16 @@ export default function Properties() {
   const [gpsTracking, setGpsTracking] = useState(false);
   const [mapCenter, setMapCenter] = useState({ lat: 29.9695, lng: 76.8783 });
   const [mapZoom, setMapZoom] = useState(18);
-  const [currentHeading, setCurrentHeading] = useState(0);
+  const [mapRotation, setMapRotation] = useState(0);
   const [deviceHeading, setDeviceHeading] = useState(0);
   const [autoRotate, setAutoRotate] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
   
   const mapRef = useRef(null);
+  const mapContainerRef = useRef(null);
   const watchIdRef = useRef(null);
+  const touchStartAngleRef = useRef(0);
+  const initialRotationRef = useRef(0);
   
   // Stats
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
@@ -124,10 +116,10 @@ export default function Properties() {
     const savedPosition = localStorage.getItem('surveyor_map_position');
     if (savedPosition) {
       try {
-        const { lat, lng, zoom, heading } = JSON.parse(savedPosition);
+        const { lat, lng, zoom, rotation } = JSON.parse(savedPosition);
         setMapCenter({ lat, lng });
         setMapZoom(zoom || 18);
-        setCurrentHeading(heading || 0);
+        setMapRotation(rotation || 0);
       } catch (e) {
         console.log('Could not restore map position');
       }
@@ -145,6 +137,70 @@ export default function Properties() {
     };
   }, []);
 
+  // Two-finger rotation touch handlers
+  useEffect(() => {
+    const container = mapContainerRef.current;
+    if (!container) return;
+
+    let lastAngle = 0;
+    let isMultiTouch = false;
+
+    const handleTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        isMultiTouch = true;
+        setIsRotating(true);
+        const angle = getAngle(e.touches[0], e.touches[1]);
+        touchStartAngleRef.current = angle;
+        initialRotationRef.current = mapRotation;
+        lastAngle = angle;
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 2 && isMultiTouch) {
+        const currentAngle = getAngle(e.touches[0], e.touches[1]);
+        const angleDelta = currentAngle - touchStartAngleRef.current;
+        
+        // Smooth rotation calculation
+        let newRotation = initialRotationRef.current + angleDelta;
+        
+        // Normalize to 0-360
+        while (newRotation < 0) newRotation += 360;
+        while (newRotation >= 360) newRotation -= 360;
+        
+        setMapRotation(newRotation);
+        lastAngle = currentAngle;
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      if (e.touches.length < 2) {
+        isMultiTouch = false;
+        setIsRotating(false);
+        // Save position with rotation
+        if (mapRef.current) {
+          const center = mapRef.current.getCenter();
+          localStorage.setItem('surveyor_map_position', JSON.stringify({
+            lat: center.lat(),
+            lng: center.lng(),
+            zoom: mapRef.current.getZoom(),
+            rotation: mapRotation
+          }));
+        }
+      }
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [mapRotation]);
+
   const fetchProperties = async () => {
     try {
       const response = await axios.get(`${API_URL}/map/employee-properties?limit=500`, {
@@ -157,7 +213,6 @@ export default function Properties() {
       const completed = props.filter(p => ['Completed', 'Approved', 'In Progress'].includes(p.status)).length;
       setStats({ total: props.length, pending, completed });
       
-      // Set initial center if no saved position
       const savedPosition = localStorage.getItem('surveyor_map_position');
       if (!savedPosition) {
         const firstWithGPS = props.find(p => p.latitude && p.longitude);
@@ -192,7 +247,7 @@ export default function Properties() {
         setUserLocation(prev => {
           if (prev) {
             const dist = calculateDistance(prev.lat, prev.lng, pos.coords.latitude, pos.coords.longitude);
-            if (dist < 30) return prev; // Only update if moved > 30m
+            if (dist < 30) return prev;
           }
           return { lat: pos.coords.latitude, lng: pos.coords.longitude };
         });
@@ -202,10 +257,8 @@ export default function Properties() {
     );
   };
 
-  // Compass for device orientation
   const startCompass = () => {
     if (window.DeviceOrientationEvent) {
-      // Request permission on iOS
       if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
           .then(permission => {
@@ -225,35 +278,29 @@ export default function Properties() {
     let heading = event.webkitCompassHeading || (event.alpha !== null ? (360 - event.alpha) % 360 : null);
     if (heading !== null && heading !== undefined) {
       setDeviceHeading(Math.round(heading));
-      if (autoRotate && mapRef.current) {
-        mapRef.current.setHeading(heading);
+      if (autoRotate) {
+        setMapRotation(heading);
       }
     }
   }, [autoRotate]);
 
   const onMapLoad = useCallback((map) => {
     mapRef.current = map;
-    if (currentHeading) {
-      map.setHeading(currentHeading);
-    }
-  }, [currentHeading]);
+  }, []);
 
   const onMapIdle = useCallback(() => {
-    if (mapRef.current) {
+    if (mapRef.current && !isRotating) {
       const center = mapRef.current.getCenter();
       const zoom = mapRef.current.getZoom();
-      const heading = mapRef.current.getHeading() || 0;
-      
-      setCurrentHeading(heading);
       
       localStorage.setItem('surveyor_map_position', JSON.stringify({
         lat: center.lat(),
         lng: center.lng(),
         zoom: zoom,
-        heading: heading
+        rotation: mapRotation
       }));
     }
-  }, []);
+  }, [mapRotation, isRotating]);
 
   const refreshLocation = () => {
     navigator.geolocation.getCurrentPosition(
@@ -273,10 +320,8 @@ export default function Properties() {
   const toggleAutoRotate = () => {
     if (!autoRotate) {
       setAutoRotate(true);
-      if (mapRef.current && deviceHeading) {
-        mapRef.current.setHeading(deviceHeading);
-      }
-      toast.success('Auto-rotate ON - Map follows compass');
+      setMapRotation(deviceHeading);
+      toast.success('Auto-rotate ON');
     } else {
       setAutoRotate(false);
       toast.info('Auto-rotate OFF');
@@ -284,12 +329,8 @@ export default function Properties() {
   };
 
   const resetNorth = () => {
-    if (mapRef.current) {
-      mapRef.current.setHeading(0);
-      mapRef.current.setTilt(0);
-    }
+    setMapRotation(0);
     setAutoRotate(false);
-    setCurrentHeading(0);
     toast.info('Reset to North');
   };
 
@@ -321,6 +362,22 @@ export default function Properties() {
     return props;
   }, [allProperties, userLocation]);
 
+  // Map options
+  const mapOptions = useMemo(() => ({
+    mapTypeId: 'satellite',
+    gestureHandling: 'greedy',
+    disableDefaultUI: true,
+    zoomControl: false,
+    mapTypeControl: false,
+    scaleControl: false,
+    streetViewControl: false,
+    rotateControl: false,
+    fullscreenControl: false,
+    minZoom: 10,
+    maxZoom: 21,
+    clickableIcons: false,
+  }), []);
+
   // Loading states
   if (loadError) {
     return (
@@ -350,8 +407,16 @@ export default function Properties() {
 
   return (
     <EmployeeLayout>
-      {/* FULLSCREEN GOOGLE MAP */}
-      <div className="fixed inset-0 z-0">
+      {/* FULLSCREEN ROTATING MAP CONTAINER */}
+      <div 
+        ref={mapContainerRef}
+        className="fixed inset-0 z-0"
+        style={{
+          transform: `rotate(${mapRotation}deg)`,
+          transformOrigin: 'center center',
+          transition: isRotating ? 'none' : 'transform 0.1s ease-out',
+        }}
+      >
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={mapCenter}
@@ -423,7 +488,7 @@ export default function Properties() {
                         lat: selectedProperty.latitude,
                         lng: selectedProperty.longitude,
                         zoom: mapZoom,
-                        heading: currentHeading
+                        rotation: mapRotation
                       }));
                       navigate(`/employee/survey/${selectedProperty.id}`);
                     }}
@@ -444,8 +509,11 @@ export default function Properties() {
         </GoogleMap>
       </div>
 
-      {/* TOP STATUS BAR */}
-      <div className="fixed top-0 left-0 right-0 z-[1000] bg-black/70 backdrop-blur-sm text-white px-4 py-3">
+      {/* TOP STATUS BAR - Counter-rotated to stay fixed */}
+      <div 
+        className="fixed top-0 left-0 right-0 z-[1000] bg-black/70 backdrop-blur-sm text-white px-4 py-3"
+        style={{ transform: `rotate(${-mapRotation}deg)`, transformOrigin: 'top center' }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -466,23 +534,26 @@ export default function Properties() {
           </div>
           
           <div className="flex items-center gap-2">
-            {/* Compass Heading Display */}
+            {/* Rotation indicator */}
             <div 
-              className="flex items-center gap-1 px-2 py-1 bg-slate-800 rounded-lg cursor-pointer"
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg cursor-pointer ${isRotating ? 'bg-blue-600' : 'bg-slate-800'}`}
               onClick={toggleAutoRotate}
             >
               <Compass 
-                className={`w-5 h-5 transition-transform ${autoRotate ? 'text-blue-400' : 'text-slate-400'}`}
+                className={`w-5 h-5 transition-transform ${autoRotate ? 'text-green-400' : 'text-slate-400'}`}
                 style={{ transform: `rotate(${deviceHeading}deg)` }}
               />
-              <span className="text-xs font-mono">{Math.round(currentHeading)}°</span>
+              <span className="text-xs font-mono">{Math.round(mapRotation)}°</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* MAP CONTROLS - Right Side */}
-      <div className="fixed right-3 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-2">
+      {/* MAP CONTROLS - Fixed position, counter-rotated */}
+      <div 
+        className="fixed right-3 top-1/2 z-[1000] flex flex-col gap-2"
+        style={{ transform: `translateY(-50%) rotate(${-mapRotation}deg)` }}
+      >
         {/* Map Type Toggle */}
         <Button
           size="sm"
@@ -514,7 +585,7 @@ export default function Properties() {
         </Button>
         
         {/* Reset North */}
-        {currentHeading !== 0 && (
+        {mapRotation !== 0 && (
           <Button
             size="sm"
             className="w-12 h-12 rounded-full bg-orange-600 hover:bg-orange-700 shadow-lg"
@@ -537,8 +608,11 @@ export default function Properties() {
         </Button>
       </div>
 
-      {/* BOTTOM INFO BAR */}
-      <div className="fixed bottom-0 left-0 right-0 z-[1000] bg-black/80 backdrop-blur-sm text-white px-4 py-3">
+      {/* BOTTOM INFO BAR - Counter-rotated */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 z-[1000] bg-black/80 backdrop-blur-sm text-white px-4 py-3"
+        style={{ transform: `rotate(${-mapRotation}deg)`, transformOrigin: 'bottom center' }}
+      >
         <div className="flex items-center justify-between">
           <div className="text-sm">
             <span className="text-slate-400">Total: </span>
@@ -557,7 +631,17 @@ export default function Properties() {
         </div>
       </div>
 
-{/* Clean map - no extra hints needed */}
+      {/* Rotation hint - only show when not rotating */}
+      {!isRotating && mapRotation === 0 && (
+        <div 
+          className="fixed bottom-16 left-1/2 z-[999] pointer-events-none"
+          style={{ transform: 'translateX(-50%)' }}
+        >
+          <div className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
+            Use two fingers to rotate 360°
+          </div>
+        </div>
+      )}
     </EmployeeLayout>
   );
 }
