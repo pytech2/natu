@@ -544,6 +544,26 @@ export default function Properties() {
                 Unassign Employee
               </Button>
 
+              {/* Delete Colony Button */}
+              <Button
+                variant="outline"
+                className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                onClick={() => setDeleteColonyDialog(true)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Colony
+              </Button>
+
+              {/* Delete Duplicates Button */}
+              <Button
+                variant="outline"
+                className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                onClick={() => setDeleteDuplicatesDialog(true)}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Delete Duplicates
+              </Button>
+
               {/* Delete All Button - Always visible when there are properties */}
               {pagination.total > 0 && (
                 <Button
