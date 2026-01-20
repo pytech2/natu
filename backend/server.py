@@ -3446,11 +3446,12 @@ async def generate_arranged_pdf(
             if position == 0:
                 current_page = output_pdf.new_page(width=A4_WIDTH, height=A4_HEIGHT)
             
-            # Get source page and render to image
+            # Get source page and render to compressed image
             src_page = src_pdf[page_num]
             
-            # Render at 1x scale
-            pix = src_page.get_pixmap()
+            # Render at 0.7x scale for smaller file size
+            mat = fitz.Matrix(0.7, 0.7)
+            pix = src_page.get_pixmap(matrix=mat)
             
             # Convert to JPEG with HIGH COMPRESSION for smaller file size
             img_bytes = pix.tobytes("jpeg", 50)  # Lower quality = smaller file
