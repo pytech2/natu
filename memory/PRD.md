@@ -9,12 +9,21 @@
 - **Connection Pool**: 50 max connections
 - **20 concurrent users**: 0.6s response time
 
-### Surveyor Map Features ✅
-- **Fullscreen Satellite Map**: Google satellite tiles
-- **Map Rotation**: Compass-based auto-rotate
+### Surveyor Map Features ✅ (UPDATED)
+- **Google Maps API Integration**: Native Google Maps with smooth 360° rotation
+- **Fullscreen Satellite Map**: Google satellite view like native Google Maps app
+- **Native 360° Rotation**: Two-finger touch rotation gestures (smooth like video)
+- **Compass Auto-Rotate**: Map follows device compass heading
 - **GPS Tracking**: Real-time location with blue pulsing dot
-- **Position Persistence**: Map stays at same position after survey
-- **Fast Loading**: Cached API responses
+- **Position Persistence**: Map center/zoom/heading saved to localStorage
+- **Fast Loading**: Cached API responses + optimized markers
+
+### Google Maps Setup (Required for Production)
+1. Add `REACT_APP_GOOGLE_MAPS_API_KEY` to frontend/.env
+2. In Google Cloud Console:
+   - Enable "Maps JavaScript API"
+   - Enable billing on the project
+   - Set domain restrictions for the API key
 
 ### API Endpoints (Optimized)
 | Endpoint | Purpose | Cache |
