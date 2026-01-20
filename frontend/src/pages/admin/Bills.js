@@ -933,6 +933,23 @@ export default function BillsPage() {
                     : '3 bills stacked on each A4 page (compact)'}
                 </p>
               </div>
+              
+              {/* Print Serial Number option */}
+              <div className="flex items-center space-x-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="printSerial"
+                  checked={pdfOptions.print_serial}
+                  onChange={(e) => setPdfOptions({...pdfOptions, print_serial: e.target.checked})}
+                  className="w-4 h-4 text-amber-600 rounded border-gray-300"
+                />
+                <label htmlFor="printSerial" className="text-sm">
+                  <span className="font-medium text-amber-800">Print Serial Number on PDF</span>
+                  <p className="text-xs text-amber-600">
+                    Adds serial number (like N34, N54) in red color on top-right of each bill
+                  </p>
+                </label>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setGenerateDialog(false)}>
