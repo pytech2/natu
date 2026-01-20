@@ -364,3 +364,8 @@ A_20260120_072307.pdf
 # Environment files
 *.env
 *.env.*
+
+# Uploads folder - large files
+backend/uploads/
+backend/uploads/*
+*.pdf
