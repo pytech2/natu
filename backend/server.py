@@ -3489,8 +3489,8 @@ async def generate_arranged_pdf(
             mat = fitz.Matrix(0.9, 0.9)
             pix = src_page.get_pixmap(matrix=mat)
             
-            # Convert to JPEG with HIGH COMPRESSION for smaller file size
-            img_bytes = pix.tobytes("jpeg", 50)  # Lower quality = smaller file
+            # Convert to JPEG with good quality (70% = good balance for multi-bill)
+            img_bytes = pix.tobytes("jpeg", 70)
             
             # Pixmap dimensions
             pix_width = pix.width
