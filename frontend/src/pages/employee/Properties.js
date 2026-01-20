@@ -557,12 +557,7 @@ export default function Properties() {
         </div>
       </div>
 
-      {/* Rotation hint for mobile */}
-      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-[999] pointer-events-none">
-        <div className="bg-black/60 text-white text-xs px-3 py-1 rounded-full opacity-70">
-          Use two fingers to rotate map 360°
-        </div>
-      </div>
+{/* Clean map - no extra hints needed */}
     </EmployeeLayout>
   );
 }
