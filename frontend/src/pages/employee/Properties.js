@@ -96,6 +96,7 @@ export default function Properties() {
   const [deviceHeading, setDeviceHeading] = useState(0);
   const [autoRotate, setAutoRotate] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
+  const [showHint, setShowHint] = useState(true);
   
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
@@ -110,6 +111,12 @@ export default function Properties() {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   });
+
+  // Hide hint after 5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => setShowHint(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Restore saved position
   useEffect(() => {
@@ -142,17 +149,16 @@ export default function Properties() {
     const container = mapContainerRef.current;
     if (!container) return;
 
-    let lastAngle = 0;
     let isMultiTouch = false;
 
     const handleTouchStart = (e) => {
       if (e.touches.length === 2) {
         isMultiTouch = true;
         setIsRotating(true);
+        setShowHint(false);
         const angle = getAngle(e.touches[0], e.touches[1]);
         touchStartAngleRef.current = angle;
         initialRotationRef.current = mapRotation;
-        lastAngle = angle;
       }
     };
 
@@ -169,7 +175,6 @@ export default function Properties() {
         while (newRotation >= 360) newRotation -= 360;
         
         setMapRotation(newRotation);
-        lastAngle = currentAngle;
       }
     };
 
@@ -410,11 +415,11 @@ export default function Properties() {
       {/* FULLSCREEN ROTATING MAP CONTAINER */}
       <div 
         ref={mapContainerRef}
-        className="fixed inset-0 z-0"
+        className="fixed inset-0 z-0 overflow-hidden"
         style={{
           transform: `rotate(${mapRotation}deg)`,
           transformOrigin: 'center center',
-          transition: isRotating ? 'none' : 'transform 0.1s ease-out',
+          transition: isRotating ? 'none' : 'transform 0.15s ease-out',
         }}
       >
         <GoogleMap
@@ -509,139 +514,130 @@ export default function Properties() {
         </GoogleMap>
       </div>
 
-      {/* TOP STATUS BAR - Counter-rotated to stay fixed */}
-      <div 
-        className="fixed top-0 left-0 right-0 z-[1000] bg-black/70 backdrop-blur-sm text-white px-4 py-3"
-        style={{ transform: `rotate(${-mapRotation}deg)`, transformOrigin: 'top center' }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      {/* FIXED UI OVERLAY - Does NOT rotate */}
+      <div className="fixed inset-0 z-[1000] pointer-events-none">
+        {/* TOP STATUS BAR */}
+        <div className="absolute top-0 left-0 right-0 bg-black/70 backdrop-blur-sm text-white px-4 py-3 pointer-events-auto">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                {gpsTracking && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-xs text-green-400">GPS</span>
+                  </div>
+                )}
+              </div>
+              <div className="text-sm">
+                <span className="text-red-400 font-bold">{stats.pending}</span>
+                <span className="text-slate-400"> pending</span>
+                <span className="mx-2 text-slate-600">|</span>
+                <span className="text-green-400 font-bold">{stats.completed}</span>
+                <span className="text-slate-400"> done</span>
+              </div>
+            </div>
+            
             <div className="flex items-center gap-2">
-              {gpsTracking && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-xs text-green-400">GPS</span>
-                </div>
-              )}
-            </div>
-            <div className="text-sm">
-              <span className="text-red-400 font-bold">{stats.pending}</span>
-              <span className="text-slate-400"> pending</span>
-              <span className="mx-2 text-slate-600">|</span>
-              <span className="text-green-400 font-bold">{stats.completed}</span>
-              <span className="text-slate-400"> done</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {/* Rotation indicator */}
-            <div 
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg cursor-pointer ${isRotating ? 'bg-blue-600' : 'bg-slate-800'}`}
-              onClick={toggleAutoRotate}
-            >
-              <Compass 
-                className={`w-5 h-5 transition-transform ${autoRotate ? 'text-green-400' : 'text-slate-400'}`}
-                style={{ transform: `rotate(${deviceHeading}deg)` }}
-              />
-              <span className="text-xs font-mono">{Math.round(mapRotation)}°</span>
+              {/* Rotation indicator */}
+              <div 
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg cursor-pointer ${isRotating ? 'bg-blue-600' : 'bg-slate-800'}`}
+                onClick={toggleAutoRotate}
+              >
+                <Compass 
+                  className={`w-5 h-5 ${autoRotate ? 'text-green-400' : 'text-slate-400'}`}
+                  style={{ transform: `rotate(${mapRotation}deg)`, transition: 'transform 0.15s ease-out' }}
+                />
+                <span className="text-xs font-mono">{Math.round(mapRotation)}°</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* MAP CONTROLS - Fixed position, counter-rotated */}
-      <div 
-        className="fixed right-3 top-1/2 z-[1000] flex flex-col gap-2"
-        style={{ transform: `translateY(-50%) rotate(${-mapRotation}deg)` }}
-      >
-        {/* Map Type Toggle */}
-        <Button
-          size="sm"
-          className="w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 shadow-lg"
-          onClick={toggleMapType}
-          title="Toggle map labels"
-        >
-          <Layers className="w-5 h-5" />
-        </Button>
-
-        {/* Center on Location */}
-        <Button
-          size="sm"
-          className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
-          onClick={refreshLocation}
-          title="My location"
-        >
-          <LocateFixed className="w-6 h-6" />
-        </Button>
-        
-        {/* Auto Rotate Toggle */}
-        <Button
-          size="sm"
-          className={`w-12 h-12 rounded-full shadow-lg ${autoRotate ? 'bg-green-600 hover:bg-green-700' : 'bg-slate-700 hover:bg-slate-600'}`}
-          onClick={toggleAutoRotate}
-          title="Auto-rotate with compass"
-        >
-          <Compass className="w-6 h-6" />
-        </Button>
-        
-        {/* Reset North */}
-        {mapRotation !== 0 && (
+        {/* MAP CONTROLS - Right Side */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-2 pointer-events-auto">
+          {/* Map Type Toggle */}
           <Button
             size="sm"
-            className="w-12 h-12 rounded-full bg-orange-600 hover:bg-orange-700 shadow-lg"
-            onClick={resetNorth}
-            title="Reset to North"
+            className="w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 shadow-lg"
+            onClick={toggleMapType}
+            title="Toggle map labels"
           >
-            <span className="text-xs font-bold">N↑</span>
+            <Layers className="w-5 h-5" />
           </Button>
-        )}
-        
-        {/* Refresh Properties */}
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-12 h-12 rounded-full bg-white shadow-lg"
-          onClick={fetchProperties}
-          title="Refresh properties"
-        >
-          <RefreshCw className="w-5 h-5 text-slate-700" />
-        </Button>
-      </div>
 
-      {/* BOTTOM INFO BAR - Counter-rotated */}
-      <div 
-        className="fixed bottom-0 left-0 right-0 z-[1000] bg-black/80 backdrop-blur-sm text-white px-4 py-3"
-        style={{ transform: `rotate(${-mapRotation}deg)`, transformOrigin: 'bottom center' }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="text-sm">
-            <span className="text-slate-400">Total: </span>
-            <span className="font-bold">{sortedProperties.length}</span>
-            <span className="text-slate-400"> properties</span>
-          </div>
+          {/* Center on Location */}
+          <Button
+            size="sm"
+            className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
+            onClick={refreshLocation}
+            title="My location"
+          >
+            <LocateFixed className="w-6 h-6" />
+          </Button>
           
-          {sortedProperties.length > 0 && sortedProperties[0].distance && (
-            <div className="flex items-center gap-2 bg-green-600/30 px-3 py-1 rounded-full">
-              <MapPin className="w-4 h-4 text-green-400" />
-              <span className="text-sm">
-                Nearest: <strong>{formatDistance(sortedProperties[0].distance)}</strong>
-              </span>
-            </div>
+          {/* Auto Rotate Toggle */}
+          <Button
+            size="sm"
+            className={`w-12 h-12 rounded-full shadow-lg ${autoRotate ? 'bg-green-600 hover:bg-green-700' : 'bg-slate-700 hover:bg-slate-600'}`}
+            onClick={toggleAutoRotate}
+            title="Auto-rotate with compass"
+          >
+            <Compass className="w-6 h-6" />
+          </Button>
+          
+          {/* Reset North */}
+          {Math.round(mapRotation) !== 0 && (
+            <Button
+              size="sm"
+              className="w-12 h-12 rounded-full bg-orange-600 hover:bg-orange-700 shadow-lg"
+              onClick={resetNorth}
+              title="Reset to North"
+            >
+              <span className="text-xs font-bold">N↑</span>
+            </Button>
           )}
+          
+          {/* Refresh Properties */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-12 h-12 rounded-full bg-white shadow-lg"
+            onClick={fetchProperties}
+            title="Refresh properties"
+          >
+            <RefreshCw className="w-5 h-5 text-slate-700" />
+          </Button>
         </div>
-      </div>
 
-      {/* Rotation hint - only show when not rotating */}
-      {!isRotating && mapRotation === 0 && (
-        <div 
-          className="fixed bottom-16 left-1/2 z-[999] pointer-events-none"
-          style={{ transform: 'translateX(-50%)' }}
-        >
-          <div className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
-            Use two fingers to rotate 360°
+        {/* BOTTOM INFO BAR */}
+        <div className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-sm text-white px-4 py-3 pointer-events-auto">
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <span className="text-slate-400">Total: </span>
+              <span className="font-bold">{sortedProperties.length}</span>
+              <span className="text-slate-400"> properties</span>
+            </div>
+            
+            {sortedProperties.length > 0 && sortedProperties[0].distance && (
+              <div className="flex items-center gap-2 bg-green-600/30 px-3 py-1 rounded-full">
+                <MapPin className="w-4 h-4 text-green-400" />
+                <span className="text-sm">
+                  Nearest: <strong>{formatDistance(sortedProperties[0].distance)}</strong>
+                </span>
+              </div>
+            )}
           </div>
         </div>
-      )}
+
+        {/* Rotation hint - fades out */}
+        {showHint && (
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2">
+            <div className="bg-black/70 text-white text-sm px-4 py-2 rounded-full animate-pulse">
+              👆👆 Use two fingers to rotate 360°
+            </div>
+          </div>
+        )}
+      </div>
     </EmployeeLayout>
   );
 }
