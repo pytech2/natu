@@ -3438,8 +3438,8 @@ async def generate_arranged_pdf(
             # Render at 1x scale
             pix = src_page.get_pixmap()
             
-            # Convert to JPEG
-            img_bytes = pix.tobytes("jpeg", 85)
+            # Convert to JPEG with HIGH COMPRESSION for smaller file size
+            img_bytes = pix.tobytes("jpeg", 50)  # Lower quality = smaller file
             
             # Pixmap dimensions
             pix_width = pix.width
@@ -3504,7 +3504,15 @@ async def generate_arranged_pdf(
             included_count += 1
             position = (position + 1) % num_bills
     
-    output_pdf.save(str(output_path))
+    # SAVE WITH COMPRESSION - smaller file size
+    output_pdf.save(
+        str(output_path),
+        garbage=4,           # Maximum garbage collection
+        deflate=True,        # Compress streams
+        clean=True,          # Clean unused objects
+        deflate_images=True, # Compress images
+        deflate_fonts=True   # Compress fonts
+    )
     output_pdf.close()
     src_pdf.close()
     
