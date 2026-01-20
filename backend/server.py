@@ -3639,15 +3639,17 @@ async def delete_all_bills(
 async def copy_bills_to_properties(
     batch_id: str = Form(None),
     colony: str = Form(None),
-    skip_duplicates: str = Form("false"),  # NEW: Option to skip or include duplicates
+    skip_duplicates: str = Form("false"),
+    skip_vacant_plots: str = Form("false"),
     current_user: dict = Depends(get_current_user)
 ):
     """Copy bill data to properties collection"""
     if current_user["role"] not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Parse skip_duplicates option
+    # Parse options
     should_skip_duplicates = skip_duplicates.lower() == "true"
+    should_skip_vacant = skip_vacant_plots.lower() == "true"
     
     query = {}
     if batch_id and batch_id.strip():
@@ -3698,12 +3700,41 @@ async def copy_bills_to_properties(
                 "lng": b["longitude"]
             })
     
+    # Vacant plot keywords to check
+    VACANT_KEYWORDS = ["vacant", "empty", "plot", "n/a", "na", "nil", "blank", "-", "खाली", "रिक्त"]
+    
+    def is_vacant_plot(bill):
+        """Check if a bill represents a vacant plot"""
+        owner = (bill.get("owner_name") or "").strip().lower()
+        category = (bill.get("category") or "").strip().lower()
+        
+        # Check if owner name matches vacant patterns
+        for keyword in VACANT_KEYWORDS:
+            if keyword in owner:
+                return True
+        
+        # Check if category indicates vacant
+        if "vacant" in category or "empty" in category or "plot" in category:
+            return True
+        
+        # Check if owner name is very short or just numbers
+        if len(owner) <= 2 or owner.isdigit():
+            return True
+        
+        return False
+    
     # Convert bills to properties
     properties = []
     skipped_duplicates = 0
+    skipped_vacant = 0
     
     for i, bill in enumerate(bills):
         bill_prop_id = bill.get("property_id", "")
+        
+        # Skip vacant plots if option is enabled
+        if should_skip_vacant and is_vacant_plot(bill):
+            skipped_vacant += 1
+            continue
         
         # Only check duplicates if option is enabled
         if should_skip_duplicates:
