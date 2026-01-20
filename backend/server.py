@@ -3534,13 +3534,13 @@ async def generate_arranged_pdf(
             if should_print_serial:
                 serial_text = get_display_serial(bill)
                 
-                # Draw serial number in top-right of the bill slot
-                font_size = 24 if num_bills == 3 else 28
-                text_x = rect.x1 - len(serial_text) * font_size * 0.5 - 10
-                text_y = rect.y0 + font_size + 5
+                # Draw serial number in top-right of the bill slot (smaller size)
+                font_size = 12 if num_bills == 3 else 14
+                text_x = rect.x1 - len(serial_text) * font_size * 0.5 - 5
+                text_y = rect.y0 + font_size + 3
                 
                 # White background rectangle
-                bg_rect = fitz.Rect(text_x - 5, rect.y0 + 5, rect.x1 - 5, text_y + 5)
+                bg_rect = fitz.Rect(text_x - 3, rect.y0 + 2, rect.x1 - 3, text_y + 3)
                 current_page.draw_rect(bg_rect, color=(1, 1, 1), fill=(1, 1, 1))
                 
                 # Red text
