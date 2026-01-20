@@ -3431,25 +3431,25 @@ async def generate_arranged_pdf(
             if should_print_serial:
                 serial_text = get_display_serial(bill)
                 
-                # Draw LARGE serial number in top-right corner - easy to match with map
-                font_size = 48  # Big font for visibility
+                # Draw serial number in top-right corner (60% smaller)
+                font_size = 20  # Reduced from 48
                 text_width = len(serial_text) * font_size * 0.7
                 
                 # Position: top-right area of the page
-                x_pos = new_page.rect.width - text_width - 20
-                y_pos = 15
+                x_pos = new_page.rect.width - text_width - 15
+                y_pos = 10
                 
                 rect = fitz.Rect(
-                    x_pos - 10,
+                    x_pos - 5,
                     y_pos,
-                    new_page.rect.width - 10,
-                    y_pos + font_size + 15
+                    new_page.rect.width - 8,
+                    y_pos + font_size + 8
                 )
                 
                 # White background with border
-                new_page.draw_rect(rect, color=(1, 0, 0), fill=(1, 1, 1), width=2)
+                new_page.draw_rect(rect, color=(1, 0, 0), fill=(1, 1, 1), width=1)
                 
-                # RED BOLD text - matches map marker color
+                # RED text - matches map marker color
                 new_page.insert_text(
                     (x_pos, y_pos + font_size),
                     serial_text,
