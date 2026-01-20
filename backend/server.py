@@ -3297,11 +3297,14 @@ async def generate_arranged_pdf(
     batch_id: str = Form(None),
     colony: str = Form(None),
     bills_per_page: int = Form(1),  # 1 = full page, 3 = stacked vertically
+    print_serial: str = Form("true"),  # Print serial number on PDF
     current_user: dict = Depends(get_current_user)
 ):
     """Generate PDF with invoices. 3 per page = landscape bills scaled & stacked vertically on A4."""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Only Admin can generate PDF")
+    
+    should_print_serial = print_serial.lower() == "true"
     
     query = {}
     if batch_id and batch_id.strip():
@@ -3329,15 +3332,77 @@ async def generate_arranged_pdf(
     src_pdf = fitz.open(str(original_pdf_path))
     output_pdf = fitz.open()
     
+    # Build serial number lookup - N/A serials get NX format
+    valid_serials_with_gps = []
+    for b in bills:
+        if not b.get("serial_na", False) and b.get("serial_number", 0) > 0 and b.get("latitude") and b.get("longitude"):
+            valid_serials_with_gps.append({
+                "serial": b["serial_number"],
+                "lat": b["latitude"],
+                "lng": b["longitude"]
+            })
+    
+    def get_display_serial(bill):
+        """Get display serial number (like N34 for N/A serials)"""
+        bill_serial = bill.get("serial_number", 0)
+        is_serial_na = bill.get("serial_na", False) or bill_serial == 0
+        
+        if is_serial_na:
+            nearest_serial = 0
+            if valid_serials_with_gps and bill.get("latitude") and bill.get("longitude"):
+                min_distance = float('inf')
+                bill_lat = bill["latitude"]
+                bill_lng = bill["longitude"]
+                
+                for vs in valid_serials_with_gps:
+                    dist = ((vs["lat"] - bill_lat) ** 2 + (vs["lng"] - bill_lng) ** 2) ** 0.5
+                    if dist < min_distance:
+                        min_distance = dist
+                        nearest_serial = vs["serial"]
+            elif valid_serials_with_gps:
+                nearest_serial = valid_serials_with_gps[0]["serial"]
+            
+            return f"N{nearest_serial}"
+        else:
+            return str(bill_serial)
+    
     included_count = 0
     
     if bills_per_page == 1:
-        # ONE BILL PER PAGE - Direct copy, preserves original layout exactly
+        # ONE BILL PER PAGE - Direct copy with serial number overlay
         for bill in bills:
             page_num = bill.get("page_number", 1) - 1
             if page_num < 0 or page_num >= len(src_pdf):
                 continue
             output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
+            
+            # Add serial number overlay if enabled
+            if should_print_serial:
+                new_page = output_pdf[-1]
+                serial_text = get_display_serial(bill)
+                
+                # Draw serial number in top-right corner with red color
+                font_size = 36
+                text_width = len(serial_text) * font_size * 0.6
+                rect = fitz.Rect(
+                    new_page.rect.width - text_width - 30,
+                    10,
+                    new_page.rect.width - 10,
+                    50
+                )
+                
+                # White background
+                new_page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
+                
+                # Red text
+                new_page.insert_text(
+                    (rect.x0 + 5, rect.y1 - 10),
+                    serial_text,
+                    fontsize=font_size,
+                    fontname="helv",
+                    color=(1, 0, 0)  # Red
+                )
+            
             included_count += 1
     else:
         # 2 OR 3 BILLS PER PAGE - Render as image for accurate output
