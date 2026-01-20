@@ -565,13 +565,36 @@ async def get_employee_map_properties(
         ("serial_number", 1)
     ]).limit(limit).to_list(limit)
     
-    response = {
-        "properties": properties,
-        "count": len(properties)
-    }
+    # Remove duplicates - keep unique by property_id or (owner_name + mobile)
+    seen_property_ids = set()
+    seen_owner_mobile = set()
+    unique_properties = []
     
-    map_cache.set(cache_key, response)
-    return response
+    for prop in properties:
+        prop_id = prop.get("property_id", "")
+        owner = (prop.get("owner_name") or "").strip().upper()
+        mobile = (prop.get("mobile") or "").strip()
+        
+        # Skip if duplicate property_id
+        if prop_id and prop_id in seen_property_ids:
+            continue
+        
+        # Skip if duplicate owner+mobile combination
+        if owner and mobile:
+            key = f"{owner}_{mobile}"
+            if key in seen_owner_mobile:
+                continue
+            seen_owner_mobile.add(key)
+        
+        if prop_id:
+            seen_property_ids.add(prop_id)
+        
+        unique_properties.append(prop)
+    
+    return {
+        "properties": unique_properties,
+        "count": len(unique_properties)
+    }
 
 # Clear cache when properties are modified
 async def clear_map_cache():
