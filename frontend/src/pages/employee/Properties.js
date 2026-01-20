@@ -174,7 +174,9 @@ export default function Properties() {
         const { lat, lng, zoom } = JSON.parse(savedPosition);
         setMapCenter([lat, lng]);
         setMapZoom(zoom || 18);
-      } catch (e) {}
+      } catch (e) {
+        console.log('Could not restore map position');
+      }
     }
   }, []);
 
