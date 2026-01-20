@@ -110,6 +110,7 @@ export default function BillsPage() {
   const [copyDialog, setCopyDialog] = useState(false);
   const [copying, setCopying] = useState(false);
   const [skipDuplicates, setSkipDuplicates] = useState(false); // NEW: Option to skip or add all
+  const [skipVacantPlots, setSkipVacantPlots] = useState(false); // Skip vacant/empty plots
 
   // GPS Arrangement confirmation dialog
   const [gpsArrangeDialog, setGpsArrangeDialog] = useState(false);
