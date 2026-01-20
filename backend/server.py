@@ -3039,6 +3039,31 @@ async def upload_pdf_bills(
     try:
         pdf_doc = fitz.open(str(pdf_path))
         
+        # Vacant plot keywords to check
+        VACANT_KEYWORDS = ["vacant", "empty", "plot", "n/a", "na", "nil", "blank", "-", "खाली", "रिक्त", "खालि"]
+        
+        def is_vacant_plot(owner_name, category=""):
+            """Check if a bill represents a vacant plot"""
+            owner = (owner_name or "").strip().lower()
+            cat = (category or "").strip().lower()
+            
+            # Check if owner name matches vacant patterns
+            for keyword in VACANT_KEYWORDS:
+                if keyword in owner:
+                    return True
+            
+            # Check if category indicates vacant
+            if "vacant" in cat or "empty" in cat:
+                return True
+            
+            # Check if owner name is very short or just numbers
+            if len(owner) <= 2 or owner.isdigit():
+                return True
+            
+            return False
+        
+        skipped_vacant = 0
+        
         # First pass: Extract all bill data
         for page_num in range(len(pdf_doc)):
             page = pdf_doc[page_num]
@@ -3051,6 +3076,11 @@ async def upload_pdf_bills(
             if not is_valid_owner_name(bill_data.get("owner_name")):
                 skipped_count += 1
                 continue  # Skip this record
+            
+            # Skip vacant plots
+            if is_vacant_plot(bill_data.get("owner_name"), bill_data.get("category")):
+                skipped_vacant += 1
+                continue  # Skip vacant plots
             
             bill_data["id"] = str(uuid.uuid4())
             bill_data["batch_id"] = batch_id
