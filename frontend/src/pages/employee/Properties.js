@@ -512,6 +512,76 @@ export default function Properties() {
           </div>
         </div>
 
+        {/* SEARCH BAR */}
+        <div className="absolute top-14 left-3 right-3 pointer-events-auto">
+          <div className="relative">
+            <div className="flex items-center bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="pl-4">
+                <Search className="w-5 h-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Search Property ID, Serial No, Name..."
+                className="flex-1 px-3 py-3 text-gray-800 placeholder-gray-400 outline-none text-sm"
+                data-testid="property-search-input"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={clearSearch}
+                  className="pr-4 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+            
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg max-h-64 overflow-y-auto z-50">
+                {searchResults.map((property, index) => (
+                  <div
+                    key={property.id}
+                    onClick={() => selectSearchResult(property)}
+                    className={`px-4 py-3 cursor-pointer hover:bg-blue-50 flex items-center gap-3 ${index !== searchResults.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    data-testid={`search-result-${index}`}
+                  >
+                    <div 
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                      style={{ backgroundColor: getMarkerColor(property.status) }}
+                    >
+                      {property.bill_sr_no || property.serial_number || '-'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 truncate">{property.owner_name}</div>
+                      <div className="text-xs text-gray-500 flex items-center gap-2">
+                        <span className="font-mono">{property.property_id}</span>
+                        <span>•</span>
+                        <span>{property.colony}</span>
+                      </div>
+                    </div>
+                    <div className={`text-xs px-2 py-0.5 rounded-full ${
+                      property.status === 'Pending' ? 'bg-red-100 text-red-700' : 
+                      property.status === 'Completed' ? 'bg-green-100 text-green-700' : 
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {property.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* No results message */}
+            {showSearchResults && searchResults.length === 0 && searchQuery.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg p-4 text-center text-gray-500 text-sm">
+                No properties found for "{searchQuery}"
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* MAP CONTROLS - Right Side */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-2 pointer-events-auto">
           {/* Center on Location */}
