@@ -278,6 +278,7 @@ export default function BillsPage() {
       if (filters.batch_id) formData.append('batch_id', filters.batch_id);
       if (filters.colony) formData.append('colony', filters.colony);
       formData.append('bills_per_page', pdfOptions.bills_per_page || '1');
+      formData.append('print_serial', pdfOptions.print_serial ? 'true' : 'false');
 
       const response = await axios.post(`${API_URL}/admin/bills/generate-pdf`, formData, {
         headers: { 
