@@ -822,26 +822,6 @@ export default function Submissions() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-xs text-slate-600 flex items-center gap-1">
-                          <User className="w-3 h-3" /> New Owner Name
-                        </Label>
-                        <Input
-                          value={editData.new_owner_name}
-                          onChange={(e) => setEditData({ ...editData, new_owner_name: e.target.value })}
-                          className="bg-white"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs text-slate-600 flex items-center gap-1">
-                          <Phone className="w-3 h-3" /> New Mobile Number
-                        </Label>
-                        <Input
-                          value={editData.new_mobile}
-                          onChange={(e) => setEditData({ ...editData, new_mobile: e.target.value })}
-                          className="bg-white"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs text-slate-600 flex items-center gap-1">
                           <Users className="w-3 h-3" /> Receiver Name
                         </Label>
                         <Input
