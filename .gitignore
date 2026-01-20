@@ -340,3 +340,7 @@ A_20260120_072307.pdf
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
