@@ -3369,16 +3369,30 @@ async def generate_arranged_pdf(
     included_count = 0
     
     if bills_per_page == 1:
-        # ONE BILL PER PAGE - Direct copy with serial number overlay
+        # ONE BILL PER PAGE - Render as compressed image for smaller file size
         for bill in bills:
             page_num = bill.get("page_number", 1) - 1
             if page_num < 0 or page_num >= len(src_pdf):
                 continue
-            output_pdf.insert_pdf(src_pdf, from_page=page_num, to_page=page_num)
+            
+            # Render source page as image (compressed)
+            src_page = src_pdf[page_num]
+            
+            # Render at 0.8x scale for smaller file
+            mat = fitz.Matrix(0.8, 0.8)
+            pix = src_page.get_pixmap(matrix=mat)
+            
+            # Convert to JPEG with compression
+            img_bytes = pix.tobytes("jpeg", 60)  # 60% quality for smaller file
+            
+            # Create new page with original dimensions
+            new_page = output_pdf.new_page(width=src_page.rect.width, height=src_page.rect.height)
+            
+            # Insert compressed image
+            new_page.insert_image(new_page.rect, stream=img_bytes)
             
             # Add serial number overlay if enabled
             if should_print_serial:
-                new_page = output_pdf[-1]
                 serial_text = get_display_serial(bill)
                 
                 # Draw LARGE serial number in top-right corner - easy to match with map
