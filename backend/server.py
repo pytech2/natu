@@ -3407,10 +3407,6 @@ async def generate_arranged_pdf(
                     fontname="helv",
                     color=(1, 0, 0)  # Red to match map markers
                 )
-                    fontsize=font_size,
-                    fontname="helv",
-                    color=(1, 0, 0)  # Red
-                )
             
             included_count += 1
     else:
