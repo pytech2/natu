@@ -526,10 +526,9 @@ async def get_map_properties(
 @api_router.get("/map/employee-properties")
 async def get_employee_map_properties(
     hide_completed: bool = False,
-    limit: int = 300,
     current_user: dict = Depends(get_current_user)
 ):
-    """Fast lightweight endpoint for surveyor map - NO DUPLICATES"""
+    """Fast lightweight endpoint for surveyor map - NO LIMIT, fetch ALL assigned properties"""
     
     query = {
         "$or": [
@@ -559,11 +558,11 @@ async def get_employee_map_properties(
         "mobile": 1
     }
     
-    # Sort: pending first, then by serial
+    # Sort: pending first, then by serial - NO LIMIT
     properties = await db.properties.find(query, projection).sort([
         ("status", 1),
         ("serial_number", 1)
-    ]).limit(limit).to_list(limit)
+    ]).to_list(None)
     
     # Remove duplicates - keep unique by property_id or (owner_name + mobile)
     seen_property_ids = set()
