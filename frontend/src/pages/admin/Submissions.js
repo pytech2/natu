@@ -419,8 +419,8 @@ export default function Submissions() {
                     <tr>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Property ID</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Employee</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">New Owner</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Receiver</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Relation</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">GPS</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Submitted</th>
@@ -432,8 +432,8 @@ export default function Submissions() {
                       <tr key={sub.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 font-mono text-sm font-medium text-blue-600">{sub.property_id}</td>
                         <td className="px-4 py-3 text-sm">{sub.employee_name}</td>
-                        <td className="px-4 py-3 text-sm">{sub.new_owner_name || '-'}</td>
                         <td className="px-4 py-3 text-sm">{sub.receiver_name || '-'}</td>
+                        <td className="px-4 py-3 text-sm">{sub.relation || '-'}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1 text-emerald-600">
                             <MapPin className="w-3 h-3" />
