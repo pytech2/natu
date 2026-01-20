@@ -522,41 +522,14 @@ async def get_map_properties(
         "count": len(unique_properties),
         "total_before_dedup": len(properties)
     }
-        "latitude": 1,
-        "longitude": 1,
-        "status": 1,
-        "serial_number": 1,
-        "bill_sr_no": 1,
-        "property_id": 1,
-        "owner_name": 1,
-        "colony": 1,
-        "ward": 1,
-        "mobile": 1
-    }
-    
-    properties = await db.properties.find(query, projection).limit(limit).to_list(limit)
-    
-    response = {
-        "properties": properties,
-        "count": len(properties)
-    }
-    
-    # Cache for admin users
-    if current_user["role"] in ["ADMIN", "SUPERVISOR", "MC_OFFICER"]:
-        map_cache.set(cache_key, response)
-    
-    return response
 
 @api_router.get("/map/employee-properties")
 async def get_employee_map_properties(
+    hide_completed: bool = False,
     limit: int = 300,
     current_user: dict = Depends(get_current_user)
 ):
-    """Fast lightweight endpoint for surveyor map - CACHED per employee"""
-    cache_key = f"emp_map_{current_user['id']}"
-    cached = map_cache.get(cache_key)
-    if cached:
-        return cached
+    """Fast lightweight endpoint for surveyor map - NO DUPLICATES"""
     
     query = {
         "$or": [
@@ -566,6 +539,10 @@ async def get_employee_map_properties(
         "latitude": {"$ne": None},
         "longitude": {"$ne": None}
     }
+    
+    # Hide completed if requested
+    if hide_completed:
+        query["status"] = {"$nin": ["Completed", "Approved"]}
     
     # Ultra-minimal projection for speed
     projection = {
