@@ -3405,26 +3405,26 @@ async def generate_arranged_pdf(
     included_count = 0
     
     if bills_per_page == 1:
-        # ONE BILL PER PAGE - Render as compressed image for smaller file size
+        # ONE BILL PER PAGE - Render as image with good quality
         for bill in bills:
             page_num = bill.get("page_number", 1) - 1
             if page_num < 0 or page_num >= len(src_pdf):
                 continue
             
-            # Render source page as image (compressed)
+            # Render source page as image
             src_page = src_pdf[page_num]
             
-            # Render at 0.8x scale for smaller file
-            mat = fitz.Matrix(0.8, 0.8)
+            # Render at 1.0x scale for good quality
+            mat = fitz.Matrix(1.0, 1.0)
             pix = src_page.get_pixmap(matrix=mat)
             
-            # Convert to JPEG with compression
-            img_bytes = pix.tobytes("jpeg", 60)  # 60% quality for smaller file
+            # Convert to JPEG with good quality (75% = good balance)
+            img_bytes = pix.tobytes("jpeg", 75)
             
             # Create new page with original dimensions
             new_page = output_pdf.new_page(width=src_page.rect.width, height=src_page.rect.height)
             
-            # Insert compressed image
+            # Insert image
             new_page.insert_image(new_page.rect, stream=img_bytes)
             
             # Add serial number overlay if enabled
