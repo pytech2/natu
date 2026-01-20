@@ -3375,6 +3375,11 @@ async def generate_arranged_pdf(
     
     def get_display_serial(bill):
         """Get display serial number (like N34 for N/A serials)"""
+        # First check if bill_sr_no is already set correctly
+        existing_sr = bill.get("bill_sr_no", "")
+        if existing_sr and existing_sr != "N0":
+            return str(existing_sr)
+        
         bill_serial = bill.get("serial_number", 0)
         is_serial_na = bill.get("serial_na", False) or bill_serial == 0
         
