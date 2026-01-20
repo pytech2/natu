@@ -5,14 +5,14 @@ import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import Map, { Marker, Popup, NavigationControl, GeolocateControl } from 'react-map-gl/maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { 
   MapPin, Navigation, FileText, Loader2, RefreshCw, 
-  Compass, LocateFixed, Layers, RotateCcw
+  Compass, LocateFixed
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
-const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
 // Calculate distance (Haversine)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -27,50 +27,16 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 const formatDistance = (meters) => meters < 1000 ? `${Math.round(meters)}m` : `${(meters/1000).toFixed(1)}km`;
 
-// Custom marker SVG creator
-const createMarkerIcon = (serialNo, status, isNearest = false) => {
+// Marker colors based on status
+const getMarkerColor = (status) => {
   const colors = {
     'Pending': '#ef4444',
     'Completed': '#22c55e',
     'Approved': '#22c55e',
     'In Progress': '#eab308',
     'Rejected': '#f97316',
-    'default': '#ef4444'
   };
-  const color = colors[status] || colors['default'];
-  const size = isNearest ? 40 : 32;
-  
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" fill="${color}" stroke="white" stroke-width="3"/>
-      <text x="${size/2}" y="${size/2 + 4}" text-anchor="middle" fill="white" font-size="${isNearest ? 14 : 11}" font-weight="bold" font-family="Arial">${serialNo || '-'}</text>
-    </svg>
-  `;
-  
-  return {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: { width: size, height: size },
-    anchor: { x: size/2, y: size/2 },
-  };
-};
-
-// User location marker (blue dot)
-const userLocationIcon = {
-  url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" fill="rgba(59,130,246,0.3)"/>
-      <circle cx="12" cy="12" r="6" fill="#3b82f6" stroke="white" stroke-width="2"/>
-    </svg>
-  `)}`,
-  scaledSize: { width: 24, height: 24 },
-  anchor: { x: 12, y: 12 },
-};
-
-// Touch gesture utilities
-const getTouchAngle = (touch1, touch2) => {
-  const dx = touch2.clientX - touch1.clientX;
-  const dy = touch2.clientY - touch1.clientY;
-  return Math.atan2(dy, dx) * (180 / Math.PI);
+  return colors[status] || '#ef4444';
 };
 
 export default function Properties() {
@@ -84,50 +50,42 @@ export default function Properties() {
   // GPS & Map state
   const [userLocation, setUserLocation] = useState(null);
   const [gpsTracking, setGpsTracking] = useState(false);
-  const [mapCenter, setMapCenter] = useState({ lat: 29.9695, lng: 76.8783 });
-  const [mapZoom, setMapZoom] = useState(18);
-  const [mapRotation, setMapRotation] = useState(0);
+  const [viewState, setViewState] = useState({
+    latitude: 29.9695,
+    longitude: 76.8783,
+    zoom: 17,
+    bearing: 0, // This is the rotation!
+    pitch: 0
+  });
   const [deviceHeading, setDeviceHeading] = useState(0);
   const [autoRotate, setAutoRotate] = useState(false);
   
-  // Rotation mode state
-  const [rotationMode, setRotationMode] = useState(false);
-  const [isRotating, setIsRotating] = useState(false);
-  
   const mapRef = useRef(null);
-  const rotationOverlayRef = useRef(null);
   const watchIdRef = useRef(null);
-  
-  // Touch tracking refs
-  const touchStateRef = useRef({
-    startAngle: 0,
-    lastAngle: 0,
-  });
   
   // Stats
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
-
-  // Load Google Maps
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-  });
 
   // Restore saved position
   useEffect(() => {
     const savedPosition = localStorage.getItem('surveyor_map_position');
     if (savedPosition) {
       try {
-        const { lat, lng, zoom, rotation } = JSON.parse(savedPosition);
-        setMapCenter({ lat, lng });
-        setMapZoom(zoom || 18);
-        setMapRotation(rotation || 0);
+        const { lat, lng, zoom, bearing } = JSON.parse(savedPosition);
+        setViewState(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+          zoom: zoom || 17,
+          bearing: bearing || 0
+        }));
       } catch (e) {
         console.log('Could not restore map position');
       }
     }
   }, []);
 
-  // Fetch properties
+  // Fetch ALL properties - NO LIMIT
   useEffect(() => {
     fetchProperties();
     startGPSTracking();
@@ -138,79 +96,10 @@ export default function Properties() {
     };
   }, []);
 
-  // ROTATION MODE - when enabled, two-finger gesture rotates the map
-  useEffect(() => {
-    if (!rotationMode) return;
-    
-    const overlay = rotationOverlayRef.current;
-    if (!overlay) return;
-
-    const handleTouchStart = (e) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        const angle = getTouchAngle(e.touches[0], e.touches[1]);
-        touchStateRef.current = {
-          startAngle: angle,
-          lastAngle: angle,
-        };
-        setIsRotating(true);
-      }
-    };
-
-    const handleTouchMove = (e) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        const currentAngle = getTouchAngle(e.touches[0], e.touches[1]);
-        const state = touchStateRef.current;
-        
-        // Calculate rotation delta
-        let rotationDelta = currentAngle - state.lastAngle;
-        
-        // Handle angle wrap-around
-        if (rotationDelta > 180) rotationDelta -= 360;
-        if (rotationDelta < -180) rotationDelta += 360;
-        
-        setMapRotation(prev => {
-          let newRotation = prev + rotationDelta;
-          while (newRotation < 0) newRotation += 360;
-          while (newRotation >= 360) newRotation -= 360;
-          return newRotation;
-        });
-        
-        state.lastAngle = currentAngle;
-      }
-    };
-
-    const handleTouchEnd = (e) => {
-      if (e.touches.length < 2) {
-        setIsRotating(false);
-        // Save position
-        if (mapRef.current) {
-          const center = mapRef.current.getCenter();
-          localStorage.setItem('surveyor_map_position', JSON.stringify({
-            lat: center.lat(),
-            lng: center.lng(),
-            zoom: mapRef.current.getZoom(),
-            rotation: mapRotation
-          }));
-        }
-      }
-    };
-
-    overlay.addEventListener('touchstart', handleTouchStart, { passive: false });
-    overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
-    overlay.addEventListener('touchend', handleTouchEnd, { passive: true });
-
-    return () => {
-      overlay.removeEventListener('touchstart', handleTouchStart);
-      overlay.removeEventListener('touchmove', handleTouchMove);
-      overlay.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [rotationMode, mapRotation]);
-
   const fetchProperties = async () => {
     try {
-      const response = await axios.get(`${API_URL}/map/employee-properties?limit=500`, {
+      // NO LIMIT - fetch ALL assigned properties
+      const response = await axios.get(`${API_URL}/map/employee-properties`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const props = response.data.properties || [];
@@ -220,13 +109,20 @@ export default function Properties() {
       const completed = props.filter(p => ['Completed', 'Approved', 'In Progress'].includes(p.status)).length;
       setStats({ total: props.length, pending, completed });
       
+      // Set initial center if no saved position
       const savedPosition = localStorage.getItem('surveyor_map_position');
-      if (!savedPosition) {
+      if (!savedPosition && props.length > 0) {
         const firstWithGPS = props.find(p => p.latitude && p.longitude);
         if (firstWithGPS) {
-          setMapCenter({ lat: firstWithGPS.latitude, lng: firstWithGPS.longitude });
+          setViewState(prev => ({
+            ...prev,
+            latitude: firstWithGPS.latitude,
+            longitude: firstWithGPS.longitude
+          }));
         }
       }
+      
+      toast.success(`Loaded ${props.length} properties`);
     } catch (error) {
       toast.error('Failed to load properties');
     } finally {
@@ -243,7 +139,13 @@ export default function Properties() {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setUserLocation(loc);
         const savedPosition = localStorage.getItem('surveyor_map_position');
-        if (!savedPosition) setMapCenter(loc);
+        if (!savedPosition) {
+          setViewState(prev => ({
+            ...prev,
+            latitude: loc.lat,
+            longitude: loc.lng
+          }));
+        }
       },
       () => {},
       { enableHighAccuracy: true, timeout: 15000 }
@@ -286,37 +188,30 @@ export default function Properties() {
     if (heading !== null && heading !== undefined) {
       setDeviceHeading(Math.round(heading));
       if (autoRotate) {
-        setMapRotation(heading);
+        setViewState(prev => ({ ...prev, bearing: heading }));
       }
     }
   }, [autoRotate]);
 
-  const onMapLoad = useCallback((map) => {
-    mapRef.current = map;
-  }, []);
-
-  const onMapIdle = useCallback(() => {
-    if (mapRef.current && !isRotating) {
-      const center = mapRef.current.getCenter();
-      const zoom = mapRef.current.getZoom();
-      
-      localStorage.setItem('surveyor_map_position', JSON.stringify({
-        lat: center.lat(),
-        lng: center.lng(),
-        zoom: zoom,
-        rotation: mapRotation
-      }));
-    }
-  }, [mapRotation, isRotating]);
+  // Save position on map move
+  const onMoveEnd = useCallback(() => {
+    localStorage.setItem('surveyor_map_position', JSON.stringify({
+      lat: viewState.latitude,
+      lng: viewState.longitude,
+      zoom: viewState.zoom,
+      bearing: viewState.bearing
+    }));
+  }, [viewState]);
 
   const refreshLocation = () => {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setUserLocation(loc);
-        if (mapRef.current) {
-          mapRef.current.panTo(loc);
-        }
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setViewState(prev => ({
+          ...prev,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude
+        }));
         toast.success('Location updated!');
       },
       () => toast.error('Location failed'),
@@ -327,8 +222,7 @@ export default function Properties() {
   const toggleAutoRotate = () => {
     if (!autoRotate) {
       setAutoRotate(true);
-      setMapRotation(deviceHeading);
-      setRotationMode(false);
+      setViewState(prev => ({ ...prev, bearing: deviceHeading }));
       toast.success('Auto-rotate ON - follows compass');
     } else {
       setAutoRotate(false);
@@ -336,28 +230,10 @@ export default function Properties() {
     }
   };
 
-  const toggleRotationMode = () => {
-    if (!rotationMode) {
-      setRotationMode(true);
-      setAutoRotate(false);
-      toast.success('ROTATION MODE ON - twist to rotate');
-    } else {
-      setRotationMode(false);
-      toast.info('Rotation mode OFF');
-    }
-  };
-
   const resetNorth = () => {
-    setMapRotation(0);
+    setViewState(prev => ({ ...prev, bearing: 0 }));
     setAutoRotate(false);
     toast.info('Reset to North');
-  };
-
-  const toggleMapType = () => {
-    if (mapRef.current) {
-      const currentType = mapRef.current.getMapTypeId();
-      mapRef.current.setMapTypeId(currentType === 'satellite' ? 'hybrid' : 'satellite');
-    }
   };
 
   // Filter and sort by distance
@@ -381,37 +257,7 @@ export default function Properties() {
     return props;
   }, [allProperties, userLocation]);
 
-  // Map options
-  const mapOptions = useMemo(() => ({
-    mapTypeId: 'satellite',
-    gestureHandling: 'greedy',
-    disableDefaultUI: true,
-    zoomControl: false,
-    mapTypeControl: false,
-    scaleControl: false,
-    streetViewControl: false,
-    rotateControl: false,
-    fullscreenControl: false,
-    minZoom: 10,
-    maxZoom: 21,
-    clickableIcons: false,
-  }), []);
-
-  // Loading states
-  if (loadError) {
-    return (
-      <EmployeeLayout>
-        <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
-          <div className="text-center text-white">
-            <p>Error loading maps</p>
-            <p className="text-sm text-slate-400 mt-2">{loadError.message}</p>
-          </div>
-        </div>
-      </EmployeeLayout>
-    );
-  }
-
-  if (!isLoaded || loading) {
+  if (loading) {
     return (
       <EmployeeLayout>
         <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
@@ -426,54 +272,92 @@ export default function Properties() {
 
   return (
     <EmployeeLayout>
-      {/* FULLSCREEN ROTATING MAP CONTAINER */}
-      <div 
-        className="fixed inset-0 z-0 overflow-hidden"
-        style={{
-          transform: `rotate(${mapRotation}deg)`,
-          transformOrigin: 'center center',
-          transition: isRotating ? 'none' : 'transform 0.15s ease-out',
-        }}
-      >
-        <GoogleMap
-          mapContainerStyle={{ width: '100%', height: '100%' }}
-          center={mapCenter}
-          zoom={mapZoom}
-          options={mapOptions}
-          onLoad={onMapLoad}
-          onIdle={onMapIdle}
+      {/* FULLSCREEN MAP with native 360° rotation */}
+      <div className="fixed inset-0 z-0">
+        <Map
+          ref={mapRef}
+          {...viewState}
+          onMove={evt => setViewState(evt.viewState)}
+          onMoveEnd={onMoveEnd}
+          style={{ width: '100%', height: '100%' }}
+          mapStyle={{
+            version: 8,
+            sources: {
+              'satellite': {
+                type: 'raster',
+                tiles: [
+                  'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+                ],
+                tileSize: 256,
+                maxzoom: 21
+              }
+            },
+            layers: [
+              {
+                id: 'satellite-layer',
+                type: 'raster',
+                source: 'satellite',
+                minzoom: 0,
+                maxzoom: 21
+              }
+            ]
+          }}
+          maxZoom={21}
+          minZoom={10}
+          touchZoomRotate={true}
+          touchPitch={false}
+          dragRotate={true}
+          pitchWithRotate={false}
         >
           {/* User location marker */}
           {userLocation && (
-            <Marker
-              position={userLocation}
-              icon={userLocationIcon}
-              zIndex={1000}
-            />
+            <Marker 
+              latitude={userLocation.lat} 
+              longitude={userLocation.lng}
+              anchor="center"
+            >
+              <div className="relative">
+                <div className="w-6 h-6 bg-blue-500 rounded-full border-3 border-white shadow-lg animate-pulse" />
+                <div className="absolute -inset-2 bg-blue-500/30 rounded-full animate-ping" />
+              </div>
+            </Marker>
           )}
           
-          {/* Property markers */}
+          {/* Property markers - render ALL */}
           {sortedProperties.map((property, index) => (
             <Marker
               key={property.id}
-              position={{ lat: property.latitude, lng: property.longitude }}
-              icon={createMarkerIcon(
-                property.bill_sr_no || property.serial_number || (index + 1),
-                property.status,
-                index === 0 && userLocation
-              )}
-              onClick={() => setSelectedProperty(property)}
-              zIndex={index === 0 ? 999 : 100 - index}
-            />
+              latitude={property.latitude}
+              longitude={property.longitude}
+              anchor="center"
+              onClick={(e) => {
+                e.originalEvent.stopPropagation();
+                setSelectedProperty(property);
+              }}
+            >
+              <div 
+                className={`flex items-center justify-center rounded-full border-2 border-white shadow-lg cursor-pointer transition-transform hover:scale-110 ${index === 0 && userLocation ? 'w-10 h-10 animate-pulse' : 'w-8 h-8'}`}
+                style={{ backgroundColor: getMarkerColor(property.status) }}
+              >
+                <span className="text-white text-xs font-bold">
+                  {property.bill_sr_no || property.serial_number || (index + 1)}
+                </span>
+              </div>
+            </Marker>
           ))}
           
-          {/* Info Window for selected property */}
+          {/* Popup for selected property */}
           {selectedProperty && (
-            <InfoWindow
-              position={{ lat: selectedProperty.latitude, lng: selectedProperty.longitude }}
-              onCloseClick={() => setSelectedProperty(null)}
+            <Popup
+              latitude={selectedProperty.latitude}
+              longitude={selectedProperty.longitude}
+              anchor="bottom"
+              onClose={() => setSelectedProperty(null)}
+              closeButton={true}
+              closeOnClick={false}
+              maxWidth="300px"
             >
-              <div className="p-2 min-w-[220px] max-w-[280px]">
+              <div className="p-2 min-w-[200px]">
                 <div className="text-xl font-bold text-amber-600">
                   #{selectedProperty.bill_sr_no || selectedProperty.serial_number || '-'}
                 </div>
@@ -505,8 +389,8 @@ export default function Properties() {
                       localStorage.setItem('surveyor_map_position', JSON.stringify({
                         lat: selectedProperty.latitude,
                         lng: selectedProperty.longitude,
-                        zoom: mapZoom,
-                        rotation: mapRotation
+                        zoom: viewState.zoom,
+                        bearing: viewState.bearing
                       }));
                       navigate(`/employee/survey/${selectedProperty.id}`);
                     }}
@@ -522,19 +406,10 @@ export default function Properties() {
                   </button>
                 </div>
               </div>
-            </InfoWindow>
+            </Popup>
           )}
-        </GoogleMap>
+        </Map>
       </div>
-
-      {/* ROTATION MODE OVERLAY - Only shown when rotation mode is active */}
-      {rotationMode && (
-        <div 
-          ref={rotationOverlayRef}
-          className="fixed inset-0 z-[500] bg-blue-500/10"
-          style={{ touchAction: 'none' }}
-        />
-      )}
 
       {/* FIXED UI OVERLAY */}
       <div className="fixed inset-0 z-[1000] pointer-events-none">
@@ -562,13 +437,14 @@ export default function Properties() {
             <div className="flex items-center gap-2">
               {/* Rotation indicator */}
               <div 
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg ${rotationMode ? 'bg-blue-600' : autoRotate ? 'bg-green-600' : 'bg-slate-800'}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg ${autoRotate ? 'bg-green-600' : 'bg-slate-800'}`}
+                onClick={toggleAutoRotate}
               >
                 <Compass 
                   className="w-5 h-5 text-white"
-                  style={{ transform: `rotate(${mapRotation}deg)`, transition: 'transform 0.15s ease-out' }}
+                  style={{ transform: `rotate(${viewState.bearing}deg)`, transition: 'transform 0.15s ease-out' }}
                 />
-                <span className="text-xs font-mono">{Math.round(mapRotation)}°</span>
+                <span className="text-xs font-mono">{Math.round(viewState.bearing)}°</span>
               </div>
             </div>
           </div>
@@ -576,16 +452,6 @@ export default function Properties() {
 
         {/* MAP CONTROLS - Right Side */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-2 pointer-events-auto">
-          {/* Map Type Toggle */}
-          <Button
-            size="sm"
-            className="w-12 h-12 rounded-full bg-slate-800 hover:bg-slate-700 shadow-lg"
-            onClick={toggleMapType}
-            title="Toggle map labels"
-          >
-            <Layers className="w-5 h-5" />
-          </Button>
-
           {/* Center on Location */}
           <Button
             size="sm"
@@ -594,16 +460,6 @@ export default function Properties() {
             title="My location"
           >
             <LocateFixed className="w-6 h-6" />
-          </Button>
-          
-          {/* ROTATION MODE TOGGLE - Main feature */}
-          <Button
-            size="sm"
-            className={`w-12 h-12 rounded-full shadow-lg ${rotationMode ? 'bg-blue-600 hover:bg-blue-700 ring-4 ring-blue-400 animate-pulse' : 'bg-purple-600 hover:bg-purple-700'}`}
-            onClick={toggleRotationMode}
-            title="Rotation mode - twist to rotate"
-          >
-            <RotateCcw className="w-6 h-6" />
           </Button>
           
           {/* Auto Rotate Toggle */}
@@ -617,7 +473,7 @@ export default function Properties() {
           </Button>
           
           {/* Reset North */}
-          {Math.round(mapRotation) !== 0 && (
+          {Math.round(viewState.bearing) !== 0 && (
             <Button
               size="sm"
               className="w-12 h-12 rounded-full bg-orange-600 hover:bg-orange-700 shadow-lg"
@@ -645,7 +501,7 @@ export default function Properties() {
           <div className="flex items-center justify-between">
             <div className="text-sm">
               <span className="text-slate-400">Total: </span>
-              <span className="font-bold">{sortedProperties.length}</span>
+              <span className="font-bold text-lg">{sortedProperties.length}</span>
               <span className="text-slate-400"> properties</span>
             </div>
             
@@ -660,14 +516,12 @@ export default function Properties() {
           </div>
         </div>
 
-        {/* Rotation mode hint */}
-        {rotationMode && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 pointer-events-none">
-            <div className="bg-blue-600 text-white text-sm px-4 py-2 rounded-full shadow-lg">
-              👆👆 ROTATION MODE - Twist with two fingers
-            </div>
+        {/* Rotation hint - only show initially */}
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2">
+          <div className="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full">
+            👆👆 Two fingers to rotate 360°
           </div>
-        )}
+        </div>
       </div>
     </EmployeeLayout>
   );
