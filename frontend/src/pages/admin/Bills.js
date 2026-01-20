@@ -1113,8 +1113,9 @@ export default function BillsPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             
-            {/* Skip Duplicates Option */}
-            <div className="py-4 border-t border-b">
+            {/* Options */}
+            <div className="py-4 border-t border-b space-y-4">
+              {/* Skip Duplicates Option */}
               <div className="flex items-center space-x-3">
                 <input
                   type="checkbox"
@@ -1129,6 +1130,25 @@ export default function BillsPage() {
                     {skipDuplicates 
                       ? "Properties with same ID or owner+mobile will be skipped" 
                       : "All bills will be added (recommended for new colonies)"}
+                  </p>
+                </label>
+              </div>
+              
+              {/* Skip Vacant Plots Option */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="skipVacantPlots"
+                  checked={skipVacantPlots}
+                  onChange={(e) => setSkipVacantPlots(e.target.checked)}
+                  className="w-4 h-4 text-amber-600 rounded border-gray-300"
+                />
+                <label htmlFor="skipVacantPlots" className="text-sm">
+                  <span className="font-medium">Skip Vacant Plots</span>
+                  <p className="text-xs text-slate-500">
+                    {skipVacantPlots 
+                      ? "Vacant plots, empty plots, and 'NA' entries will be skipped" 
+                      : "All entries including vacant plots will be added"}
                   </p>
                 </label>
               </div>
