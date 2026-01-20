@@ -94,6 +94,16 @@ export default function Properties() {
   const [deleteAllDialog, setDeleteAllDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   
+  // Delete Colony dialog
+  const [deleteColonyDialog, setDeleteColonyDialog] = useState(false);
+  const [selectedColony, setSelectedColony] = useState('');
+  const [keepSurveyed, setKeepSurveyed] = useState(true);
+  const [deletingColony, setDeletingColony] = useState(false);
+  
+  // Delete Duplicates dialog
+  const [deleteDuplicatesDialog, setDeleteDuplicatesDialog] = useState(false);
+  const [deletingDuplicates, setDeletingDuplicates] = useState(false);
+  
   // Unassign dialog
   const [unassignDialog, setUnassignDialog] = useState(false);
   const [unassignEmployeeId, setUnassignEmployeeId] = useState('');
