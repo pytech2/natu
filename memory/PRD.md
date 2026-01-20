@@ -9,30 +9,21 @@
 - **Connection Pool**: 50 max connections
 - **20 concurrent users**: 0.6s response time
 
-### Surveyor Map Features ✅ (UPDATED)
-- **Google Maps API Integration**: Native Google Maps with smooth 360° rotation
-- **Fullscreen Satellite Map**: Google satellite view like native Google Maps app
-- **Native 360° Rotation**: Two-finger touch rotation gestures (smooth like video)
-- **Compass Auto-Rotate**: Map follows device compass heading
-- **GPS Tracking**: Real-time location with blue pulsing dot
-- **Position Persistence**: Map center/zoom/heading saved to localStorage
-- **Fast Loading**: Cached API responses + optimized markers
+### Surveyor Map Features ✅ (UPDATED - MapLibre)
+- **MapLibre GL** - Free, fast map library with NATIVE 360° rotation
+- **Native Two-Finger Rotation** - Built-in gesture support, no hacks needed
+- **Fullscreen Satellite Map** - Google satellite tiles via MapLibre
+- **NO PROPERTY LIMIT** - Shows ALL assigned properties (100, 2000, 5000+)
+- **Compass Auto-Rotate** - Map follows device compass heading
+- **GPS Tracking** - Real-time location with blue pulsing dot
+- **Position Persistence** - Map center, zoom, bearing saved to localStorage
+- **Fast Loading** - Cached API responses + lightweight markers
 
-### Google Maps Setup (Required for Production)
-1. Add `REACT_APP_GOOGLE_MAPS_API_KEY` to frontend/.env ✅ Done
-2. In Google Cloud Console:
-   - Enable "Maps JavaScript API"
-   - Enable billing on the project
-   - Set domain restrictions for the API key
-
-### Two-Finger 360° Rotation Implementation
-- **Custom touch handler** detects two-finger twist gesture
-- **CSS transform rotation** applied to map container for smooth 360° rotation
-- **Fixed UI overlay** - Top bar, controls, bottom bar stay fixed while map rotates
-- **Compass indicator** shows current rotation angle (0-360°)
-- **Auto-rotate mode** - Map follows device compass heading
-- **Reset to North (N↑)** button appears when map is rotated
-- **State persistence** - Map center, zoom, and rotation saved to localStorage
+### How 360° Rotation Works (MapLibre Native)
+- Two-finger twist on mobile → Map rotates smoothly
+- `touchZoomRotate={true}` and `dragRotate={true}` enabled
+- Bearing (rotation angle) shown in compass indicator
+- Reset to North (N↑) button when rotated
 
 ### API Endpoints (Optimized)
 | Endpoint | Purpose | Cache |
