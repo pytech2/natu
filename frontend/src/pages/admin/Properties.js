@@ -1021,6 +1021,115 @@ export default function Properties() {
           </AlertDialogContent>
         </AlertDialog>
 
+        {/* Delete Colony Dialog */}
+        <Dialog open={deleteColonyDialog} onOpenChange={setDeleteColonyDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-heading flex items-center gap-2 text-orange-600">
+                <Trash2 className="w-5 h-5" />
+                Delete Colony Properties
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Select Colony to Delete</Label>
+                <Select value={selectedColony} onValueChange={setSelectedColony}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a colony" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {areas.map((area) => (
+                      <SelectItem key={area} value={area}>{area}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <input
+                  type="checkbox"
+                  id="keepSurveyed"
+                  checked={keepSurveyed}
+                  onChange={(e) => setKeepSurveyed(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded"
+                />
+                <label htmlFor="keepSurveyed" className="text-sm">
+                  <span className="font-medium text-yellow-800">Keep properties with surveys</span>
+                  <p className="text-xs text-yellow-600">
+                    {keepSurveyed ? "Properties with submitted surveys will NOT be deleted" : "⚠️ ALL properties including surveyed ones will be deleted"}
+                  </p>
+                </label>
+              </div>
+              
+              <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                <p className="text-sm text-red-700">
+                  ⚠️ This will delete all properties in the selected colony{keepSurveyed ? ' (except surveyed ones)' : ''}.
+                </p>
+              </div>
+            </div>
+            
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setDeleteColonyDialog(false)}>Cancel</Button>
+              <Button 
+                variant="destructive"
+                onClick={handleDeleteColony}
+                disabled={!selectedColony || deletingColony}
+              >
+                {deletingColony ? 'Deleting...' : 'Delete Colony'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Duplicates Dialog */}
+        <Dialog open={deleteDuplicatesDialog} onOpenChange={setDeleteDuplicatesDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-heading flex items-center gap-2 text-purple-600">
+                <Users className="w-5 h-5" />
+                Delete Duplicate Properties
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 mt-4">
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-700 font-medium">This will:</p>
+                <ul className="text-sm text-blue-600 list-disc ml-5 mt-2 space-y-1">
+                  <li>Find duplicate properties (same Property ID or same Owner+Mobile)</li>
+                  <li><strong>KEEP</strong> properties that have survey submissions</li>
+                  <li><strong>DELETE</strong> duplicate properties without surveys</li>
+                </ul>
+              </div>
+              
+              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                <p className="text-sm text-green-700">
+                  ✅ <strong>Surveyed properties are SAFE</strong> - they will not be deleted.
+                </p>
+              </div>
+              
+              {filters.area && (
+                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                  <p className="text-sm text-yellow-700">
+                    📍 Only checking duplicates in: <strong>{filters.area}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setDeleteDuplicatesDialog(false)}>Cancel</Button>
+              <Button 
+                className="bg-purple-600 hover:bg-purple-700"
+                onClick={handleDeleteDuplicates}
+                disabled={deletingDuplicates}
+              >
+                {deletingDuplicates ? 'Finding & Deleting...' : 'Delete Duplicates'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Unassign Dialog */}
         <Dialog open={unassignDialog} onOpenChange={(open) => {
           setUnassignDialog(open);
