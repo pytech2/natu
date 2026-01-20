@@ -1,16 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EmployeeLayout from '../../components/EmployeeLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../components/ui/select';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -18,8 +9,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { 
-  Search, MapPin, Phone, User, Navigation, 
-  FileText, Loader2, RefreshCw, Maximize2, X, ChevronDown
+  Search, MapPin, Navigation, FileText, Loader2, RefreshCw, 
+  Compass, LocateFixed, ZoomIn, ZoomOut
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -35,16 +26,16 @@ L.Icon.Default.mergeOptions({
 // FAST Custom marker - Simple colored circle with number
 const createFastMarker = (serialNo, status, isNearest = false) => {
   const colors = {
-    'Pending': '#ef4444',    // RED
-    'Completed': '#22c55e',  // GREEN
-    'Approved': '#22c55e',   // GREEN
-    'In Progress': '#eab308', // YELLOW
-    'Rejected': '#f97316',   // ORANGE
+    'Pending': '#ef4444',
+    'Completed': '#22c55e',
+    'Approved': '#22c55e',
+    'In Progress': '#eab308',
+    'Rejected': '#f97316',
     'default': '#ef4444'
   };
   const color = colors[status] || colors['default'];
-  const size = isNearest ? 28 : 20;
-  const fontSize = isNearest ? 11 : 9;
+  const size = isNearest ? 32 : 24;
+  const fontSize = isNearest ? 12 : 10;
   
   return L.divIcon({
     className: 'fast-marker',
@@ -53,35 +44,51 @@ const createFastMarker = (serialNo, status, isNearest = false) => {
       height:${size}px;
       background:${color};
       border-radius:50%;
-      border:2px solid white;
-      box-shadow:0 2px 4px rgba(0,0,0,0.3);
+      border:3px solid white;
+      box-shadow:0 3px 8px rgba(0,0,0,0.4);
       display:flex;
       align-items:center;
       justify-content:center;
       font-size:${fontSize}px;
       font-weight:700;
       color:white;
-      ${isNearest ? 'animation:pulse 1s infinite;' : ''}
+      ${isNearest ? 'animation:pulse 1.5s infinite;' : ''}
     ">${serialNo || '-'}</div>
-    ${isNearest ? '<style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}</style>' : ''}`,
+    ${isNearest ? '<style>@keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(34,197,94,0.7)}50%{transform:scale(1.1);box-shadow:0 0 0 10px rgba(34,197,94,0)}}</style>' : ''}`,
     iconSize: [size, size],
     iconAnchor: [size/2, size/2],
     popupAnchor: [0, -size/2]
   });
 };
 
-// Current location marker (blue dot)
+// Current location marker (blue pulsing dot)
 const currentLocationIcon = L.divIcon({
   className: 'current-location-marker',
   html: `<div style="
-    background:#3b82f6;
-    width:14px;height:14px;
-    border-radius:50%;
-    border:3px solid white;
-    box-shadow:0 0 10px rgba(59,130,246,0.5);
-  "></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7]
+    position:relative;
+    width:20px;height:20px;
+  ">
+    <div style="
+      position:absolute;
+      background:#3b82f6;
+      width:16px;height:16px;
+      border-radius:50%;
+      border:3px solid white;
+      box-shadow:0 0 10px rgba(59,130,246,0.8);
+      top:2px;left:2px;
+    "></div>
+    <div style="
+      position:absolute;
+      background:rgba(59,130,246,0.3);
+      width:40px;height:40px;
+      border-radius:50%;
+      top:-10px;left:-10px;
+      animation:locationPulse 2s infinite;
+    "></div>
+  </div>
+  <style>@keyframes locationPulse{0%,100%{transform:scale(1);opacity:0.5}50%{transform:scale(1.5);opacity:0}}</style>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
 });
 
 // Calculate distance (Haversine)
@@ -97,17 +104,26 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 const formatDistance = (meters) => meters < 1000 ? `${Math.round(meters)}m` : `${(meters/1000).toFixed(1)}km`;
 
-// Simple Map Controller - Saves position to localStorage for stability
-function MapController({ center, zoom, onPositionChange }) {
+// Map Controller with rotation support
+function MapController({ center, zoom, rotation, onPositionChange }) {
   const map = useMap();
   
   useEffect(() => {
     if (center) {
-      map.setView(center, zoom || 17, { animate: false }); // No animation for stability
+      map.setView(center, zoom || 18, { animate: false });
     }
   }, [center, zoom, map]);
   
-  // Save map position when it changes
+  // Apply rotation to map container
+  useEffect(() => {
+    const container = map.getContainer();
+    if (container) {
+      container.style.transform = `rotate(${rotation || 0}deg)`;
+      container.style.transformOrigin = 'center center';
+    }
+  }, [rotation, map]);
+  
+  // Save position on move
   useEffect(() => {
     const handleMoveEnd = () => {
       const newCenter = map.getCenter();
@@ -129,52 +145,45 @@ function MapController({ center, zoom, onPositionChange }) {
   return null;
 }
 
-// Constants for lazy loading
-const INITIAL_LOAD = 100;  // Load 100 properties first for better coverage
-const LOAD_MORE = 50;      // Load 50 more on scroll
-
 export default function Properties() {
   const navigate = useNavigate();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [allProperties, setAllProperties] = useState([]); // All fetched properties
-  const [displayCount, setDisplayCount] = useState(INITIAL_LOAD); // How many to show on map
+  const [allProperties, setAllProperties] = useState([]);
   
-  // Filters
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  
-  // GPS tracking
+  // GPS & Map state
   const [userLocation, setUserLocation] = useState(null);
   const [gpsTracking, setGpsTracking] = useState(false);
+  const [mapCenter, setMapCenter] = useState(null);
+  const [mapZoom, setMapZoom] = useState(18);
+  const [mapRotation, setMapRotation] = useState(0);
+  const [deviceHeading, setDeviceHeading] = useState(0);
+  const [autoRotate, setAutoRotate] = useState(false);
+  
   const watchIdRef = useRef(null);
   
-  // UI state
-  const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0, rejected: 0 });
-  const [fullscreenMap, setFullscreenMap] = useState(false);
-  const [mapCenter, setMapCenter] = useState(null);
-  const [mapZoom, setMapZoom] = useState(17);
+  // Stats
+  const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
 
-  // Restore saved map position on mount
+  // Restore saved position
   useEffect(() => {
     const savedPosition = localStorage.getItem('surveyor_map_position');
     if (savedPosition) {
       try {
         const { lat, lng, zoom } = JSON.parse(savedPosition);
         setMapCenter([lat, lng]);
-        setMapZoom(zoom || 17);
-      } catch (e) {
-        console.log('Could not restore map position');
-      }
+        setMapZoom(zoom || 18);
+      } catch (e) {}
     }
   }, []);
 
-  // Fetch properties on mount
+  // Fetch properties
   useEffect(() => {
     fetchProperties();
     startGPSTracking();
+    startCompass();
+    
     return () => {
       if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
     };
@@ -182,23 +191,22 @@ export default function Properties() {
 
   const fetchProperties = async () => {
     try {
-      // Use FAST map endpoint - returns only essential fields
       const response = await axios.get(`${API_URL}/map/employee-properties?limit=500`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const props = response.data.properties || [];
       setAllProperties(props);
       
-      // Calculate stats
       const pending = props.filter(p => p.status === 'Pending').length;
-      const completed = props.filter(p => ['Completed', 'Approved'].includes(p.status)).length;
-      const rejected = props.filter(p => p.status === 'Rejected').length;
-      setStats({ total: props.length, pending, completed, rejected });
+      const completed = props.filter(p => ['Completed', 'Approved', 'In Progress'].includes(p.status)).length;
+      setStats({ total: props.length, pending, completed });
       
-      // Set initial map center
-      const firstWithGPS = props.find(p => p.latitude && p.longitude);
-      if (firstWithGPS) {
-        setMapCenter([firstWithGPS.latitude, firstWithGPS.longitude]);
+      // Set initial center if no saved position
+      if (!mapCenter) {
+        const firstWithGPS = props.find(p => p.latitude && p.longitude);
+        if (firstWithGPS) {
+          setMapCenter([firstWithGPS.latitude, firstWithGPS.longitude]);
+        }
       }
     } catch (error) {
       toast.error('Failed to load properties');
@@ -213,27 +221,47 @@ export default function Properties() {
     
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-        setMapCenter([pos.coords.latitude, pos.coords.longitude]);
+        const loc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        setUserLocation(loc);
+        if (!mapCenter) setMapCenter([loc.latitude, loc.longitude]);
       },
       () => {},
       { enableHighAccuracy: true, timeout: 15000 }
     );
     
-    // Watch with very low frequency for battery saving
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         setUserLocation(prev => {
           if (prev) {
             const dist = calculateDistance(prev.latitude, prev.longitude, pos.coords.latitude, pos.coords.longitude);
-            if (dist < 200) return prev; // Only update if moved 200m+
+            if (dist < 50) return prev;
           }
           return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
         });
       },
       () => {},
-      { enableHighAccuracy: false, maximumAge: 120000, timeout: 60000 } // Very relaxed for battery
+      { enableHighAccuracy: true, maximumAge: 60000, timeout: 60000 }
     );
+  };
+
+  // Compass for device orientation
+  const startCompass = () => {
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+  };
+
+  const handleOrientation = (event) => {
+    let heading = event.webkitCompassHeading || event.alpha;
+    if (heading !== null && heading !== undefined) {
+      // Normalize heading
+      heading = (360 - heading) % 360;
+      setDeviceHeading(Math.round(heading));
+      if (autoRotate) {
+        setMapRotation(-heading);
+      }
+    }
   };
 
   const refreshLocation = () => {
@@ -243,79 +271,62 @@ export default function Properties() {
         setMapCenter([pos.coords.latitude, pos.coords.longitude]);
         toast.success('Location updated!');
       },
-      () => toast.error('Location failed')
+      () => toast.error('Location failed'),
+      { enableHighAccuracy: true }
     );
   };
 
-  // Filter and sort properties - MEMOIZED for performance
-  const filteredProperties = useMemo(() => {
-    let filtered = [...allProperties];
-    
-    // Search filter
-    if (search.trim()) {
-      const s = search.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.property_id?.toLowerCase().includes(s) ||
-        p.owner_name?.toLowerCase().includes(s) ||
-        p.mobile?.includes(search)
-      );
+  const toggleAutoRotate = () => {
+    if (!autoRotate) {
+      setAutoRotate(true);
+      toast.success('Map rotation ON - follows compass');
+    } else {
+      setAutoRotate(false);
+      setMapRotation(0);
+      toast.info('Map rotation OFF');
     }
+  };
+
+  const resetRotation = () => {
+    setMapRotation(0);
+    setAutoRotate(false);
+  };
+
+  // Filter and sort by distance
+  const sortedProperties = useMemo(() => {
+    let props = [...allProperties].filter(p => p.latitude && p.longitude);
     
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(p => p.status === statusFilter);
-    }
-    
-    // Add distance and sort by distance if location available
     if (userLocation) {
-      filtered = filtered.map(p => ({
+      props = props.map(p => ({
         ...p,
-        distance: (p.latitude && p.longitude) 
-          ? calculateDistance(userLocation.latitude, userLocation.longitude, p.latitude, p.longitude)
-          : Infinity
+        distance: calculateDistance(userLocation.latitude, userLocation.longitude, p.latitude, p.longitude)
       }));
-      
-      // Sort: Pending first, then by distance
-      filtered.sort((a, b) => {
-        const statusOrder = { 'Pending': 0, 'Rejected': 1, 'Completed': 2, 'Approved': 3 };
-        const aOrder = statusOrder[a.status] ?? 2;
-        const bOrder = statusOrder[b.status] ?? 2;
-        if (aOrder !== bOrder) return aOrder - bOrder;
+      props.sort((a, b) => {
+        const statusOrder = { 'Pending': 0, 'Rejected': 1, 'In Progress': 2, 'Completed': 3, 'Approved': 4 };
+        if ((statusOrder[a.status] || 0) !== (statusOrder[b.status] || 0)) {
+          return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
+        }
         return (a.distance || Infinity) - (b.distance || Infinity);
       });
     }
     
-    return filtered;
-  }, [allProperties, search, statusFilter, userLocation]);
-
-  // Properties to show on map (limited for performance)
-  const mapProperties = useMemo(() => {
-    return filteredProperties
-      .filter(p => p.latitude && p.longitude)
-      .slice(0, displayCount);
-  }, [filteredProperties, displayCount]);
-
-  // Load more properties
-  const loadMore = useCallback(() => {
-    if (displayCount >= filteredProperties.length) return;
-    setLoadingMore(true);
-    setTimeout(() => {
-      setDisplayCount(prev => Math.min(prev + LOAD_MORE, filteredProperties.length));
-      setLoadingMore(false);
-    }, 100);
-  }, [displayCount, filteredProperties.length]);
+    return props;
+  }, [allProperties, userLocation]);
 
   const getDefaultCenter = () => {
     if (mapCenter) return mapCenter;
     if (userLocation) return [userLocation.latitude, userLocation.longitude];
-    return [29.9695, 76.8783]; // Default
+    return [29.9695, 76.8783];
   };
 
   if (loading) {
     return (
       <EmployeeLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto" />
+            <p className="text-white mt-4">Loading Map...</p>
+          </div>
         </div>
       </EmployeeLayout>
     );
@@ -323,352 +334,210 @@ export default function Properties() {
 
   return (
     <EmployeeLayout>
-      <div className="space-y-3">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-slate-800">Survey Properties</h1>
-            <p className="text-xs text-slate-500">
-              Showing {mapProperties.length} of {filteredProperties.length} on map
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {gpsTracking && (
-              <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                GPS
-              </div>
-            )}
-            <Button size="sm" variant="outline" onClick={refreshLocation}>
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-4 gap-2">
-          <div className="bg-white rounded-lg p-2 text-center border">
-            <p className="text-lg font-bold text-slate-800">{stats.total}</p>
-            <p className="text-xs text-slate-500">Total</p>
-          </div>
-          <div className="bg-red-50 rounded-lg p-2 text-center border border-red-200">
-            <p className="text-lg font-bold text-red-600">{stats.pending}</p>
-            <p className="text-xs text-red-600">Pending</p>
-          </div>
-          <div className="bg-green-50 rounded-lg p-2 text-center border border-green-200">
-            <p className="text-lg font-bold text-green-600">{stats.completed}</p>
-            <p className="text-xs text-green-600">Done</p>
-          </div>
-          <div className="bg-orange-50 rounded-lg p-2 text-center border border-orange-200">
-            <p className="text-lg font-bold text-orange-600">{stats.rejected}</p>
-            <p className="text-xs text-orange-600">Rejected</p>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <Card>
-          <CardContent className="p-3 space-y-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Search ID, name, mobile..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 h-9"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Approved">Approved</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {/* MAP - Fast OpenStreetMap */}
-        <Card>
-          <CardHeader className="py-2 px-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-mono uppercase tracking-wider text-slate-500">
-                <MapPin className="w-3 h-3 inline mr-1" />
-                Map ({mapProperties.length} pins)
-              </CardTitle>
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => setFullscreenMap(true)}
-                className="h-7 text-xs"
-              >
-                <Maximize2 className="w-3 h-3 mr-1" />
-                Full Map
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div style={{ height: '300px' }} className="rounded-b-lg overflow-hidden">
-              <MapContainer
-                center={getDefaultCenter()}
-                zoom={16}
-                style={{ height: '100%', width: '100%' }}
-                scrollWheelZoom={true}
-              >
-                {/* FAST OpenStreetMap tiles */}
-                <TileLayer 
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  maxZoom={19}
-                />
-                <MapController 
-                  center={mapCenter} 
-                  zoom={mapZoom} 
-                  onPositionChange={(center, zoom) => {
-                    setMapCenter(center);
-                    setMapZoom(zoom);
-                  }}
-                />
-                
-                {/* User location */}
-                {userLocation && (
-                  <Marker position={[userLocation.latitude, userLocation.longitude]} icon={currentLocationIcon}>
-                    <Popup><b>📍 Your Location</b></Popup>
-                  </Marker>
-                )}
-                
-                {/* Property markers - LIMITED */}
-                {mapProperties.map((property, index) => (
-                  <Marker
-                    key={property.id}
-                    position={[property.latitude, property.longitude]}
-                    icon={createFastMarker(
-                      property.bill_sr_no || property.serial_number || (index + 1),
-                      property.status,
-                      index === 0 && userLocation
-                    )}
-                  >
-                    <Popup>
-                      <div className="p-1 min-w-[150px]">
-                        <div className="font-bold text-amber-600">Sr: {property.bill_sr_no || property.serial_number || '-'}</div>
-                        <div className="text-xs text-blue-600 font-mono">{property.property_id}</div>
-                        <div className="font-medium text-sm mt-1">{property.owner_name}</div>
-                        <div className="text-xs text-slate-500">{property.colony || property.ward}</div>
-                        {property.distance && property.distance !== Infinity && (
-                          <div className="text-xs text-blue-600 mt-1">📍 {formatDistance(property.distance)}</div>
-                        )}
-                        <Button 
-                          size="sm" 
-                          className="w-full mt-2 h-7 text-xs bg-blue-600"
-                          onClick={() => {
-                            // Save current property location as map center before navigating
-                            localStorage.setItem('surveyor_map_position', JSON.stringify({
-                              lat: property.latitude,
-                              lng: property.longitude,
-                              zoom: mapZoom || 18
-                            }));
-                            navigate(`/employee/survey/${property.id}`);
-                          }}
-                        >
-                          Start Survey
-                        </Button>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Load More Button */}
-        {displayCount < filteredProperties.filter(p => p.latitude && p.longitude).length && (
-          <Button 
-            variant="outline" 
-            className="w-full"
-            onClick={loadMore}
-            disabled={loadingMore}
-          >
-            {loadingMore ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <ChevronDown className="w-4 h-4 mr-2" />
-            )}
-            Load More ({displayCount}/{filteredProperties.filter(p => p.latitude && p.longitude).length})
-          </Button>
-        )}
-
-        {/* Property List - Top 10 nearest */}
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-slate-700">Nearest Properties</h2>
-          {filteredProperties.slice(0, 10).map((property, index) => (
-            <Card 
+      {/* FULLSCREEN SATELLITE MAP */}
+      <div className="fixed inset-0 z-0">
+        <MapContainer
+          center={getDefaultCenter()}
+          zoom={mapZoom}
+          style={{ height: '100%', width: '100%' }}
+          scrollWheelZoom={true}
+          zoomControl={false}
+        >
+          {/* Google Satellite Tiles */}
+          <TileLayer 
+            url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+            maxZoom={21}
+          />
+          
+          <MapController 
+            center={mapCenter} 
+            zoom={mapZoom}
+            rotation={mapRotation}
+            onPositionChange={(center, zoom) => {
+              setMapCenter(center);
+              setMapZoom(zoom);
+            }}
+          />
+          
+          {/* User location marker */}
+          {userLocation && (
+            <Marker position={[userLocation.latitude, userLocation.longitude]} icon={currentLocationIcon}>
+              <Popup>
+                <div className="text-center p-2">
+                  <b className="text-blue-600">📍 Your Location</b>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+          
+          {/* Property markers */}
+          {sortedProperties.map((property, index) => (
+            <Marker
               key={property.id}
-              className={`cursor-pointer hover:shadow-md transition-shadow ${
-                index === 0 && userLocation ? 'border-2 border-green-500 bg-green-50' : ''
-              }`}
-              onClick={() => {
-                // Save property location before navigating
-                if (property.latitude && property.longitude) {
-                  localStorage.setItem('surveyor_map_position', JSON.stringify({
-                    lat: property.latitude,
-                    lng: property.longitude,
-                    zoom: 18
-                  }));
-                }
-                navigate(`/employee/survey/${property.id}`);
-              }}
+              position={[property.latitude, property.longitude]}
+              icon={createFastMarker(
+                property.bill_sr_no || property.serial_number || (index + 1),
+                property.status,
+                index === 0 && userLocation
+              )}
             >
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                      property.status === 'Pending' ? 'bg-red-500' :
-                      property.status === 'Completed' || property.status === 'Approved' ? 'bg-green-500' :
-                      'bg-orange-500'
-                    }`}>
-                      {property.bill_sr_no || property.serial_number || index + 1}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{property.owner_name}</p>
-                      <p className="text-xs text-slate-500">{property.colony || property.ward}</p>
-                    </div>
+              <Popup>
+                <div className="p-2 min-w-[200px]">
+                  <div className="text-xl font-bold text-amber-500">
+                    #{property.bill_sr_no || property.serial_number || '-'}
                   </div>
-                  <div className="text-right">
-                    {property.distance && property.distance !== Infinity && (
-                      <p className="text-xs text-blue-600 font-medium">{formatDistance(property.distance)}</p>
-                    )}
-                    <p className={`text-xs ${
-                      property.status === 'Pending' ? 'text-red-600' : 'text-green-600'
-                    }`}>{property.status}</p>
+                  <div className="text-sm text-blue-600 font-mono">{property.property_id}</div>
+                  <div className="font-semibold text-base mt-2">{property.owner_name}</div>
+                  <div className="text-sm text-slate-500">{property.colony}</div>
+                  {property.mobile && (
+                    <div className="text-sm mt-1">
+                      <a href={`tel:${property.mobile}`} className="text-blue-600">📱 {property.mobile}</a>
+                    </div>
+                  )}
+                  {property.distance && (
+                    <div className="text-sm text-emerald-600 font-medium mt-1">
+                      📍 {formatDistance(property.distance)} away
+                    </div>
+                  )}
+                  <div className={`text-sm mt-1 font-medium ${
+                    property.status === 'Pending' ? 'text-red-600' : 
+                    property.status === 'In Progress' ? 'text-yellow-600' : 'text-green-600'
+                  }`}>
+                    Status: {property.status}
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button 
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 h-10"
+                      onClick={() => {
+                        localStorage.setItem('surveyor_map_position', JSON.stringify({
+                          lat: property.latitude,
+                          lng: property.longitude,
+                          zoom: mapZoom
+                        }));
+                        navigate(`/employee/survey/${property.id}`);
+                      }}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Start Survey
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="h-10 bg-white"
+                      onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${property.latitude},${property.longitude}`, '_blank')}
+                    >
+                      <Navigation className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </Popup>
+            </Marker>
           ))}
-        </div>
-
-        {/* GPS Info */}
-        {userLocation && (
-          <p className="text-xs text-center text-slate-400 pb-4">
-            📍 GPS Active • Tap property card to start survey
-          </p>
-        )}
+        </MapContainer>
       </div>
 
-      {/* Fullscreen Map Modal */}
-      {fullscreenMap && (
-        <div className="fixed inset-0 z-[9999] bg-white">
-          <div className="absolute top-0 left-0 right-0 z-[10000] bg-white/95 backdrop-blur-sm border-b px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-bold text-slate-800">Full Map View</h2>
-                <p className="text-xs text-slate-500">{mapProperties.length} properties</p>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => setFullscreenMap(false)}>
-                <X className="w-4 h-4 mr-1" /> Close
-              </Button>
+      {/* TOP STATUS BAR */}
+      <div className="fixed top-0 left-0 right-0 z-[1000] bg-black/70 backdrop-blur-sm text-white px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              {gpsTracking && (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-xs text-green-400">GPS</span>
+                </div>
+              )}
+            </div>
+            <div className="text-sm">
+              <span className="text-red-400 font-bold">{stats.pending}</span>
+              <span className="text-slate-400"> pending</span>
+              <span className="mx-2 text-slate-600">|</span>
+              <span className="text-green-400 font-bold">{stats.completed}</span>
+              <span className="text-slate-400"> done</span>
             </div>
           </div>
-
-          <div className="absolute inset-0 pt-16">
-            <MapContainer
-              center={getDefaultCenter()}
-              zoom={mapZoom}
-              style={{ height: '100%', width: '100%' }}
-              scrollWheelZoom={true}
+          
+          <div className="flex items-center gap-2">
+            {/* Compass Heading Display */}
+            <div 
+              className="flex items-center gap-1 px-2 py-1 bg-slate-800 rounded-lg cursor-pointer"
+              onClick={toggleAutoRotate}
             >
-              {/* Satellite view for fullscreen */}
-              <TileLayer 
-                url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
-                maxZoom={21}
+              <Compass 
+                className={`w-5 h-5 ${autoRotate ? 'text-blue-400' : 'text-slate-400'}`}
+                style={{ transform: `rotate(${deviceHeading}deg)` }}
               />
-              <MapController 
-                center={mapCenter} 
-                zoom={mapZoom}
-                onPositionChange={(center, zoom) => {
-                  setMapCenter(center);
-                  setMapZoom(zoom);
-                }}
-              />
-              
-              {userLocation && (
-                <Marker position={[userLocation.latitude, userLocation.longitude]} icon={currentLocationIcon}>
-                  <Popup><b>📍 Your Location</b></Popup>
-                </Marker>
-              )}
-              
-              {mapProperties.map((property, index) => (
-                <Marker
-                  key={property.id}
-                  position={[property.latitude, property.longitude]}
-                  icon={createFastMarker(
-                    property.bill_sr_no || property.serial_number || (index + 1),
-                    property.status,
-                    index === 0 && userLocation
-                  )}
-                >
-                  <Popup>
-                    <div className="p-2 min-w-[180px]">
-                      <div className="text-lg font-bold text-amber-600">Sr: {property.bill_sr_no || property.serial_number || '-'}</div>
-                      <div className="text-sm text-blue-600 font-mono">{property.property_id}</div>
-                      <div className="font-semibold mt-1">{property.owner_name}</div>
-                      <div className="text-sm text-slate-500">{property.colony}</div>
-                      {property.mobile && <div className="text-sm">📱 {property.mobile}</div>}
-                      {property.distance && property.distance !== Infinity && (
-                        <div className="text-sm text-blue-600 mt-1">📍 {formatDistance(property.distance)}</div>
-                      )}
-                      <div className="flex gap-2 mt-2">
-                        <Button 
-                          size="sm" 
-                          className="flex-1 h-8 bg-blue-600"
-                          onClick={() => { 
-                            // Save property location before navigating
-                            localStorage.setItem('surveyor_map_position', JSON.stringify({
-                              lat: property.latitude,
-                              lng: property.longitude,
-                              zoom: mapZoom || 18
-                            }));
-                            setFullscreenMap(false); 
-                            navigate(`/employee/survey/${property.id}`); 
-                          }}
-                        >
-                          <FileText className="w-3 h-3 mr-1" /> Survey
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="h-8"
-                          onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${property.latitude},${property.longitude}`, '_blank')}
-                        >
-                          <Navigation className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
+              <span className="text-xs font-mono">{deviceHeading}°</span>
+            </div>
           </div>
+        </div>
+      </div>
 
-          {/* Load more in fullscreen */}
-          {displayCount < filteredProperties.filter(p => p.latitude && p.longitude).length && (
-            <div className="absolute bottom-4 left-4 right-4 z-[10000]">
-              <Button 
-                className="w-full bg-blue-600"
-                onClick={loadMore}
-                disabled={loadingMore}
-              >
-                {loadingMore ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ChevronDown className="w-4 h-4 mr-2" />}
-                Load More Properties ({displayCount}/{filteredProperties.filter(p => p.latitude && p.longitude).length})
-              </Button>
+      {/* MAP CONTROLS - Right Side */}
+      <div className="fixed right-3 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-2">
+        {/* Center on Location */}
+        <Button
+          size="sm"
+          className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
+          onClick={refreshLocation}
+        >
+          <LocateFixed className="w-6 h-6" />
+        </Button>
+        
+        {/* Rotate Map */}
+        <Button
+          size="sm"
+          className={`w-12 h-12 rounded-full shadow-lg ${autoRotate ? 'bg-green-600 hover:bg-green-700' : 'bg-slate-700 hover:bg-slate-600'}`}
+          onClick={toggleAutoRotate}
+          title="Toggle auto-rotate"
+        >
+          <Compass className="w-6 h-6" />
+        </Button>
+        
+        {/* Reset Rotation */}
+        {mapRotation !== 0 && (
+          <Button
+            size="sm"
+            className="w-12 h-12 rounded-full bg-orange-600 hover:bg-orange-700 shadow-lg"
+            onClick={resetRotation}
+            title="Reset north"
+          >
+            <span className="text-xs font-bold">N↑</span>
+          </Button>
+        )}
+        
+        {/* Refresh */}
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-12 h-12 rounded-full bg-white shadow-lg"
+          onClick={fetchProperties}
+        >
+          <RefreshCw className="w-5 h-5" />
+        </Button>
+      </div>
+
+      {/* BOTTOM INFO BAR */}
+      <div className="fixed bottom-0 left-0 right-0 z-[1000] bg-black/80 backdrop-blur-sm text-white px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="text-sm">
+            <span className="text-slate-400">Total: </span>
+            <span className="font-bold">{sortedProperties.length}</span>
+            <span className="text-slate-400"> properties</span>
+          </div>
+          
+          {sortedProperties.length > 0 && sortedProperties[0].distance && (
+            <div className="flex items-center gap-2 bg-green-600/30 px-3 py-1 rounded-full">
+              <MapPin className="w-4 h-4 text-green-400" />
+              <span className="text-sm">
+                Nearest: <strong>{formatDistance(sortedProperties[0].distance)}</strong>
+              </span>
             </div>
           )}
         </div>
-      )}
+      </div>
     </EmployeeLayout>
   );
 }
