@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
 import { 
   MapPin, Navigation, FileText, Loader2, RefreshCw, 
-  Compass, LocateFixed, Layers
+  Compass, LocateFixed, Layers, RotateCcw
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -73,12 +73,6 @@ const getTouchAngle = (touch1, touch2) => {
   return Math.atan2(dy, dx) * (180 / Math.PI);
 };
 
-const getTouchDistance = (touch1, touch2) => {
-  const dx = touch2.clientX - touch1.clientX;
-  const dy = touch2.clientY - touch1.clientY;
-  return Math.sqrt(dx * dx + dy * dy);
-};
-
 export default function Properties() {
   const navigate = useNavigate();
   const { token } = useAuth();
@@ -95,8 +89,10 @@ export default function Properties() {
   const [mapRotation, setMapRotation] = useState(0);
   const [deviceHeading, setDeviceHeading] = useState(0);
   const [autoRotate, setAutoRotate] = useState(false);
+  
+  // Rotation mode state
+  const [rotationMode, setRotationMode] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
-  const [showHint, setShowHint] = useState(true);
   
   const mapRef = useRef(null);
   const rotationOverlayRef = useRef(null);
@@ -105,9 +101,6 @@ export default function Properties() {
   // Touch tracking refs
   const touchStateRef = useRef({
     startAngle: 0,
-    startRotation: 0,
-    startDistance: 0,
-    isRotateGesture: false,
     lastAngle: 0,
   });
   
@@ -118,12 +111,6 @@ export default function Properties() {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   });
-
-  // Hide hint after 5 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => setShowHint(false), 5000);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Restore saved position
   useEffect(() => {
@@ -151,91 +138,66 @@ export default function Properties() {
     };
   }, []);
 
-  // ROTATION GESTURE HANDLER - on the overlay that captures rotation
+  // ROTATION MODE - when enabled, two-finger gesture rotates the map
   useEffect(() => {
+    if (!rotationMode) return;
+    
     const overlay = rotationOverlayRef.current;
     if (!overlay) return;
 
     const handleTouchStart = (e) => {
       if (e.touches.length === 2) {
+        e.preventDefault();
         const angle = getTouchAngle(e.touches[0], e.touches[1]);
-        const distance = getTouchDistance(e.touches[0], e.touches[1]);
-        
         touchStateRef.current = {
           startAngle: angle,
-          startRotation: mapRotation,
-          startDistance: distance,
-          isRotateGesture: false,
           lastAngle: angle,
         };
-        
-        setShowHint(false);
+        setIsRotating(true);
       }
     };
 
     const handleTouchMove = (e) => {
       if (e.touches.length === 2) {
+        e.preventDefault();
         const currentAngle = getTouchAngle(e.touches[0], e.touches[1]);
-        const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
         const state = touchStateRef.current;
         
-        // Calculate deltas
-        const angleDelta = Math.abs(currentAngle - state.startAngle);
-        const distanceDelta = Math.abs(currentDistance - state.startDistance);
+        // Calculate rotation delta
+        let rotationDelta = currentAngle - state.lastAngle;
         
-        // Determine if this is a rotation gesture (angle change > distance change)
-        // Threshold: if angle changed more than 10 degrees and distance changed less than 50px
-        if (angleDelta > 8 || state.isRotateGesture) {
-          // This is a rotation gesture - prevent default and handle rotation
-          e.preventDefault();
-          e.stopPropagation();
-          
-          state.isRotateGesture = true;
-          setIsRotating(true);
-          
-          // Calculate new rotation
-          let rotationDelta = currentAngle - state.lastAngle;
-          
-          // Handle angle wrap-around
-          if (rotationDelta > 180) rotationDelta -= 360;
-          if (rotationDelta < -180) rotationDelta += 360;
-          
-          setMapRotation(prev => {
-            let newRotation = prev + rotationDelta;
-            // Normalize to 0-360
-            while (newRotation < 0) newRotation += 360;
-            while (newRotation >= 360) newRotation -= 360;
-            return newRotation;
-          });
-          
-          state.lastAngle = currentAngle;
-        }
-        // If distance is changing more (pinch/zoom), let Google Maps handle it
+        // Handle angle wrap-around
+        if (rotationDelta > 180) rotationDelta -= 360;
+        if (rotationDelta < -180) rotationDelta += 360;
+        
+        setMapRotation(prev => {
+          let newRotation = prev + rotationDelta;
+          while (newRotation < 0) newRotation += 360;
+          while (newRotation >= 360) newRotation -= 360;
+          return newRotation;
+        });
+        
+        state.lastAngle = currentAngle;
       }
     };
 
     const handleTouchEnd = (e) => {
       if (e.touches.length < 2) {
-        if (touchStateRef.current.isRotateGesture) {
-          // Save position with rotation
-          if (mapRef.current) {
-            const center = mapRef.current.getCenter();
-            localStorage.setItem('surveyor_map_position', JSON.stringify({
-              lat: center.lat(),
-              lng: center.lng(),
-              zoom: mapRef.current.getZoom(),
-              rotation: mapRotation
-            }));
-          }
-        }
-        
-        touchStateRef.current.isRotateGesture = false;
         setIsRotating(false);
+        // Save position
+        if (mapRef.current) {
+          const center = mapRef.current.getCenter();
+          localStorage.setItem('surveyor_map_position', JSON.stringify({
+            lat: center.lat(),
+            lng: center.lng(),
+            zoom: mapRef.current.getZoom(),
+            rotation: mapRotation
+          }));
+        }
       }
     };
 
-    // Use passive: false to allow preventDefault
-    overlay.addEventListener('touchstart', handleTouchStart, { passive: true });
+    overlay.addEventListener('touchstart', handleTouchStart, { passive: false });
     overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
     overlay.addEventListener('touchend', handleTouchEnd, { passive: true });
 
@@ -244,7 +206,7 @@ export default function Properties() {
       overlay.removeEventListener('touchmove', handleTouchMove);
       overlay.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [mapRotation]);
+  }, [rotationMode, mapRotation]);
 
   const fetchProperties = async () => {
     try {
@@ -366,10 +328,22 @@ export default function Properties() {
     if (!autoRotate) {
       setAutoRotate(true);
       setMapRotation(deviceHeading);
-      toast.success('Auto-rotate ON');
+      setRotationMode(false);
+      toast.success('Auto-rotate ON - follows compass');
     } else {
       setAutoRotate(false);
       toast.info('Auto-rotate OFF');
+    }
+  };
+
+  const toggleRotationMode = () => {
+    if (!rotationMode) {
+      setRotationMode(true);
+      setAutoRotate(false);
+      toast.success('ROTATION MODE ON - twist to rotate');
+    } else {
+      setRotationMode(false);
+      toast.info('Rotation mode OFF');
     }
   };
 
@@ -407,7 +381,7 @@ export default function Properties() {
     return props;
   }, [allProperties, userLocation]);
 
-  // Map options - disable rotation since we handle it with CSS
+  // Map options
   const mapOptions = useMemo(() => ({
     mapTypeId: 'satellite',
     gestureHandling: 'greedy',
@@ -458,7 +432,7 @@ export default function Properties() {
         style={{
           transform: `rotate(${mapRotation}deg)`,
           transformOrigin: 'center center',
-          transition: isRotating ? 'none' : 'transform 0.1s ease-out',
+          transition: isRotating ? 'none' : 'transform 0.15s ease-out',
         }}
       >
         <GoogleMap
@@ -553,12 +527,14 @@ export default function Properties() {
         </GoogleMap>
       </div>
 
-      {/* ROTATION GESTURE CAPTURE OVERLAY - Captures two-finger rotation */}
-      <div 
-        ref={rotationOverlayRef}
-        className="fixed inset-0 z-[500]"
-        style={{ touchAction: 'pan-x pan-y' }}
-      />
+      {/* ROTATION MODE OVERLAY - Only shown when rotation mode is active */}
+      {rotationMode && (
+        <div 
+          ref={rotationOverlayRef}
+          className="fixed inset-0 z-[500] bg-blue-500/10"
+          style={{ touchAction: 'none' }}
+        />
+      )}
 
       {/* FIXED UI OVERLAY */}
       <div className="fixed inset-0 z-[1000] pointer-events-none">
@@ -586,12 +562,11 @@ export default function Properties() {
             <div className="flex items-center gap-2">
               {/* Rotation indicator */}
               <div 
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg cursor-pointer ${isRotating ? 'bg-blue-600' : 'bg-slate-800'}`}
-                onClick={toggleAutoRotate}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg ${rotationMode ? 'bg-blue-600' : autoRotate ? 'bg-green-600' : 'bg-slate-800'}`}
               >
                 <Compass 
-                  className={`w-5 h-5 ${autoRotate ? 'text-green-400' : 'text-slate-400'}`}
-                  style={{ transform: `rotate(${mapRotation}deg)`, transition: 'transform 0.1s ease-out' }}
+                  className="w-5 h-5 text-white"
+                  style={{ transform: `rotate(${mapRotation}deg)`, transition: 'transform 0.15s ease-out' }}
                 />
                 <span className="text-xs font-mono">{Math.round(mapRotation)}°</span>
               </div>
@@ -619,6 +594,16 @@ export default function Properties() {
             title="My location"
           >
             <LocateFixed className="w-6 h-6" />
+          </Button>
+          
+          {/* ROTATION MODE TOGGLE - Main feature */}
+          <Button
+            size="sm"
+            className={`w-12 h-12 rounded-full shadow-lg ${rotationMode ? 'bg-blue-600 hover:bg-blue-700 ring-4 ring-blue-400 animate-pulse' : 'bg-purple-600 hover:bg-purple-700'}`}
+            onClick={toggleRotationMode}
+            title="Rotation mode - twist to rotate"
+          >
+            <RotateCcw className="w-6 h-6" />
           </Button>
           
           {/* Auto Rotate Toggle */}
@@ -675,11 +660,11 @@ export default function Properties() {
           </div>
         </div>
 
-        {/* Rotation hint */}
-        {showHint && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2">
-            <div className="bg-black/70 text-white text-sm px-4 py-2 rounded-full animate-pulse">
-              👆👆 Twist with two fingers to rotate
+        {/* Rotation mode hint */}
+        {rotationMode && (
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 pointer-events-none">
+            <div className="bg-blue-600 text-white text-sm px-4 py-2 rounded-full shadow-lg">
+              👆👆 ROTATION MODE - Twist with two fingers
             </div>
           </div>
         )}
