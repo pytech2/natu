@@ -27,12 +27,6 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 const formatDistance = (meters) => meters < 1000 ? `${Math.round(meters)}m` : `${(meters/1000).toFixed(1)}km`;
 
-// Map container style - fullscreen
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%',
-};
-
 // Custom marker SVG creator
 const createMarkerIcon = (serialNo, status, isNearest = false) => {
   const colors = {
@@ -72,11 +66,17 @@ const userLocationIcon = {
   anchor: { x: 12, y: 12 },
 };
 
-// Calculate angle between two touch points
-const getAngle = (touch1, touch2) => {
+// Touch gesture utilities
+const getTouchAngle = (touch1, touch2) => {
   const dx = touch2.clientX - touch1.clientX;
   const dy = touch2.clientY - touch1.clientY;
   return Math.atan2(dy, dx) * (180 / Math.PI);
+};
+
+const getTouchDistance = (touch1, touch2) => {
+  const dx = touch2.clientX - touch1.clientX;
+  const dy = touch2.clientY - touch1.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
 };
 
 export default function Properties() {
@@ -99,10 +99,17 @@ export default function Properties() {
   const [showHint, setShowHint] = useState(true);
   
   const mapRef = useRef(null);
-  const mapContainerRef = useRef(null);
+  const rotationOverlayRef = useRef(null);
   const watchIdRef = useRef(null);
-  const touchStartAngleRef = useRef(0);
-  const initialRotationRef = useRef(0);
+  
+  // Touch tracking refs
+  const touchStateRef = useRef({
+    startAngle: 0,
+    startRotation: 0,
+    startDistance: 0,
+    isRotateGesture: false,
+    lastAngle: 0,
+  });
   
   // Stats
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
@@ -144,65 +151,98 @@ export default function Properties() {
     };
   }, []);
 
-  // Two-finger rotation touch handlers
+  // ROTATION GESTURE HANDLER - on the overlay that captures rotation
   useEffect(() => {
-    const container = mapContainerRef.current;
-    if (!container) return;
-
-    let isMultiTouch = false;
+    const overlay = rotationOverlayRef.current;
+    if (!overlay) return;
 
     const handleTouchStart = (e) => {
       if (e.touches.length === 2) {
-        isMultiTouch = true;
-        setIsRotating(true);
+        const angle = getTouchAngle(e.touches[0], e.touches[1]);
+        const distance = getTouchDistance(e.touches[0], e.touches[1]);
+        
+        touchStateRef.current = {
+          startAngle: angle,
+          startRotation: mapRotation,
+          startDistance: distance,
+          isRotateGesture: false,
+          lastAngle: angle,
+        };
+        
         setShowHint(false);
-        const angle = getAngle(e.touches[0], e.touches[1]);
-        touchStartAngleRef.current = angle;
-        initialRotationRef.current = mapRotation;
       }
     };
 
     const handleTouchMove = (e) => {
-      if (e.touches.length === 2 && isMultiTouch) {
-        const currentAngle = getAngle(e.touches[0], e.touches[1]);
-        const angleDelta = currentAngle - touchStartAngleRef.current;
+      if (e.touches.length === 2) {
+        const currentAngle = getTouchAngle(e.touches[0], e.touches[1]);
+        const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
+        const state = touchStateRef.current;
         
-        // Smooth rotation calculation
-        let newRotation = initialRotationRef.current + angleDelta;
+        // Calculate deltas
+        const angleDelta = Math.abs(currentAngle - state.startAngle);
+        const distanceDelta = Math.abs(currentDistance - state.startDistance);
         
-        // Normalize to 0-360
-        while (newRotation < 0) newRotation += 360;
-        while (newRotation >= 360) newRotation -= 360;
-        
-        setMapRotation(newRotation);
+        // Determine if this is a rotation gesture (angle change > distance change)
+        // Threshold: if angle changed more than 10 degrees and distance changed less than 50px
+        if (angleDelta > 8 || state.isRotateGesture) {
+          // This is a rotation gesture - prevent default and handle rotation
+          e.preventDefault();
+          e.stopPropagation();
+          
+          state.isRotateGesture = true;
+          setIsRotating(true);
+          
+          // Calculate new rotation
+          let rotationDelta = currentAngle - state.lastAngle;
+          
+          // Handle angle wrap-around
+          if (rotationDelta > 180) rotationDelta -= 360;
+          if (rotationDelta < -180) rotationDelta += 360;
+          
+          setMapRotation(prev => {
+            let newRotation = prev + rotationDelta;
+            // Normalize to 0-360
+            while (newRotation < 0) newRotation += 360;
+            while (newRotation >= 360) newRotation -= 360;
+            return newRotation;
+          });
+          
+          state.lastAngle = currentAngle;
+        }
+        // If distance is changing more (pinch/zoom), let Google Maps handle it
       }
     };
 
     const handleTouchEnd = (e) => {
       if (e.touches.length < 2) {
-        isMultiTouch = false;
-        setIsRotating(false);
-        // Save position with rotation
-        if (mapRef.current) {
-          const center = mapRef.current.getCenter();
-          localStorage.setItem('surveyor_map_position', JSON.stringify({
-            lat: center.lat(),
-            lng: center.lng(),
-            zoom: mapRef.current.getZoom(),
-            rotation: mapRotation
-          }));
+        if (touchStateRef.current.isRotateGesture) {
+          // Save position with rotation
+          if (mapRef.current) {
+            const center = mapRef.current.getCenter();
+            localStorage.setItem('surveyor_map_position', JSON.stringify({
+              lat: center.lat(),
+              lng: center.lng(),
+              zoom: mapRef.current.getZoom(),
+              rotation: mapRotation
+            }));
+          }
         }
+        
+        touchStateRef.current.isRotateGesture = false;
+        setIsRotating(false);
       }
     };
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: true });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    // Use passive: false to allow preventDefault
+    overlay.addEventListener('touchstart', handleTouchStart, { passive: true });
+    overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
+    overlay.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
+      overlay.removeEventListener('touchstart', handleTouchStart);
+      overlay.removeEventListener('touchmove', handleTouchMove);
+      overlay.removeEventListener('touchend', handleTouchEnd);
     };
   }, [mapRotation]);
 
@@ -367,7 +407,7 @@ export default function Properties() {
     return props;
   }, [allProperties, userLocation]);
 
-  // Map options
+  // Map options - disable rotation since we handle it with CSS
   const mapOptions = useMemo(() => ({
     mapTypeId: 'satellite',
     gestureHandling: 'greedy',
@@ -414,16 +454,15 @@ export default function Properties() {
     <EmployeeLayout>
       {/* FULLSCREEN ROTATING MAP CONTAINER */}
       <div 
-        ref={mapContainerRef}
         className="fixed inset-0 z-0 overflow-hidden"
         style={{
           transform: `rotate(${mapRotation}deg)`,
           transformOrigin: 'center center',
-          transition: isRotating ? 'none' : 'transform 0.15s ease-out',
+          transition: isRotating ? 'none' : 'transform 0.1s ease-out',
         }}
       >
         <GoogleMap
-          mapContainerStyle={mapContainerStyle}
+          mapContainerStyle={{ width: '100%', height: '100%' }}
           center={mapCenter}
           zoom={mapZoom}
           options={mapOptions}
@@ -514,7 +553,14 @@ export default function Properties() {
         </GoogleMap>
       </div>
 
-      {/* FIXED UI OVERLAY - Does NOT rotate */}
+      {/* ROTATION GESTURE CAPTURE OVERLAY - Captures two-finger rotation */}
+      <div 
+        ref={rotationOverlayRef}
+        className="fixed inset-0 z-[500]"
+        style={{ touchAction: 'pan-x pan-y' }}
+      />
+
+      {/* FIXED UI OVERLAY */}
       <div className="fixed inset-0 z-[1000] pointer-events-none">
         {/* TOP STATUS BAR */}
         <div className="absolute top-0 left-0 right-0 bg-black/70 backdrop-blur-sm text-white px-4 py-3 pointer-events-auto">
@@ -545,7 +591,7 @@ export default function Properties() {
               >
                 <Compass 
                   className={`w-5 h-5 ${autoRotate ? 'text-green-400' : 'text-slate-400'}`}
-                  style={{ transform: `rotate(${mapRotation}deg)`, transition: 'transform 0.15s ease-out' }}
+                  style={{ transform: `rotate(${mapRotation}deg)`, transition: 'transform 0.1s ease-out' }}
                 />
                 <span className="text-xs font-mono">{Math.round(mapRotation)}°</span>
               </div>
@@ -629,11 +675,11 @@ export default function Properties() {
           </div>
         </div>
 
-        {/* Rotation hint - fades out */}
+        {/* Rotation hint */}
         {showHint && (
           <div className="absolute bottom-16 left-1/2 -translate-x-1/2">
             <div className="bg-black/70 text-white text-sm px-4 py-2 rounded-full animate-pulse">
-              👆👆 Use two fingers to rotate 360°
+              👆👆 Twist with two fingers to rotate
             </div>
           </div>
         )}
