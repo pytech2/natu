@@ -181,7 +181,8 @@ export default function PropertyMap() {
   const [colonies, setColonies] = useState([]);
   const [categories, setCategories] = useState([]);
   const [mapType, setMapType] = useState('satellite');
-  const [showMap, setShowMap] = useState(false); // NEW: Don't show map until colony selected
+  const [showMap, setShowMap] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(false); // NEW: Hide completed properties
   
   // Filters
   const [filters, setFilters] = useState({
@@ -194,9 +195,9 @@ export default function PropertyMap() {
   const [stats, setStats] = useState({
     total: 0,
     withGPS: 0,
-    residential: 0,
-    commercial: 0,
-    vacant: 0
+    pending: 0,
+    completed: 0,
+    duplicatesRemoved: 0
   });
 
   // Arrange & Download state
