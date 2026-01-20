@@ -3816,12 +3816,20 @@ async def copy_bills_to_properties(
     
     await db.batches.insert_one(prop_batch_doc)
     
+    # Build detailed message
+    msg_parts = [f"Successfully added {len(properties)} bills to properties"]
+    if skipped_duplicates > 0:
+        msg_parts.append(f"Skipped {skipped_duplicates} duplicates")
+    if skipped_vacant > 0:
+        msg_parts.append(f"Skipped {skipped_vacant} vacant plots")
+    
     return {
-        "message": f"Successfully added {len(properties)} bills to properties. Skipped {skipped_duplicates} duplicates.",
+        "message": ". ".join(msg_parts) + ".",
         "batch_id": prop_batch_id,
         "batch_name": prop_batch_name,
         "total_added": len(properties),
-        "skipped_duplicates": skipped_duplicates
+        "skipped_duplicates": skipped_duplicates,
+        "skipped_vacant": skipped_vacant
     }
 
 @api_router.post("/admin/bills/split-by-employees")
