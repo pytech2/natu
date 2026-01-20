@@ -1245,6 +1245,153 @@ async def delete_all_properties(
         "deleted_count": result.deleted_count
     }
 
+@api_router.post("/admin/properties/delete-colony")
+async def delete_colony_properties(
+    colony: str = Form(...),
+    keep_surveyed: bool = Form(True),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete all properties of a specific colony. Option to keep surveyed properties."""
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Find properties in this colony
+    query = {"$or": [
+        {"colony": {"$regex": f"^{colony}$", "$options": "i"}},
+        {"ward": {"$regex": f"^{colony}$", "$options": "i"}}
+    ]}
+    
+    properties = await db.properties.find(query, {"id": 1, "_id": 0}).to_list(None)
+    property_ids = [p["id"] for p in properties]
+    
+    if not property_ids:
+        return {"message": "No properties found in this colony", "deleted_count": 0}
+    
+    # If keep_surveyed, exclude properties with submissions
+    ids_to_delete = property_ids
+    if keep_surveyed:
+        submissions = await db.submissions.find(
+            {"property_record_id": {"$in": property_ids}},
+            {"property_record_id": 1, "_id": 0}
+        ).to_list(None)
+        surveyed_ids = set(s["property_record_id"] for s in submissions)
+        ids_to_delete = [pid for pid in property_ids if pid not in surveyed_ids]
+    
+    if not ids_to_delete:
+        return {"message": "All properties in this colony have surveys. Nothing deleted.", "deleted_count": 0, "kept_surveyed": len(property_ids)}
+    
+    # Delete properties
+    result = await db.properties.delete_many({"id": {"$in": ids_to_delete}})
+    
+    # Clear cache
+    await clear_map_cache()
+    
+    return {
+        "message": f"Deleted {result.deleted_count} properties from {colony}",
+        "deleted_count": result.deleted_count,
+        "kept_surveyed": len(property_ids) - len(ids_to_delete) if keep_surveyed else 0
+    }
+
+@api_router.post("/admin/properties/delete-duplicates")
+async def delete_duplicate_properties(
+    colony: str = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Delete duplicate properties but KEEP the ones with survey submissions.
+    Duplicates are identified by: property_id OR (owner_name + mobile)
+    """
+    if current_user["role"] not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Build query
+    query = {}
+    if colony and colony.strip():
+        query["$or"] = [
+            {"colony": {"$regex": f"^{colony}$", "$options": "i"}},
+            {"ward": {"$regex": f"^{colony}$", "$options": "i"}}
+        ]
+    
+    # Get all properties
+    properties = await db.properties.find(query, {"_id": 0}).to_list(None)
+    
+    if not properties:
+        return {"message": "No properties found", "deleted_count": 0}
+    
+    # Get all submissions to know which properties have surveys
+    all_submissions = await db.submissions.find({}, {"property_record_id": 1, "_id": 0}).to_list(None)
+    surveyed_property_ids = set(s["property_record_id"] for s in all_submissions)
+    
+    # Group properties by property_id and by owner+mobile
+    by_property_id = {}
+    by_owner_mobile = {}
+    
+    for prop in properties:
+        pid = prop.get("property_id", "")
+        owner = (prop.get("owner_name") or "").strip().upper()
+        mobile = (prop.get("mobile") or "").strip()
+        prop_uuid = prop.get("id")
+        has_survey = prop_uuid in surveyed_property_ids
+        
+        # Group by property_id
+        if pid:
+            if pid not in by_property_id:
+                by_property_id[pid] = []
+            by_property_id[pid].append({"uuid": prop_uuid, "has_survey": has_survey, "prop": prop})
+        
+        # Group by owner + mobile
+        if owner and mobile:
+            key = f"{owner}_{mobile}"
+            if key not in by_owner_mobile:
+                by_owner_mobile[key] = []
+            by_owner_mobile[key].append({"uuid": prop_uuid, "has_survey": has_survey, "prop": prop})
+    
+    # Find duplicates to delete (keep ones with survey, delete others)
+    ids_to_delete = set()
+    
+    # Check property_id duplicates
+    for pid, items in by_property_id.items():
+        if len(items) > 1:
+            # Keep the one with survey, or the first one if none have survey
+            has_survey_items = [i for i in items if i["has_survey"]]
+            if has_survey_items:
+                # Keep all with survey, delete others
+                for item in items:
+                    if not item["has_survey"]:
+                        ids_to_delete.add(item["uuid"])
+            else:
+                # Keep only the first one
+                for item in items[1:]:
+                    ids_to_delete.add(item["uuid"])
+    
+    # Check owner+mobile duplicates
+    for key, items in by_owner_mobile.items():
+        if len(items) > 1:
+            has_survey_items = [i for i in items if i["has_survey"]]
+            if has_survey_items:
+                for item in items:
+                    if not item["has_survey"]:
+                        ids_to_delete.add(item["uuid"])
+            else:
+                for item in items[1:]:
+                    ids_to_delete.add(item["uuid"])
+    
+    if not ids_to_delete:
+        return {"message": "No duplicate properties found", "deleted_count": 0}
+    
+    # Delete duplicates
+    result = await db.properties.delete_many({"id": {"$in": list(ids_to_delete)}})
+    
+    # Clear cache
+    await clear_map_cache()
+    
+    return {
+        "message": f"Deleted {result.deleted_count} duplicate properties (kept surveyed ones)",
+        "deleted_count": result.deleted_count,
+        "total_properties": len(properties),
+        "remaining": len(properties) - result.deleted_count
+    }
+
 @api_router.post("/admin/properties/arrange-by-route")
 async def arrange_properties_by_route(
     ward: Optional[str] = None,
