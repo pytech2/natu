@@ -434,29 +434,28 @@ async def get_colonies_list(current_user: dict = Depends(get_current_user)):
 async def get_map_properties(
     colony: Optional[str] = None,
     status: Optional[str] = None,
+    hide_completed: bool = False,
     limit: int = 500,
     current_user: dict = Depends(get_current_user)
 ):
-    """Fast lightweight endpoint for map markers - CACHED per colony"""
-    # Build cache key
-    cache_key = f"map_{colony or 'all'}_{status or 'all'}_{current_user['role']}"
-    
-    # Check cache for admin/supervisor (they see all data)
-    if current_user["role"] in ["ADMIN", "SUPERVISOR", "MC_OFFICER"]:
-        cached = map_cache.get(cache_key)
-        if cached:
-            return cached
+    """Fast lightweight endpoint for map markers - NO DUPLICATES, shows submission status"""
     
     query = {"latitude": {"$ne": None}, "longitude": {"$ne": None}}
     
     if colony and colony.strip():
-        # Search in both colony and ward fields
         query["$or"] = [
             {"colony": {"$regex": f"^{colony}$", "$options": "i"}},
             {"ward": {"$regex": f"^{colony}$", "$options": "i"}}
         ]
+    
+    # Filter by status if provided
     if status and status.strip():
         query["status"] = status
+    
+    # Hide completed/approved if requested
+    if hide_completed:
+        if "status" not in query:
+            query["status"] = {"$nin": ["Completed", "Approved", "In Progress"]}
     
     # For non-admin users, filter by assigned properties
     if current_user["role"] not in ["ADMIN", "SUPERVISOR", "MC_OFFICER"]:
@@ -478,6 +477,51 @@ async def get_map_properties(
     projection = {
         "_id": 0,
         "id": 1,
+        "latitude": 1,
+        "longitude": 1,
+        "status": 1,
+        "serial_number": 1,
+        "bill_sr_no": 1,
+        "property_id": 1,
+        "owner_name": 1,
+        "colony": 1,
+        "ward": 1,
+        "mobile": 1
+    }
+    
+    properties = await db.properties.find(query, projection).limit(limit).to_list(limit)
+    
+    # Remove duplicates - keep unique by property_id or (owner_name + mobile)
+    seen_property_ids = set()
+    seen_owner_mobile = set()
+    unique_properties = []
+    
+    for prop in properties:
+        prop_id = prop.get("property_id", "")
+        owner = (prop.get("owner_name") or "").strip().upper()
+        mobile = (prop.get("mobile") or "").strip()
+        
+        # Skip if duplicate property_id
+        if prop_id and prop_id in seen_property_ids:
+            continue
+        
+        # Skip if duplicate owner+mobile combination
+        if owner and mobile:
+            key = f"{owner}_{mobile}"
+            if key in seen_owner_mobile:
+                continue
+            seen_owner_mobile.add(key)
+        
+        if prop_id:
+            seen_property_ids.add(prop_id)
+        
+        unique_properties.append(prop)
+    
+    return {
+        "properties": unique_properties,
+        "count": len(unique_properties),
+        "total_before_dedup": len(properties)
+    }
         "latitude": 1,
         "longitude": 1,
         "status": 1,
