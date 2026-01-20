@@ -283,6 +283,64 @@ export default function Properties() {
     }
   };
 
+  // Delete single colony
+  const handleDeleteColony = async () => {
+    if (!selectedColony) {
+      toast.error('Please select a colony');
+      return;
+    }
+    
+    setDeletingColony(true);
+    try {
+      const formData = new FormData();
+      formData.append('colony', selectedColony);
+      formData.append('keep_surveyed', keepSurveyed.toString());
+      
+      const response = await axios.post(`${API_URL}/admin/properties/delete-colony`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      toast.success(response.data.message);
+      if (response.data.kept_surveyed > 0) {
+        toast.info(`Kept ${response.data.kept_surveyed} properties with surveys`);
+      }
+      setDeleteColonyDialog(false);
+      setSelectedColony('');
+      fetchProperties();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete colony');
+    } finally {
+      setDeletingColony(false);
+    }
+  };
+
+  // Delete duplicate properties (keep surveyed)
+  const handleDeleteDuplicates = async () => {
+    setDeletingDuplicates(true);
+    try {
+      const formData = new FormData();
+      if (filters.area) formData.append('colony', filters.area);
+      
+      const response = await axios.post(`${API_URL}/admin/properties/delete-duplicates`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      toast.success(response.data.message);
+      setDeleteDuplicatesDialog(false);
+      fetchProperties();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete duplicates');
+    } finally {
+      setDeletingDuplicates(false);
+    }
+  };
+
   // Unassign properties
   const handleUnassign = async () => {
     if (selectedProperties.length === 0) {
