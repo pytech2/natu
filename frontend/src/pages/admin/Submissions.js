@@ -519,12 +519,8 @@ export default function Submissions() {
 
             {selectedSubmission && (
               <div className="space-y-6">
-                {/* Survey Info */}
+                {/* Survey Info - Same fields as Surveyor page */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">New Owner Name</label>
-                    <p className="font-medium">{selectedSubmission.new_owner_name || '-'}</p>
-                  </div>
                   <div>
                     <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Receiver Name</label>
                     <p className="font-medium">{selectedSubmission.receiver_name || '-'}</p>
@@ -534,7 +530,7 @@ export default function Submissions() {
                     <p className="font-medium font-mono">{selectedSubmission.receiver_mobile || '-'}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Relation</label>
+                    <label className="text-xs font-mono uppercase tracking-wider text-slate-500">Relation with Owner</label>
                     <p className="font-medium">{selectedSubmission.relation || '-'}</p>
                   </div>
                   <div>
