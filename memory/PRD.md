@@ -19,11 +19,20 @@
 - **Fast Loading**: Cached API responses + optimized markers
 
 ### Google Maps Setup (Required for Production)
-1. Add `REACT_APP_GOOGLE_MAPS_API_KEY` to frontend/.env
+1. Add `REACT_APP_GOOGLE_MAPS_API_KEY` to frontend/.env ✅ Done
 2. In Google Cloud Console:
    - Enable "Maps JavaScript API"
    - Enable billing on the project
    - Set domain restrictions for the API key
+
+### Two-Finger 360° Rotation Implementation
+- **Custom touch handler** detects two-finger twist gesture
+- **CSS transform rotation** applied to map container for smooth 360° rotation
+- **Fixed UI overlay** - Top bar, controls, bottom bar stay fixed while map rotates
+- **Compass indicator** shows current rotation angle (0-360°)
+- **Auto-rotate mode** - Map follows device compass heading
+- **Reset to North (N↑)** button appears when map is rotated
+- **State persistence** - Map center, zoom, and rotation saved to localStorage
 
 ### API Endpoints (Optimized)
 | Endpoint | Purpose | Cache |
